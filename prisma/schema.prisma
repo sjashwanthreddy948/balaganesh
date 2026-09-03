@@ -1,0 +1,36 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Contribution {
+  id                String    @id @default(cuid())
+  receiptNumber     String    @unique
+  fullName          String
+  mobileNumber      String
+  address           String?
+  amount            Int
+  utr               String    @unique
+  paymentScreenshot String?
+  paymentStatus     String    @default("PENDING") // PENDING, VERIFIED, REJECTED
+  verifiedAt        DateTime?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([mobileNumber])
+  @@index([utr])
+  @@index([receiptNumber])
+  @@index([paymentStatus])
+}
+
+model AdminUser {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String   // bcrypt hashed
+  createdAt DateTime @default(now())
+}

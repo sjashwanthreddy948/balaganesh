@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #07112c;
+  --foreground: #f8fafc;
+}
+
+body {
+  color: var(--foreground);
+  background: radial-gradient(circle at 50% 0%, #12224d 0%, #07112c 70%);
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #07112c;
+}
+::-webkit-scrollbar-thumb {
+  background: #254eb8;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #e5b31e;
+}
+
+/* Golden text and glow utilities */
+.gold-text-gradient {
+  background: linear-gradient(135deg, #fff7c2 0%, #ffd700 40%, #e5b31e 70%, #b8860b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gold-border-glow {
+  border: 1px solid rgba(229, 179, 30, 0.4);
+  box-shadow: 0 0 15px rgba(229, 179, 30, 0.15);
+}
+
+.gold-border-glow:focus-within {
+  border-color: #f3ca3e;
+  box-shadow: 0 0 20px rgba(229, 179, 30, 0.35);
+}
+
+/* Shimmer animation for buttons */
+@keyframes goldShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.btn-gold {
+  background: linear-gradient(90deg, #d49e10 0%, #ffd23f 50%, #d49e10 100%);
+  background-size: 200% auto;
+  color: #07112c;
+  font-weight: 700;
+  transition: all 0.3s ease;
+}
+
+.btn-gold:hover:not(:disabled) {
+  background-position: right center;
+  box-shadow: 0 4px 20px rgba(243, 202, 62, 0.45);
+  transform: translateY(-1px);
+}
+
+.btn-gold:active:not(:disabled) {
+  transform: translateY(0);
+}
