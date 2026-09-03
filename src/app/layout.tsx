@@ -5,9 +5,9 @@ import { FESTIVAL_CONFIG } from '@/config/festival.config';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://balaganesh.org'),
-  title: `${FESTIVAL_CONFIG.associationName} | Ganesh Festival Chanda`,
+  title: `${FESTIVAL_CONFIG.associationName} | Ganesh Festival 2026`,
   description: `Official Chanda contribution & appreciation certificate platform for ${FESTIVAL_CONFIG.associationName}.`,
-  keywords: ['Bala Ganesh Association', 'Ganesh Chaturthi', 'Chanda', 'Festival Contribution', 'Ganesh Pandal', 'Certificate of Appreciation'],
+  keywords: ['Bala Ganesh Association', 'Ganesh Chaturthi', 'Chanda', 'Festival Contribution', 'Ganesh Pandal', 'Certificate of Appreciation', 'Expense Tracker'],
   authors: [{ name: FESTIVAL_CONFIG.associationName }],
   openGraph: {
     title: `${FESTIVAL_CONFIG.associationName} | Ganesh Festival 2026`,
@@ -46,20 +46,20 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="min-h-screen flex flex-col bg-[#050b1d] text-white selection:bg-devotional-gold-500 selection:text-devotional-blue-950 antialiased relative">
-        {/* Ambient Fullscreen Background Layer with Authentic Landscape Pandal Image */}
+        {/* Fullscreen Background Layer with 50% Transparency */}
         <div className="fixed inset-0 pointer-events-none z-[-1] overflow-hidden">
           <Image
             src="/images/ganesh-landscape-pandal.jpg"
             alt="Bala Ganesh Pandal Background"
             fill
             priority
-            className="object-cover object-center opacity-20 filter blur-[1.5px] transform scale-105"
+            className="object-cover object-center opacity-50 transform scale-100"
           />
-          {/* Rich Royal Blue Velvet Gradient Vignette Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#050b1d]/90 via-[#0a1842]/85 to-[#050b1d]/95" />
+          {/* Subtle 50% Translucent Royal Blue Tint & Vignette */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#050b1d]/40 via-[#071338]/30 to-[#050b1d]/60" />
           
-          {/* Radial Warm Golden Light from Pandal Chandelier */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-gradient-radial from-amber-400/12 via-amber-500/5 to-transparent pointer-events-none" />
+          {/* Warm Golden Glow radiating from the Top Chandelier */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[550px] bg-gradient-radial from-amber-400/25 via-amber-500/10 to-transparent pointer-events-none" />
         </div>
 
         {children}

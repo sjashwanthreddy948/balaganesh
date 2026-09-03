@@ -43,15 +43,15 @@ export default function LandscapeCertificate({ data, onImageReady }: LandscapeCe
     bgImage.crossOrigin = 'anonymous';
 
     const renderLayers = (imgLoaded: boolean) => {
-      // 1. Draw Authentic Pandal Background
+      // 1. Draw Authentic Pandal Background with 50% transparency wash
       if (imgLoaded) {
         ctx.drawImage(bgImage, 0, 0, width, height);
 
-        // Dark Royal Blue Velvet Wash Overlay for text readability
+        // 50% Translucent Royal Blue Wash Overlay
         const washGradient = ctx.createLinearGradient(0, 0, 0, height);
-        washGradient.addColorStop(0, 'rgba(5, 11, 29, 0.84)');
-        washGradient.addColorStop(0.5, 'rgba(7, 18, 48, 0.78)');
-        washGradient.addColorStop(1, 'rgba(4, 9, 24, 0.88)');
+        washGradient.addColorStop(0, 'rgba(5, 11, 29, 0.50)');
+        washGradient.addColorStop(0.5, 'rgba(7, 18, 48, 0.48)');
+        washGradient.addColorStop(1, 'rgba(4, 9, 24, 0.55)');
         ctx.fillStyle = washGradient;
         ctx.fillRect(0, 0, width, height);
       } else {
