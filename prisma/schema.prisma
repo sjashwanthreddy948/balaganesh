@@ -7,30 +7,48 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id                    String         @id @default(cuid())
+  name                  String
+  username              String         @unique
+  mobile                String?
+  email                 String?
+  password              String         // bcrypt hash
+  role                  String         @default("VOLUNTEER") // ADMIN, VOLUNTEER
+  isActive              Boolean        @default(true)
+  createdContributions  Contribution[] @relation("CreatedBy")
+  verifiedContributions Contribution[] @relation("VerifiedBy")
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+}
+
 model Contribution {
   id                String    @id @default(cuid())
-  receiptNumber     String    @unique
+  certificateNumber String    @unique // e.g. BG2026-000001
   fullName          String
-  mobileNumber      String
+  mobileNumber      String?
   address           String?
   amount            Int
-  utr               String    @unique
+  paymentMethod     String    // CASH, ONLINE
+  paymentStatus     String    // CASH_RECEIVED, PENDING, VERIFIED, REJECTED
+  utr               String?   // Transaction ID (required for online, unique if provided)
   paymentScreenshot String?
-  paymentStatus     String    @default("PENDING") // PENDING, VERIFIED, REJECTED
-  verifiedAt        DateTime?
   notes             String?
+
+  createdById       String
+  createdBy         User      @relation("CreatedBy", fields: [createdById], references: [id])
+
+  verifiedById      String?
+  verifiedBy        User?     @relation("VerifiedBy", fields: [verifiedById], references: [id])
+  verifiedAt        DateTime?
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
   @@index([mobileNumber])
-  @@index([utr])
-  @@index([receiptNumber])
+  @@index([certificateNumber])
+  @@index([paymentMethod])
   @@index([paymentStatus])
-}
-
-model AdminUser {
-  id        String   @id @default(cuid())
-  username  String   @unique
-  password  String   // bcrypt hashed
-  createdAt DateTime @default(now())
+  @@index([createdById])
+  @@index([createdAt])
 }

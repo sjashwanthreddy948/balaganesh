@@ -4,40 +4,61 @@ const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function main() {
-  const username = process.env.ADMIN_DEFAULT_USER || 'admin';
-  const plainPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'BalaGaneshAdmin@2026';
+  const adminUsername = process.env.ADMIN_DEFAULT_USER || 'admin';
+  const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'BalaGaneshAdmin@2026';
+  const volunteerUsername = 'volunteer';
+  const volunteerPassword = 'Volunteer@2026';
 
-  console.log(`Checking admin user: ${username}...`);
-  const existing = await prisma.adminUser.findUnique({
-    where: { username },
+  console.log('Seeding initial users...');
+
+  // 1. Admin User
+  const salt = await bcrypt.genSalt(10);
+  const hashedAdminPassword = await bcrypt.hash(adminPassword, salt);
+  const hashedVolunteerPassword = await bcrypt.hash(volunteerPassword, salt);
+
+  const admin = await prisma.user.upsert({
+    where: { username: adminUsername },
+    update: {
+      password: hashedAdminPassword,
+      role: 'ADMIN',
+      name: 'Association Admin',
+      isActive: true,
+    },
+    create: {
+      username: adminUsername,
+      name: 'Association Admin',
+      password: hashedAdminPassword,
+      role: 'ADMIN',
+      isActive: true,
+    },
   });
 
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(plainPassword, salt);
+  console.log(`✓ Admin user configured: ${admin.username} (Role: ${admin.role})`);
 
-  if (existing) {
-    console.log(`Updating admin user password...`);
-    await prisma.adminUser.update({
-      where: { username },
-      data: { password: hashedPassword },
-    });
-  } else {
-    console.log(`Creating default admin user...`);
-    await prisma.adminUser.create({
-      data: {
-        username,
-        password: hashedPassword,
-      },
-    });
-  }
+  // 2. Sample Volunteer User
+  const volunteer = await prisma.user.upsert({
+    where: { username: volunteerUsername },
+    update: {
+      password: hashedVolunteerPassword,
+      role: 'VOLUNTEER',
+      name: 'Suresh (Volunteer)',
+      isActive: true,
+    },
+    create: {
+      username: volunteerUsername,
+      name: 'Suresh (Volunteer)',
+      password: hashedVolunteerPassword,
+      role: 'VOLUNTEER',
+      isActive: true,
+    },
+  });
 
-  console.log(`✓ Admin user successfully configured!`);
-  console.log(`Username: ${username}`);
+  console.log(`✓ Volunteer user configured: ${volunteer.username} (Role: ${volunteer.role})`);
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error('Seed error:', e);
     process.exit(1);
   })
   .finally(async () => {

@@ -1,13 +1,10 @@
-const http = require('http');
+async function runComprehensiveTests() {
+  console.log('=== Starting Bala Ganesh Comprehensive E2E Verification ===\n');
 
-async function runTests() {
-  console.log('--- Starting End-to-End Verification ---');
-
-  const port = process.env.PORT || 3005;
+  const port = process.env.PORT || 3000;
   const baseUrl = `http://localhost:${port}`;
-  console.log(`Connecting to server at ${baseUrl}...`);
+  console.log(`Connecting to application server at ${baseUrl}...`);
 
-  // Helper fetch
   const post = async (path, body, headers = {}) => {
     const res = await fetch(`${baseUrl}${path}`, {
       method: 'POST',
@@ -19,7 +16,11 @@ async function runTests() {
 
   const get = async (path, headers = {}) => {
     const res = await fetch(`${baseUrl}${path}`, { headers });
-    return { status: res.status, data: await res.json() };
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('text/csv')) {
+      return { status: res.status, data: await res.text(), headers: res.headers };
+    }
+    return { status: res.status, data: await res.json(), headers: res.headers };
   };
 
   const patch = async (path, body, headers = {}) => {
@@ -31,99 +32,171 @@ async function runTests() {
     return { status: res.status, data: await res.json() };
   };
 
-  // 1. Submit a valid contribution
-  const testUtr = `UTR${Date.now()}`;
-  console.log(`1. Submitting test contribution with UTR: ${testUtr}...`);
-  const contribRes = await post('/api/contributions', {
-    fullName: 'Ravi Teja',
-    mobileNumber: '9876543210',
-    address: 'Plot 45, Bala Ganesh Colony',
-    amount: 501,
-    utr: testUtr,
+  const put = async (path, body, headers = {}) => {
+    const res = await fetch(`${baseUrl}${path}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify(body),
+    });
+    return { status: res.status, data: await res.json() };
+  };
+
+  // 1. Volunteer Login
+  console.log('1. Testing Volunteer Login (volunteer / Volunteer@2026)...');
+  const volLoginRes = await post('/api/auth/login', {
+    username: 'volunteer',
+    password: 'Volunteer@2026',
   });
-
-  if (contribRes.status !== 200 || !contribRes.data.success) {
-    throw new Error(`Contribution failed: ${JSON.stringify(contribRes.data)}`);
+  if (volLoginRes.status !== 200 || volLoginRes.data.user.role !== 'VOLUNTEER') {
+    throw new Error(`Volunteer login failed: ${JSON.stringify(volLoginRes.data)}`);
   }
-  const receiptNo = contribRes.data.data.receiptNumber;
-  const contribId = contribRes.data.data.id;
-  console.log(`✓ Contribution created! Receipt: ${receiptNo}, Status: ${contribRes.data.data.paymentStatus}`);
+  const volCookie = { Cookie: volLoginRes.headers.get('set-cookie')?.split(';')[0] || '' };
+  console.log(`✓ Volunteer logged in! Name: ${volLoginRes.data.user.name}`);
 
-  // 2. Test Duplicate UTR Protection
-  console.log('2. Testing duplicate UTR protection with identical UTR...');
-  const duplicateRes = await post('/api/contributions', {
-    fullName: 'Duplicate User',
-    mobileNumber: '9988776655',
-    amount: 1000,
-    utr: testUtr,
-  });
+  // 2. Fast Cash Contribution (Physical money handed over)
+  console.log('2. Recording CASH contribution (Ravi Kumar, ₹500, CASH)...');
+  const cashRes = await post(
+    '/api/contributions',
+    {
+      fullName: 'Ravi Kumar',
+      mobileNumber: '9876543210',
+      address: 'Plot 12, Pandal Ground',
+      amount: 500,
+      paymentMethod: 'CASH',
+    },
+    volCookie
+  );
+  if (cashRes.status !== 200 || cashRes.data.data.paymentStatus !== 'CASH_RECEIVED') {
+    throw new Error(`Cash contribution failed: ${JSON.stringify(cashRes.data)}`);
+  }
+  const cashCertNo = cashRes.data.data.certificateNumber;
+  console.log(`✓ Cash contribution saved! Certificate No: ${cashCertNo}, Status: ${cashRes.data.data.paymentStatus}`);
 
-  if (duplicateRes.status === 409 && duplicateRes.data.error.includes('already been submitted')) {
-    console.log(`✓ Duplicate UTR successfully blocked! Error: "${duplicateRes.data.error}"`);
+  // 3. Online Contribution (UPI with UTR)
+  const testUtr = `UPI${Date.now()}`;
+  console.log(`3. Recording ONLINE contribution (Anand Varma, ₹1000, ONLINE, UTR: ${testUtr})...`);
+  const onlineRes = await post(
+    '/api/contributions',
+    {
+      fullName: 'Anand Varma',
+      mobileNumber: '9988776655',
+      amount: 1000,
+      paymentMethod: 'ONLINE',
+      utr: testUtr,
+    },
+    volCookie
+  );
+  if (onlineRes.status !== 200 || onlineRes.data.data.paymentStatus !== 'PENDING') {
+    throw new Error(`Online contribution failed: ${JSON.stringify(onlineRes.data)}`);
+  }
+  const onlineCertNo = onlineRes.data.data.certificateNumber;
+  const onlineContribId = onlineRes.data.data.id;
+  console.log(`✓ Online contribution saved! Certificate No: ${onlineCertNo}, Status: ${onlineRes.data.data.paymentStatus}`);
+
+  // 4. Duplicate UTR Protection
+  console.log('4. Testing Duplicate UTR Protection with same transaction ID...');
+  const duplicateUtrRes = await post(
+    '/api/contributions',
+    {
+      fullName: 'Fraud Attempt',
+      mobileNumber: '9123456789',
+      amount: 500,
+      paymentMethod: 'ONLINE',
+      utr: testUtr,
+    },
+    volCookie
+  );
+  if (duplicateUtrRes.status === 409 && duplicateUtrRes.data.error.includes('already been recorded')) {
+    console.log(`✓ Duplicate UTR blocked successfully: "${duplicateUtrRes.data.error}"`);
   } else {
-    throw new Error(`Duplicate UTR test failed! Status: ${duplicateRes.status}, data: ${JSON.stringify(duplicateRes.data)}`);
+    throw new Error(`Duplicate UTR test failed: ${JSON.stringify(duplicateUtrRes.data)}`);
   }
 
-  // 3. Check public receipt lookup
-  console.log(`3. Checking public receipt lookup for ${receiptNo}...`);
-  const receiptLookup = await get(`/api/contributions/${receiptNo}`);
-  if (receiptLookup.status === 200 && receiptLookup.data.data.receiptNumber === receiptNo) {
-    console.log(`✓ Public receipt fetched! Name: ${receiptLookup.data.data.fullName}, Amount: ₹${receiptLookup.data.data.amount}`);
+  // 5. Public Certificate Lookup
+  console.log(`5. Verifying public landscape certificate lookup for ${cashCertNo}...`);
+  const certLookupRes = await get(`/api/contributions/${cashCertNo}`);
+  if (certLookupRes.status === 200 && certLookupRes.data.data.fullName === 'Ravi Kumar') {
+    console.log(`✓ Certificate fetched: ${certLookupRes.data.data.fullName}, Amount: ₹${certLookupRes.data.data.amount}, Method: ${certLookupRes.data.data.paymentMethod}`);
   } else {
-    throw new Error(`Receipt lookup failed: ${JSON.stringify(receiptLookup)}`);
+    throw new Error(`Certificate lookup failed: ${JSON.stringify(certLookupRes)}`);
   }
 
-  // 4. Test Admin Login
-  console.log('4. Testing Admin Authentication...');
-  const loginRes = await post('/api/admin/login', {
+  // 6. Admin Login
+  console.log('6. Testing Admin Login (admin / BalaGaneshAdmin@2026)...');
+  const adminLoginRes = await post('/api/auth/login', {
     username: 'admin',
     password: 'BalaGaneshAdmin@2026',
   });
-
-  if (loginRes.status !== 200 || !loginRes.data.success) {
-    throw new Error(`Admin login failed: ${JSON.stringify(loginRes.data)}`);
+  if (adminLoginRes.status !== 200 || adminLoginRes.data.user.role !== 'ADMIN') {
+    throw new Error(`Admin login failed: ${JSON.stringify(adminLoginRes.data)}`);
   }
-  const setCookie = loginRes.headers.get('set-cookie');
-  console.log('✓ Admin login successful!');
+  const adminCookie = { Cookie: adminLoginRes.headers.get('set-cookie')?.split(';')[0] || '' };
+  console.log(`✓ Admin logged in! Name: ${adminLoginRes.data.user.name}`);
 
-  // Extract session cookie for authenticated requests
-  const cookieHeader = { Cookie: setCookie ? setCookie.split(';')[0] : '' };
-
-  // 5. Check Admin Stats
-  console.log('5. Fetching Admin Stats...');
-  const statsRes = await get('/api/admin/stats', cookieHeader);
-  if (statsRes.status === 200 && statsRes.data.stats.totalContributions >= 1) {
-    console.log(`✓ Stats verified: Total: ${statsRes.data.stats.totalContributions}, Amount: ₹${statsRes.data.stats.totalAmount}, Pending: ${statsRes.data.stats.pendingPayments}`);
+  // 7. Admin Dashboard Stats
+  console.log('7. Verifying Admin Dashboard Stats (Cash vs Online breakdown)...');
+  const statsRes = await get('/api/admin/stats', adminCookie);
+  if (statsRes.status === 200 && statsRes.data.stats.totalContributions >= 2) {
+    const s = statsRes.data.stats;
+    console.log(`✓ Stats Verified: Total Amount: ₹${s.totalAmount} (Cash: ₹${s.cashAmount}, Online: ₹${s.onlineAmount}), Pending Online: ${s.pendingOnlinePayments}`);
   } else {
-    throw new Error(`Admin stats check failed: ${JSON.stringify(statsRes)}`);
+    throw new Error(`Stats verification failed: ${JSON.stringify(statsRes)}`);
   }
 
-  // 6. Admin Verifies Contribution
-  console.log(`6. Admin verifying contribution ${contribId}...`);
+  // 8. Admin Verifies Online Payment
+  console.log(`8. Admin verifying online contribution ${onlineContribId}...`);
   const verifyRes = await patch(
-    '/api/admin/contributions',
-    { id: contribId, status: 'VERIFIED' },
-    cookieHeader
+    `/api/contributions/${onlineContribId}`,
+    { status: 'VERIFIED' },
+    adminCookie
   );
   if (verifyRes.status === 200 && verifyRes.data.data.paymentStatus === 'VERIFIED') {
-    console.log('✓ Contribution status changed to VERIFIED!');
+    console.log('✓ Online payment successfully marked as VERIFIED by admin!');
   } else {
-    throw new Error(`Verify failed: ${JSON.stringify(verifyRes)}`);
+    throw new Error(`Verification failed: ${JSON.stringify(verifyRes)}`);
   }
 
-  // 7. Verify updated receipt reflects VERIFIED
-  console.log('7. Verifying receipt status update...');
-  const updatedReceipt = await get(`/api/contributions/${receiptNo}`);
-  if (updatedReceipt.data.data.paymentStatus === 'VERIFIED') {
-    console.log('✓ Receipt status confirmed as VERIFIED in database!');
+  // 9. Admin Edits Contribution
+  console.log(`9. Admin editing contribution ${onlineContribId} (fixing donor name to Anand Varma Garu)...`);
+  const editRes = await put(
+    `/api/contributions/${onlineContribId}`,
+    {
+      fullName: 'Anand Varma Garu',
+      amount: 1000,
+    },
+    adminCookie
+  );
+  if (editRes.status === 200 && editRes.data.data.fullName === 'Anand Varma Garu') {
+    console.log('✓ Contribution successfully updated with audit timestamp!');
   } else {
-    throw new Error(`Status update verification failed: ${JSON.stringify(updatedReceipt)}`);
+    throw new Error(`Edit failed: ${JSON.stringify(editRes)}`);
   }
 
-  console.log('\n🎉 ALL 7 END-TO-END AUTOMATED VERIFICATION TESTS PASSED SUCCESSFULLY! 🎉\n');
+  // 10. Admin Volunteer Tracking
+  console.log('10. Verifying Volunteer Leaderboard tracking...');
+  const volTrackRes = await get('/api/admin/volunteers', adminCookie);
+  if (volTrackRes.status === 200 && volTrackRes.data.data.length > 0) {
+    const v = volTrackRes.data.data[0];
+    console.log(`✓ Volunteer Tracking: ${v.name} has recorded ${v.contributionCount} contributions totaling ₹${v.totalAmount}!`);
+  } else {
+    throw new Error(`Volunteer tracking failed: ${JSON.stringify(volTrackRes)}`);
+  }
+
+  // 11. Admin CSV Export
+  console.log('11. Testing CSV Export for committee records...');
+  const csvRes = await get('/api/admin/export', adminCookie);
+  if (csvRes.status === 200 && csvRes.data.includes('Certificate No') && csvRes.data.includes('Ravi Kumar')) {
+    console.log('✓ CSV export generated with headers and donor rows!');
+  } else {
+    throw new Error(`CSV export failed: ${JSON.stringify(csvRes)}`);
+  }
+
+  console.log('\n===============================================================');
+  console.log('🎉 ALL 11 END-TO-END BUSINESS & SECURITY TESTS PASSED! 🎉');
+  console.log('===============================================================\n');
 }
 
-runTests().catch((err) => {
+runComprehensiveTests().catch((err) => {
   console.error('Test error:', err);
   process.exit(1);
 });

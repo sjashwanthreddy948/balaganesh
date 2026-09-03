@@ -1,79 +1,112 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { contributionFormSchema, cleanIndianMobile } from '@/lib/validation';
-import { generateNextReceiptNumber } from '@/lib/receipt-number';
+import { createContributionSchema, cleanIndianMobile } from '@/lib/validation';
+import { generateNextCertificateNumber } from '@/lib/certificate-number';
+import { getUserSession } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getUserSession();
+    
+    // Find creator ID: session user or default admin
+    let creatorId: string;
+    if (session) {
+      creatorId = session.id;
+    } else {
+      const defaultAdmin = await prisma.user.findFirst({
+        where: { role: 'ADMIN' },
+      });
+      if (!defaultAdmin) {
+        return NextResponse.json(
+          { success: false, error: 'Authentication required to record contribution.' },
+          { status: 401 }
+        );
+      }
+      creatorId = defaultAdmin.id;
+    }
+
     const body = await req.json();
 
-    // 1. Validate inputs using Zod
-    const validation = contributionFormSchema.safeParse(body);
+    // Validate request schema
+    const validation = createContributionSchema.safeParse(body);
     if (!validation.success) {
-      const firstError = validation.error.errors[0]?.message || 'Invalid input data.';
+      const firstError = validation.error.errors[0]?.message || 'Invalid contribution details.';
       return NextResponse.json({ success: false, error: firstError }, { status: 400 });
     }
 
     const data = validation.data;
-    const cleanMobile = cleanIndianMobile(data.mobileNumber);
-    const cleanUtr = data.utr.trim().toUpperCase();
+    const cleanMobile = data.mobileNumber ? cleanIndianMobile(data.mobileNumber) : null;
+    const cleanUtr = data.utr ? data.utr.trim().toUpperCase() : null;
 
-    // 2. Duplicate UTR check
-    const existingUtr = await prisma.contribution.findUnique({
-      where: { utr: cleanUtr },
-    });
-
-    if (existingUtr) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'This transaction ID has already been submitted.',
-        },
-        { status: 409 }
-      );
+    // Check duplicate UTR for online contributions
+    if (data.paymentMethod === 'ONLINE' && cleanUtr) {
+      const existing = await prisma.contribution.findFirst({
+        where: { utr: cleanUtr },
+      });
+      if (existing) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'This UTR has already been recorded.',
+          },
+          { status: 409 }
+        );
+      }
     }
 
-    // 3. Generate sequential unique receipt number
-    const receiptNumber = await generateNextReceiptNumber();
+    // Determine initial status based on payment method
+    const paymentStatus = data.paymentMethod === 'CASH' ? 'CASH_RECEIVED' : 'PENDING';
 
-    // 4. Create contribution record with status PENDING
+    // Generate next sequential certificate number
+    const certificateNumber = await generateNextCertificateNumber();
+
+    // Create database record
     const contribution = await prisma.contribution.create({
       data: {
-        receiptNumber,
+        certificateNumber,
         fullName: data.fullName.trim(),
         mobileNumber: cleanMobile,
         address: data.address?.trim() || null,
         amount: data.amount,
-        utr: cleanUtr,
+        paymentMethod: data.paymentMethod,
+        paymentStatus,
+        utr: data.paymentMethod === 'ONLINE' ? cleanUtr : null,
         paymentScreenshot: data.paymentScreenshot || null,
-        paymentStatus: 'PENDING',
+        notes: data.notes?.trim() || null,
+        createdById: creatorId,
+      },
+      include: {
+        createdBy: {
+          select: { name: true, username: true },
+        },
       },
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Contribution submitted successfully. Pending verification.',
+      message: 'Contribution recorded successfully.',
       data: {
         id: contribution.id,
-        receiptNumber: contribution.receiptNumber,
+        certificateNumber: contribution.certificateNumber,
         fullName: contribution.fullName,
         mobileNumber: contribution.mobileNumber,
         address: contribution.address,
         amount: contribution.amount,
-        utr: contribution.utr,
+        paymentMethod: contribution.paymentMethod,
         paymentStatus: contribution.paymentStatus,
+        utr: contribution.utr,
         createdAt: contribution.createdAt,
+        volunteerName: contribution.createdBy.name,
       },
     });
   } catch (error: any) {
     console.error('Error creating contribution:', error);
 
-    // Handle unique constraint failure in case of race condition
     if (error?.code === 'P2002') {
       return NextResponse.json(
         {
           success: false,
-          error: 'This transaction ID has already been submitted.',
+          error: 'This transaction ID has already been recorded.',
         },
         { status: 409 }
       );
@@ -81,6 +114,96 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(
       { success: false, error: 'Something went wrong. Please try again.' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(req: NextRequest) {
+  const session = await getUserSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const search = searchParams.get('search')?.trim();
+  const paymentMethod = searchParams.get('method')?.trim().toUpperCase();
+  const status = searchParams.get('status')?.trim().toUpperCase();
+  const volunteerId = searchParams.get('volunteerId')?.trim();
+  const dateRange = searchParams.get('dateRange')?.trim(); // today, week, month
+
+  try {
+    const whereClause: any = {};
+
+    // Role-based scope: Volunteer only sees their own contributions
+    if (session.role === 'VOLUNTEER') {
+      whereClause.createdById = session.id;
+    } else if (volunteerId && volunteerId !== 'ALL') {
+      whereClause.createdById = volunteerId;
+    }
+
+    // Payment method filter
+    if (paymentMethod && ['CASH', 'ONLINE'].includes(paymentMethod)) {
+      whereClause.paymentMethod = paymentMethod;
+    }
+
+    // Status filter
+    if (status && ['CASH_RECEIVED', 'PENDING', 'VERIFIED', 'REJECTED'].includes(status)) {
+      whereClause.paymentStatus = status;
+    }
+
+    // Date range filter
+    if (dateRange === 'today') {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      whereClause.createdAt = { gte: startOfDay };
+    } else if (dateRange === 'week') {
+      const startOfWeek = new Date();
+      startOfWeek.setDate(startOfWeek.getDate() - 7);
+      whereClause.createdAt = { gte: startOfWeek };
+    } else if (dateRange === 'month') {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      whereClause.createdAt = { gte: startOfMonth };
+    }
+
+    // Search query
+    if (search && search.length > 0) {
+      whereClause.OR = [
+        { fullName: { contains: search } },
+        { mobileNumber: { contains: search } },
+        { certificateNumber: { contains: search } },
+        { utr: { contains: search } },
+      ];
+    }
+
+    const contributions = await prisma.contribution.findMany({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      include: {
+        createdBy: {
+          select: { name: true, username: true },
+        },
+        verifiedBy: {
+          select: { name: true },
+        },
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: contributions.map((c) => ({
+        ...c,
+        volunteerName: c.createdBy.name,
+        verifiedByName: c.verifiedBy?.name || null,
+      })),
+    });
+  } catch (error) {
+    console.error('Error fetching contributions:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch contributions' },
       { status: 500 }
     );
   }

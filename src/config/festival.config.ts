@@ -13,7 +13,7 @@ export const FESTIVAL_CONFIG = {
   quickAmounts: [100, 200, 500, 1000, 2000],
   defaultAmount: 500,
   minAmount: 10,
-  maxAmount: 100000,
+  maxAmount: 1000000,
 
   // Images
   heroImage: '/images/ganesh-festival.jpg',
@@ -28,7 +28,7 @@ export const FESTIVAL_CONFIG = {
 };
 
 /**
- * Builds standard universal UPI payment link compatible with GPay, PhonePe, Paytm, BHIM, Cred
+ * Universal UPI URI for immediate scan & pay
  */
 export function buildUpiUri(amount: number, note?: string): string {
   const upiId = encodeURIComponent(FESTIVAL_CONFIG.upiId);
@@ -42,25 +42,47 @@ export function buildUpiUri(amount: number, note?: string): string {
 }
 
 /**
- * Formats WhatsApp share message
+ * Builds standard WhatsApp Share URL for Certificate of Appreciation
+ */
+export function buildWhatsAppCertificateShareUrl(contribution: {
+  fullName: string;
+  amount: number;
+  paymentMethod: string;
+  certificateNumber: string;
+  mobileNumber?: string | null;
+}): string {
+  const message = `🙏 *${FESTIVAL_CONFIG.associationName}*
+
+Thank you *${contribution.fullName}* for your valuable contribution towards our Ganesh Festival.
+
+*Contribution:* ₹${contribution.amount.toLocaleString('en-IN')}
+*Payment Method:* ${contribution.paymentMethod}
+*Certificate No:* ${contribution.certificateNumber}
+
+Ganpati Bappa Morya! 🙏`;
+
+  const targetNumber = contribution.mobileNumber
+    ? contribution.mobileNumber.replace(/[^0-9]/g, '')
+    : FESTIVAL_CONFIG.whatsappNumber.replace(/[^0-9]/g, '');
+
+  const phoneParam = targetNumber ? `phone=${targetNumber.startsWith('91') ? targetNumber : '91' + targetNumber}&` : '';
+
+  return `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(message)}`;
+}
+
+/**
+ * Alias for legacy receipt share URL
  */
 export function buildWhatsAppShareUrl(contribution: {
   fullName: string;
   amount: number;
   receiptNumber: string;
-  utr: string;
+  utr?: string;
 }): string {
-  const cleanNumber = FESTIVAL_CONFIG.whatsappNumber.replace(/[^0-9]/g, '');
-  const message = `🙏 *${FESTIVAL_CONFIG.associationName}*
-
-Thank you for your Ganesh festival Chanda contribution.
-
-*Name:* ${contribution.fullName}
-*Amount:* ₹${contribution.amount.toLocaleString('en-IN')}
-*Receipt No:* ${contribution.receiptNumber}
-*UTR / Transaction ID:* ${contribution.utr}
-
-Ganpati Bappa Morya! 🙏`;
-
-  return `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
+  return buildWhatsAppCertificateShareUrl({
+    fullName: contribution.fullName,
+    amount: contribution.amount,
+    paymentMethod: 'ONLINE',
+    certificateNumber: contribution.receiptNumber,
+  });
 }
