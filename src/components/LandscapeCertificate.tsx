@@ -37,170 +37,185 @@ export default function LandscapeCertificate({ data, onImageReady }: LandscapeCe
     canvas.width = width;
     canvas.height = height;
 
-    // Load authentic landscape pandal image
+    // Load authentic landscape pandal image for background watermark
     const bgImage = new Image();
     bgImage.src = FESTIVAL_CONFIG.pandalLandscapeImage;
     bgImage.crossOrigin = 'anonymous';
 
     const renderLayers = (imgLoaded: boolean) => {
-      // 1. Draw Authentic Pandal Background with 85% black tint
-      if (imgLoaded) {
-        ctx.drawImage(bgImage, 0, 0, width, height);
-
-        // 85% Black Tint Overlay
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
-        ctx.fillRect(0, 0, width, height);
-      } else {
-        // Fallback rich gradient if image is still loading
-        const bgGradient = ctx.createRadialGradient(
-          width / 2,
-          height / 2,
-          100,
-          width / 2,
-          height / 2,
-          width / 1.2
-        );
-        bgGradient.addColorStop(0, '#102359');
-        bgGradient.addColorStop(0.5, '#0c1a45');
-        bgGradient.addColorStop(1, '#050b1d');
-        ctx.fillStyle = bgGradient;
-        ctx.fillRect(0, 0, width, height);
-      }
-
-      // 2. Subtle golden starlight aura centered from top chandelier
-      const chandelierGlow = ctx.createRadialGradient(width / 2, 80, 20, width / 2, 80, 650);
-      chandelierGlow.addColorStop(0, 'rgba(255, 215, 0, 0.18)');
-      chandelierGlow.addColorStop(0.5, 'rgba(243, 202, 62, 0.08)');
-      chandelierGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = chandelierGlow;
+      // 1. BASE BACKGROUND: Pure Luxury Ivory / White Paper Stock
+      const paperGradient = ctx.createLinearGradient(0, 0, width, height);
+      paperGradient.addColorStop(0, '#ffffff');
+      paperGradient.addColorStop(0.5, '#fafaf7');
+      paperGradient.addColorStop(1, '#f6f5ef');
+      ctx.fillStyle = paperGradient;
       ctx.fillRect(0, 0, width, height);
 
-      // 3. Ornate Double Gold Borders with Corner Flourishes
-      // Outer Solid Gold Border
-      ctx.strokeStyle = '#ffd700';
-      ctx.lineWidth = 6;
-      ctx.strokeRect(36, 36, width - 72, height - 72);
+      // 2. SUBTLE WATERMARK: Pandal & Deity Watermark (7% Opacity on White Paper)
+      if (imgLoaded) {
+        ctx.save();
+        ctx.globalAlpha = 0.08;
+        ctx.drawImage(bgImage, 0, 0, width, height);
+        ctx.restore();
+      }
 
-      // Inner Filigree Border
-      ctx.strokeStyle = 'rgba(243, 202, 62, 0.5)';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(48, 48, width - 96, height - 96);
+      // 3. ELEGANT GOLD & ROYAL BLUE DUAL BORDERS
+      // Outer Deep Royal Blue Thick Border
+      ctx.strokeStyle = '#0c1e54';
+      ctx.lineWidth = 14;
+      ctx.strokeRect(32, 32, width - 64, height - 64);
 
-      // Corner Corner Rosettes / Jewels
-      const corners = [
-        [36, 36],
-        [width - 36, 36],
-        [36, height - 36],
-        [width - 36, height - 36],
+      // Middle Burnished Metallic Gold Border
+      ctx.strokeStyle = '#c69214';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(50, 50, width - 100, height - 100);
+
+      // Inner Royal Blue Hairline Border
+      ctx.strokeStyle = 'rgba(12, 30, 84, 0.4)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(60, 60, width - 120, height - 120);
+
+      // 4. CORNER ROSETTES & ORNAMENTS (Metallic Gold with Royal Blue Center)
+      const cornerInsets = [
+        [50, 50],
+        [width - 50, 50],
+        [50, height - 50],
+        [width - 50, height - 50],
       ];
-      corners.forEach(([cx, cy]) => {
-        ctx.fillStyle = '#ffd700';
+
+      cornerInsets.forEach(([cx, cy]) => {
+        // Outer Gold Ring
+        ctx.strokeStyle = '#c69214';
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+        ctx.arc(cx, cy, 22, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Inner Gold Rosette
+        ctx.fillStyle = '#dfb135';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 14, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.strokeStyle = '#e5b31e';
-        ctx.lineWidth = 2;
+        // Royal Blue Center Jewel
+        ctx.fillStyle = '#0c1e54';
         ctx.beginPath();
-        ctx.arc(cx, cy, 18, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+        ctx.fill();
       });
 
-      // 4. Sacred Header & Invocations
+      // 5. SACRED INVOCATION
       ctx.textAlign = 'center';
 
-      // Om symbol
+      // Sacred Om
       ctx.font = 'bold 36px Georgia, serif';
-      ctx.fillStyle = '#ffd700';
+      ctx.fillStyle = '#b8860b';
       ctx.fillText('ॐ', width / 2, 105);
 
-      // Association Name
-      ctx.font = 'bold 44px sans-serif';
-      ctx.fillStyle = '#fff7c2';
+      // Sanskrit Header
+      ctx.font = 'bold 18px Georgia, serif';
+      ctx.fillStyle = '#b8860b';
       ctx.letterSpacing = '3px';
-      ctx.shadowColor = 'rgba(255, 215, 0, 0.4)';
-      ctx.shadowBlur = 10;
-      ctx.fillText(FESTIVAL_CONFIG.associationName.toUpperCase(), width / 2, 162);
-      ctx.shadowBlur = 0; // reset
+      ctx.fillText('॥ श्री गणेशाय नमः ॥', width / 2, 136);
+
+      // 6. ASSOCIATION NAME (Deep Royal Blue Display)
+      ctx.font = 'bold 46px sans-serif';
+      ctx.fillStyle = '#0c1e54';
+      ctx.letterSpacing = '4px';
+      ctx.fillText(FESTIVAL_CONFIG.associationName.toUpperCase(), width / 2, 192);
 
       // Subtitle
-      ctx.font = '600 21px sans-serif';
-      ctx.fillStyle = '#cbd5e1';
-      ctx.letterSpacing = '2px';
-      ctx.fillText(`GANESH FESTIVAL ${FESTIVAL_CONFIG.festivalYear}`, width / 2, 198);
+      ctx.font = 'bold 19px sans-serif';
+      ctx.fillStyle = '#b8860b';
+      ctx.letterSpacing = '2.5px';
+      ctx.fillText(`GANESH FESTIVAL ${FESTIVAL_CONFIG.festivalYear} • ANNUAL UTSAV`, width / 2, 226);
 
-      // 5. Title Ribbon: CERTIFICATE OF APPRECIATION
-      const ribbonW = 660;
-      const ribbonH = 46;
+      // 7. TITLE RIBBON: CERTIFICATE OF APPRECIATION (Royal Blue Badge with Gold Border)
+      const ribbonW = 680;
+      const ribbonH = 48;
       const ribbonX = (width - ribbonW) / 2;
-      const ribbonY = 224;
+      const ribbonY = 252;
 
-      ctx.fillStyle = 'rgba(229, 179, 30, 0.22)';
-      ctx.strokeStyle = '#ffd700';
-      ctx.lineWidth = 2;
-      roundRect(ctx, ribbonX, ribbonY, ribbonW, ribbonH, 23);
+      // Royal Blue Ribbon Fill
+      const ribbonGrad = ctx.createLinearGradient(ribbonX, ribbonY, ribbonX + ribbonW, ribbonY + ribbonH);
+      ribbonGrad.addColorStop(0, '#0c1e54');
+      ribbonGrad.addColorStop(0.5, '#16358c');
+      ribbonGrad.addColorStop(1, '#0c1e54');
+      ctx.fillStyle = ribbonGrad;
+      ctx.strokeStyle = '#c69214';
+      ctx.lineWidth = 2.5;
+      roundRect(ctx, ribbonX, ribbonY, ribbonW, ribbonH, 24);
       ctx.fill();
       ctx.stroke();
 
+      // Crisp White Lettering on Royal Blue Ribbon
       ctx.font = 'bold 22px sans-serif';
       ctx.fillStyle = '#ffffff';
-      ctx.letterSpacing = '3px';
-      ctx.fillText('CERTIFICATE OF APPRECIATION', width / 2, ribbonY + 31);
+      ctx.letterSpacing = '3.5px';
+      ctx.fillText('CERTIFICATE OF APPRECIATION', width / 2, ribbonY + 32);
 
-      // 6. Presentation Line
-      ctx.font = 'italic 24px Georgia, serif';
-      ctx.fillStyle = '#e2e8f0';
+      // 8. PRESENTATION INTRO
+      ctx.font = 'italic 23px Georgia, serif';
+      ctx.fillStyle = '#475569';
       ctx.letterSpacing = '0px';
-      ctx.fillText('This certificate is proudly presented to', width / 2, 330);
+      ctx.fillText('This certificate is proudly presented to', width / 2, 350);
 
-      // 7. Recipient Full Name (Huge & Golden)
-      ctx.font = 'bold 62px Georgia, serif';
-      ctx.fillStyle = '#ffd700';
+      // 9. RECIPIENT FULL NAME (Hero in Deep Royal Blue with Gold Accents)
+      ctx.font = 'bold 64px Georgia, serif';
+      ctx.fillStyle = '#0c1e54';
       ctx.letterSpacing = '1.5px';
-      ctx.shadowColor = 'rgba(255, 215, 0, 0.45)';
-      ctx.shadowBlur = 14;
-      ctx.fillText(data.fullName.toUpperCase(), width / 2, 412);
-      ctx.shadowBlur = 0;
+      ctx.fillText(data.fullName.toUpperCase(), width / 2, 428);
 
-      // Ornate Gold Underline
-      ctx.strokeStyle = 'rgba(229, 179, 30, 0.75)';
-      ctx.lineWidth = 2;
+      // Ornate Gold Underline with Center Diamond
+      ctx.strokeStyle = '#c69214';
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.moveTo(width / 2 - 320, 432);
-      ctx.lineTo(width / 2 + 320, 432);
+      ctx.moveTo(width / 2 - 340, 448);
+      ctx.lineTo(width / 2 + 340, 448);
       ctx.stroke();
 
-      // Center diamond on underline
-      ctx.fillStyle = '#ffd700';
+      // Diamond ornament in center of underline
+      ctx.fillStyle = '#0c1e54';
+      ctx.strokeStyle = '#c69214';
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(width / 2, 425);
-      ctx.lineTo(width / 2 + 7, 432);
-      ctx.lineTo(width / 2, 439);
-      ctx.lineTo(width / 2 - 7, 432);
+      ctx.moveTo(width / 2, 440);
+      ctx.lineTo(width / 2 + 8, 448);
+      ctx.lineTo(width / 2, 456);
+      ctx.lineTo(width / 2 - 8, 448);
       ctx.closePath();
       ctx.fill();
+      ctx.stroke();
 
-      // 8. Purpose Line
-      ctx.font = 'italic 22px Georgia, serif';
-      ctx.fillStyle = '#cbd5e1';
-      ctx.fillText('in appreciation of their valuable contribution towards', width / 2, 478);
+      // 10. PURPOSE LINE
+      ctx.font = 'italic 21px Georgia, serif';
+      ctx.fillStyle = '#475569';
+      ctx.fillText('in recognition and sincere gratitude for their valuable contribution towards', width / 2, 494);
 
-      ctx.font = 'bold 30px sans-serif';
-      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 28px sans-serif';
+      ctx.fillStyle = '#0c1e54';
       ctx.letterSpacing = '2px';
-      ctx.fillText('GANESH FESTIVAL CHANDA', width / 2, 520);
+      ctx.fillText('GANESH FESTIVAL CHANDA & UTSAV CELEBRATIONS', width / 2, 534);
 
-      // 9. Details Grid Box (Amount, Payment Method, Certificate #, Date)
+      // 11. DETAILS GRID BOX (Crisp White Card with Royal Blue & Gold Borders)
       const boxW = 1440;
       const boxH = 135;
       const boxX = (width - boxW) / 2;
-      const boxY = 566;
+      const boxY = 574;
 
-      ctx.fillStyle = 'rgba(6, 14, 38, 0.85)';
-      ctx.strokeStyle = 'rgba(229, 179, 30, 0.5)';
-      ctx.lineWidth = 1.5;
-      roundRect(ctx, boxX, boxY, boxW, boxH, 16);
+      ctx.save();
+      ctx.shadowColor = 'rgba(12, 30, 84, 0.08)';
+      ctx.shadowBlur = 20;
+      ctx.shadowOffsetY = 6;
+      ctx.fillStyle = '#ffffff';
+      roundRect(ctx, boxX, boxY, boxW, boxH, 18);
       ctx.fill();
+      ctx.restore();
+
+      // Gold Outer Border for the Details Box
+      ctx.strokeStyle = '#c69214';
+      ctx.lineWidth = 2;
+      roundRect(ctx, boxX, boxY, boxW, boxH, 18);
       ctx.stroke();
 
       const dateObj = new Date(data.createdAt);
@@ -212,127 +227,168 @@ export default function LandscapeCertificate({ data, onImageReady }: LandscapeCe
 
       const colW = boxW / 4;
       const colY1 = boxY + 44;
-      const colY2 = boxY + 95;
+      const colY2 = boxY + 96;
 
-      // Col 1: Contribution
+      // Col 1: Contribution Amount
       ctx.textAlign = 'center';
-      ctx.font = '600 16px sans-serif';
-      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.letterSpacing = '1px';
       ctx.fillText('CONTRIBUTION', boxX + colW * 0.5, colY1);
-      ctx.font = 'bold 36px sans-serif';
-      ctx.fillStyle = '#ffd700';
+      ctx.font = 'bold 40px sans-serif';
+      ctx.fillStyle = '#0c1e54';
       ctx.fillText(`₹${data.amount.toLocaleString('en-IN')}`, boxX + colW * 0.5, colY2);
 
       // Col 2: Payment Method
-      ctx.font = '600 16px sans-serif';
-      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillStyle = '#64748b';
       ctx.fillText('PAYMENT METHOD', boxX + colW * 1.5, colY1);
       ctx.font = 'bold 28px sans-serif';
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#0c1e54';
       ctx.fillText(data.paymentMethod, boxX + colW * 1.5, colY2);
 
       // Col 3: Certificate No
-      ctx.font = '600 16px sans-serif';
-      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillStyle = '#64748b';
       ctx.fillText('CERTIFICATE NO', boxX + colW * 2.5, colY1);
       ctx.font = 'bold 26px monospace';
-      ctx.fillStyle = '#fef08a';
+      ctx.fillStyle = '#0c1e54';
       ctx.fillText(data.certificateNumber, boxX + colW * 2.5, colY2);
 
       // Col 4: Date
-      ctx.font = '600 16px sans-serif';
-      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillStyle = '#64748b';
       ctx.fillText('DATE', boxX + colW * 3.5, colY1);
       ctx.font = 'bold 22px sans-serif';
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#0c1e54';
       ctx.fillText(formattedDate, boxX + colW * 3.5, colY2);
 
-      // Column Dividers
-      ctx.strokeStyle = 'rgba(229, 179, 30, 0.25)';
+      // Gold Hairline Column Dividers
+      ctx.strokeStyle = 'rgba(198, 146, 20, 0.35)';
       ctx.lineWidth = 1;
       [1, 2, 3].forEach((i) => {
         ctx.beginPath();
-        ctx.moveTo(boxX + colW * i, boxY + 20);
-        ctx.lineTo(boxX + colW * i, boxY + boxH - 20);
+        ctx.moveTo(boxX + colW * i, boxY + 22);
+        ctx.lineTo(boxX + colW * i, boxY + boxH - 22);
         ctx.stroke();
       });
 
-      // 10. Status Seal Stamp
+      // 12. STATUS BADGE (Emerald on White Paper)
       const isCash = data.paymentMethod === 'CASH';
       const isVerified = data.paymentStatus === 'VERIFIED' || isCash;
       const isRejected = data.paymentStatus === 'REJECTED';
 
       const stampW = 460;
-      const stampH = 46;
+      const stampH = 42;
       const stampX = (width - stampW) / 2;
-      const stampY = 732;
+      const stampY = 735;
 
       if (isVerified) {
-        ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
-        ctx.strokeStyle = '#10b981';
+        ctx.fillStyle = '#ecfdf5';
+        ctx.strokeStyle = '#059669';
       } else if (isRejected) {
-        ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
-        ctx.strokeStyle = '#ef4444';
+        ctx.fillStyle = '#fef2f2';
+        ctx.strokeStyle = '#dc2626';
       } else {
-        ctx.fillStyle = 'rgba(245, 158, 11, 0.2)';
-        ctx.strokeStyle = '#f59e0b';
+        ctx.fillStyle = '#fffbeb';
+        ctx.strokeStyle = '#d97706';
       }
       ctx.lineWidth = 1.5;
-      roundRect(ctx, stampX, stampY, stampW, stampH, 12);
+      roundRect(ctx, stampX, stampY, stampW, stampH, 21);
       ctx.fill();
       ctx.stroke();
 
       ctx.textAlign = 'center';
-      ctx.font = 'bold 18px sans-serif';
+      ctx.font = 'bold 17px sans-serif';
+      ctx.letterSpacing = '1px';
       if (isCash) {
-        ctx.fillStyle = '#34d399';
-        ctx.fillText('✓ STATUS: CASH RECEIVED', width / 2, stampY + 29);
+        ctx.fillStyle = '#065f46';
+        ctx.fillText('✓ STATUS: CASH RECEIVED', width / 2, stampY + 27);
       } else if (isVerified) {
-        ctx.fillStyle = '#34d399';
-        ctx.fillText('✓ STATUS: PAYMENT VERIFIED', width / 2, stampY + 29);
+        ctx.fillStyle = '#065f46';
+        ctx.fillText('✓ STATUS: PAYMENT VERIFIED', width / 2, stampY + 27);
       } else if (isRejected) {
-        ctx.fillStyle = '#f87171';
-        ctx.fillText('✕ STATUS: PAYMENT REJECTED', width / 2, stampY + 29);
+        ctx.fillStyle = '#991b1b';
+        ctx.fillText('✕ STATUS: PAYMENT REJECTED', width / 2, stampY + 27);
       } else {
-        ctx.fillStyle = '#fbbf24';
-        ctx.fillText('⏳ STATUS: PENDING VERIFICATION', width / 2, stampY + 29);
+        ctx.fillStyle = '#92400e';
+        ctx.fillText('⏳ STATUS: PENDING VERIFICATION', width / 2, stampY + 27);
       }
 
-      // 11. Devotional Gratitude Quote
-      ctx.font = 'italic 22px Georgia, serif';
-      ctx.fillStyle = '#fde68a';
+      // 13. DEVOTIONAL BLESSING QUOTE
+      ctx.font = 'italic 21px Georgia, serif';
+      ctx.fillStyle = '#1e293b';
       ctx.fillText(
-        '"Your valuable contribution helps us celebrate Ganesh Chaturthi and bring our community together."',
+        '"May Lord Ganesha shower divine blessings of health, happiness, and prosperity upon your family."',
         width / 2,
-        826
+        820
       );
 
-      // 12. Signoff
-      ctx.font = 'bold 18px sans-serif';
-      ctx.fillStyle = '#94a3b8';
+      // 14. OFFICIAL TRUST SIGN-OFF (Center Bottom)
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillStyle = '#b8860b';
       ctx.letterSpacing = '3px';
-      ctx.fillText('WITH GRATITUDE', width / 2, 892);
+      ctx.fillText('WITH GRATITUDE & SINCERE PRANAMS', width / 2, 882);
 
       ctx.font = 'bold 28px sans-serif';
-      ctx.fillStyle = '#ffd700';
+      ctx.fillStyle = '#0c1e54';
       ctx.letterSpacing = '2px';
-      ctx.fillText(FESTIVAL_CONFIG.associationName.toUpperCase(), width / 2, 932);
+      ctx.fillText(FESTIVAL_CONFIG.associationName.toUpperCase(), width / 2, 922);
 
-      ctx.font = 'bold 26px sans-serif';
-      ctx.fillStyle = '#fde047';
+      ctx.font = 'bold 25px sans-serif';
+      ctx.fillStyle = '#b8860b';
       ctx.letterSpacing = '1px';
-      ctx.fillText('Ganpati Bappa Morya! 🙏', width / 2, 976);
+      ctx.fillText('Ganpati Bappa Morya! 🙏', width / 2, 962);
 
-      // Footnote
-      ctx.font = '14px monospace';
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      // 15. OFFICIAL GOLD EMBLEM SEAL (Right Bottom)
+      const sealX = width - 210;
+      const sealY = 890;
+      const sealRadius = 58;
+
+      // Outer Gold Scallop / Serrated Ring
+      ctx.strokeStyle = '#c69214';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(sealX, sealY, sealRadius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Inner Royal Blue Ring
+      ctx.fillStyle = '#0c1e54';
+      ctx.beginPath();
+      ctx.arc(sealX, sealY, sealRadius - 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Seal Gold Center
+      ctx.strokeStyle = '#dfb135';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(sealX, sealY, sealRadius - 12, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 24px Georgia, serif';
+      ctx.fillStyle = '#fef08a';
+      ctx.fillText('ॐ', sealX, sealY - 4);
+
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillStyle = '#fef08a';
+      ctx.letterSpacing = '1px';
+      ctx.fillText('OFFICIAL SEAL', sealX, sealY + 14);
+
+      ctx.font = 'bold 9px sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(FESTIVAL_CONFIG.festivalYear, sealX, sealY + 28);
+
+      // 16. FOOTNOTE FINE PRINT
+      ctx.font = '13px monospace';
+      ctx.fillStyle = '#64748b';
       ctx.fillText(
-        `OFFICIAL DIGITAL CERTIFICATE • ${data.certificateNumber} • ${FESTIVAL_CONFIG.associationAddress}`,
+        `OFFICIAL DIGITAL CERTIFICATE • CERT NO: ${data.certificateNumber} • ${FESTIVAL_CONFIG.associationAddress}`,
         width / 2,
-        1032
+        1025
       );
 
-      // Export generated high-resolution JPG
+      // Export high-resolution JPG
       const url = canvas.toDataURL('image/jpeg', 0.96);
       setImageUrl(url);
       setIsGenerating(false);
@@ -343,7 +399,6 @@ export default function LandscapeCertificate({ data, onImageReady }: LandscapeCe
 
     bgImage.onload = () => renderLayers(true);
     bgImage.onerror = () => renderLayers(false);
-    // In case image is already cached
     if (bgImage.complete) {
       renderLayers(true);
     }
@@ -408,19 +463,19 @@ export default function LandscapeCertificate({ data, onImageReady }: LandscapeCe
     <div className="w-full flex flex-col items-center">
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* 16:9 Landscape Certificate Container */}
-      <div className="w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl border-2 border-devotional-gold-500/60 bg-[#050b1d] transition-all relative group">
+      {/* 16:9 Landscape Certificate Container: Crisp White with Gold Frame */}
+      <div className="w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl border-2 border-devotional-gold-400 bg-white transition-all relative group">
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={imageUrl}
             alt={`Certificate of Appreciation for ${data.fullName}`}
-            className="w-full h-auto aspect-[16/9] object-contain block"
+            className="w-full h-auto aspect-[16/9] object-contain block bg-white"
           />
         ) : (
-          <div className="aspect-[16/9] w-full flex flex-col items-center justify-center gap-3 text-devotional-gold-300">
-            <div className="w-10 h-10 border-3 border-devotional-gold-400 border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm font-semibold">Generating Official Landscape Certificate...</p>
+          <div className="aspect-[16/9] w-full flex flex-col items-center justify-center gap-3 bg-white text-devotional-blue-950">
+            <div className="w-10 h-10 border-3 border-devotional-gold-500 border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm font-bold text-devotional-blue-950">Generating Official White & Gold Certificate...</p>
           </div>
         )}
       </div>
@@ -430,9 +485,9 @@ export default function LandscapeCertificate({ data, onImageReady }: LandscapeCe
         <button
           onClick={handleDownload}
           disabled={!imageUrl}
-          className="w-full py-3.5 px-4 rounded-xl btn-gold text-devotional-blue-950 font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99] disabled:opacity-50"
+          className="w-full py-3.5 px-4 rounded-xl btn-gold text-devotional-blue-950 font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99] disabled:opacity-50"
         >
-          <Download className="w-5 h-5" />
+          <Download className="w-5 h-5 text-devotional-blue-950" />
           <span>Download Certificate (JPG)</span>
         </button>
 
