@@ -13,60 +13,46 @@ export const cleanIndianMobile = (val: string): string => {
   return digits;
 };
 
-// Fast Contribution Form Schema for Volunteers and Admins
-export const createContributionSchema = z
-  .object({
-    fullName: z
-      .string()
-      .trim()
-      .min(2, "Please enter the donor's name.")
-      .max(100, "Donor name cannot exceed 100 characters."),
-    mobileNumber: z
-      .string()
-      .trim()
-      .optional()
-      .refine(
-        (val) => {
-          if (!val || val === '') return true;
-          const cleaned = cleanIndianMobile(val);
-          return cleaned.length === 10 && /^[6789]/.test(cleaned);
-        },
-        {
-          message: 'Please enter a valid 10-digit mobile number.',
-        }
-      ),
-    address: z
-      .string()
-      .trim()
-      .max(250, 'Address cannot exceed 250 characters.')
-      .optional()
-      .or(z.literal('')),
-    amount: z.coerce
-      .number({ invalid_type_error: 'Please enter a valid contribution amount.' })
-      .int('Amount must be a whole number in rupees.')
-      .positive('Please enter a valid contribution amount.')
-      .min(10, 'Minimum contribution amount is ₹10.')
-      .max(1000000, 'Maximum contribution limit is ₹10,00,000.'),
-    paymentMethod: z.enum(['CASH', 'ONLINE'], {
-      errorMap: () => ({ message: 'Please select CASH or ONLINE.' }),
-    }),
-    utr: z.string().trim().optional(),
-    paymentScreenshot: z.string().optional().nullable(),
-    notes: z.string().trim().max(300).optional(),
-  })
-  .refine(
-    (data) => {
-      // If ONLINE, UTR is required
-      if (data.paymentMethod === 'ONLINE') {
-        return !!data.utr && data.utr.trim().length >= 4;
+// Fast Contribution Form Schema: UTR is now OPTIONAL for both cash and online
+export const createContributionSchema = z.object({
+  fullName: z
+    .string()
+    .trim()
+    .min(2, "Please enter the donor's name.")
+    .max(100, "Donor name cannot exceed 100 characters."),
+  mobileNumber: z
+    .string()
+    .trim()
+    .optional()
+    .refine(
+      (val) => {
+        if (!val || val === '') return true;
+        const cleaned = cleanIndianMobile(val);
+        return cleaned.length === 10 && /^[6789]/.test(cleaned);
+      },
+      {
+        message: 'Please enter a valid 10-digit mobile number.',
       }
-      return true;
-    },
-    {
-      message: 'UTR is required for online contributions.',
-      path: ['utr'],
-    }
-  );
+    ),
+  address: z
+    .string()
+    .trim()
+    .max(250, 'Address cannot exceed 250 characters.')
+    .optional()
+    .or(z.literal('')),
+  amount: z.coerce
+    .number({ invalid_type_error: 'Please enter a valid contribution amount.' })
+    .int('Amount must be a whole number in rupees.')
+    .positive('Please enter a valid contribution amount.')
+    .min(10, 'Minimum contribution amount is ₹10.')
+    .max(1000000, 'Maximum contribution limit is ₹10,00,000.'),
+  paymentMethod: z.enum(['CASH', 'ONLINE'], {
+    errorMap: () => ({ message: 'Please select CASH or ONLINE.' }),
+  }),
+  utr: z.string().trim().optional().or(z.literal('')),
+  paymentScreenshot: z.string().optional().nullable(),
+  notes: z.string().trim().max(300).optional(),
+});
 
 // Edit Contribution Schema (Admin only)
 export const editContributionSchema = z.object({

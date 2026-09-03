@@ -36,10 +36,10 @@ export async function POST(req: NextRequest) {
 
     const data = validation.data;
     const cleanMobile = data.mobileNumber ? cleanIndianMobile(data.mobileNumber) : null;
-    const cleanUtr = data.utr ? data.utr.trim().toUpperCase() : null;
+    const cleanUtr = data.utr && data.utr.trim().length > 0 ? data.utr.trim().toUpperCase() : null;
 
-    // Check duplicate UTR for online contributions
-    if (data.paymentMethod === 'ONLINE' && cleanUtr) {
+    // Check duplicate UTR ONLY if UTR was provided
+    if (cleanUtr) {
       const existing = await prisma.contribution.findFirst({
         where: { utr: cleanUtr },
       });
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
         amount: data.amount,
         paymentMethod: data.paymentMethod,
         paymentStatus,
-        utr: data.paymentMethod === 'ONLINE' ? cleanUtr : null,
+        utr: cleanUtr,
         paymentScreenshot: data.paymentScreenshot || null,
         notes: data.notes?.trim() || null,
         createdById: creatorId,
@@ -130,29 +130,25 @@ export async function GET(req: NextRequest) {
   const paymentMethod = searchParams.get('method')?.trim().toUpperCase();
   const status = searchParams.get('status')?.trim().toUpperCase();
   const volunteerId = searchParams.get('volunteerId')?.trim();
-  const dateRange = searchParams.get('dateRange')?.trim(); // today, week, month
+  const dateRange = searchParams.get('dateRange')?.trim();
 
   try {
     const whereClause: any = {};
 
-    // Role-based scope: Volunteer only sees their own contributions
     if (session.role === 'VOLUNTEER') {
       whereClause.createdById = session.id;
     } else if (volunteerId && volunteerId !== 'ALL') {
       whereClause.createdById = volunteerId;
     }
 
-    // Payment method filter
     if (paymentMethod && ['CASH', 'ONLINE'].includes(paymentMethod)) {
       whereClause.paymentMethod = paymentMethod;
     }
 
-    // Status filter
     if (status && ['CASH_RECEIVED', 'PENDING', 'VERIFIED', 'REJECTED'].includes(status)) {
       whereClause.paymentStatus = status;
     }
 
-    // Date range filter
     if (dateRange === 'today') {
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
@@ -168,7 +164,6 @@ export async function GET(req: NextRequest) {
       whereClause.createdAt = { gte: startOfMonth };
     }
 
-    // Search query
     if (search && search.length > 0) {
       whereClause.OR = [
         { fullName: { contains: search } },

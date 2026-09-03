@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FESTIVAL_CONFIG, buildUpiUri } from '@/config/festival.config';
 import { cleanIndianMobile } from '@/lib/validation';
 import LandscapeCertificate, { CertificateData } from './LandscapeCertificate';
@@ -12,16 +12,14 @@ import {
   QrCode,
   CheckCircle,
   AlertCircle,
-  UploadCloud,
+  Camera,
+  Image as ImageIcon,
   PlusCircle,
   ChevronRight,
   Sparkles,
   User,
-  Phone,
-  MapPin,
   X,
-  Clock,
-  ShieldCheck,
+  Trash2,
 } from 'lucide-react';
 
 interface FastContributionFormProps {
@@ -41,6 +39,10 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
   const [utr, setUtr] = useState('');
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
+
+  // File input refs for Camera vs Gallery
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
 
   // Dynamic QR Helper Drawer for online donor
   const [showQrModal, setShowQrModal] = useState(false);
@@ -88,18 +90,29 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
     setErrorMessage(null);
   };
 
-  // Screenshot handler
-  const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  // Process File Select (Camera or Gallery)
+  const processSelectedFile = (file: File | undefined) => {
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setErrorMessage('Screenshot image must be less than 5MB.');
+      if (file.size > 8 * 1024 * 1024) {
+        setErrorMessage('Photo size must be less than 8MB.');
         return;
       }
       setScreenshotFile(file);
       setScreenshotPreview(URL.createObjectURL(file));
       setErrorMessage(null);
     }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    processSelectedFile(file);
+  };
+
+  const handleRemovePhoto = () => {
+    setScreenshotFile(null);
+    setScreenshotPreview(null);
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+    if (galleryInputRef.current) galleryInputRef.current.value = '';
   };
 
   // Reset form for "+ ADD ANOTHER CONTRIBUTION"
@@ -151,14 +164,6 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
       }
     }
 
-    if (paymentMethod === 'ONLINE') {
-      const cleanUtr = utr.trim();
-      if (!cleanUtr || cleanUtr.length < 4) {
-        setErrorMessage("UTR is required for online contributions.");
-        return;
-      }
-    }
-
     setIsSubmitting(true);
 
     try {
@@ -182,7 +187,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
         address: address.trim() || undefined,
         amount: effectiveAmount,
         paymentMethod,
-        utr: paymentMethod === 'ONLINE' ? utr.trim().toUpperCase() : undefined,
+        utr: paymentMethod === 'ONLINE' && utr.trim().length > 0 ? utr.trim().toUpperCase() : undefined,
         paymentScreenshot: uploadedScreenshotUrl,
       };
 
@@ -243,7 +248,6 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
   if (createdCertificate) {
     return (
       <div className="w-full max-w-2xl mx-auto space-y-6 animate-fadeIn py-2">
-        {/* Success Header */}
         <div className="bg-devotional-blue-900/60 border border-emerald-500/40 rounded-2xl p-4 text-center space-y-1.5 shadow-xl">
           <div className="flex items-center justify-center gap-2 text-emerald-400 font-extrabold text-base sm:text-lg">
             <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -279,7 +283,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
   // ==========================================
   return (
     <div className="w-full max-w-xl mx-auto">
-      {/* Last Contribution Pill Bar (if volunteer is entering continuously) */}
+      {/* Last Contribution Pill Bar */}
       {lastContributionPill && (
         <div className="mb-4 bg-emerald-950/40 border border-emerald-500/30 rounded-xl p-2.5 px-4 flex items-center justify-between text-xs text-emerald-200 shadow-sm animate-fadeIn">
           <span className="truncate">
@@ -345,7 +349,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
               />
             </div>
 
-            {/* Mobile Number (Optional on ground) */}
+            {/* Mobile Number */}
             <div>
               <label className="block text-xs font-semibold text-devotional-gold-200 mb-1">
                 Mobile Number <span className="text-gray-400 text-[11px] font-normal">(Optional for WhatsApp certificate)</span>
@@ -365,7 +369,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
               </div>
             </div>
 
-            {/* Address (Optional) */}
+            {/* Address */}
             <div>
               <label className="block text-xs font-semibold text-devotional-gold-200 mb-1">
                 Address / Colony <span className="text-gray-400 text-[11px] font-normal">(Optional)</span>
@@ -386,7 +390,6 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
               Contribution Amount <span className="text-amber-400 font-bold">*</span>
             </label>
 
-            {/* Quick Amount Buttons */}
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
               {FESTIVAL_CONFIG.quickAmounts.map((amt) => {
                 const isSelected = !isCustomAmount && selectedAmount === amt;
@@ -406,7 +409,6 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
                 );
               })}
 
-              {/* Custom Amount Chip */}
               <button
                 type="button"
                 onClick={handleCustomAmountClick}
@@ -420,7 +422,6 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
               </button>
             </div>
 
-            {/* Custom Amount Input Field */}
             {isCustomAmount && (
               <div className="pt-1 animate-fadeIn">
                 <div className="relative flex items-center">
@@ -442,14 +443,14 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
             )}
           </div>
 
-          {/* SECTION 3: PAYMENT METHOD (2 Large Mobile Buttons) */}
+          {/* SECTION 3: PAYMENT METHOD */}
           <div className="space-y-2.5 pt-1">
             <label className="block text-xs font-bold uppercase tracking-wider text-devotional-gold-400">
               Payment Method <span className="text-amber-400 font-bold">*</span>
             </label>
 
             <div className="grid grid-cols-2 gap-3">
-              {/* CASH BUTTON */}
+              {/* CASH */}
               <button
                 type="button"
                 onClick={() => {
@@ -467,7 +468,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
                 <span className="text-[10px] text-gray-400 font-medium">Cash Contribution</span>
               </button>
 
-              {/* ONLINE / UPI BUTTON */}
+              {/* ONLINE / UPI */}
               <button
                 type="button"
                 onClick={() => {
@@ -504,7 +505,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
               </span>
             </div>
           ) : (
-            /* ONLINE FIELDS: UTR + QR Helper + Screenshot */
+            /* ONLINE FIELDS: UTR (OPTIONAL) + CAMERA / GALLERY PHOTO UPLOAD */
             <div className="bg-devotional-blue-950/90 border border-devotional-gold-500/30 rounded-2xl p-4 space-y-4 animate-fadeIn">
               <div className="flex items-center justify-between">
                 <div>
@@ -516,7 +517,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
                   </span>
                 </div>
 
-                {/* Optional "Show UPI QR" toggle for on-the-spot scan */}
+                {/* Show UPI QR button */}
                 <button
                   type="button"
                   onClick={() => setShowQrModal(true)}
@@ -527,50 +528,99 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
                 </button>
               </div>
 
-              {/* UTR Input */}
+              {/* UTR Input (Now strictly OPTIONAL with no compulsory asterisk) */}
               <div>
                 <label className="block text-xs font-semibold text-devotional-gold-200 mb-1">
-                  Transaction ID / UTR <span className="text-amber-400 font-bold">*</span>
+                  Transaction ID / UTR <span className="text-gray-400 text-[11px] font-normal">(Optional)</span>
                 </label>
                 <input
                   type="text"
-                  required
-                  placeholder="e.g. 424567890123"
+                  placeholder="Enter 12-digit UTR if available"
                   value={utr}
                   onChange={(e) => setUtr(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white placeholder-gray-500 font-mono tracking-wider focus:outline-none focus:border-devotional-gold-400 text-sm uppercase"
                 />
               </div>
 
-              {/* Optional Screenshot upload */}
-              <div>
-                <label className="block text-xs font-semibold text-devotional-gold-200 mb-1">
-                  Payment Screenshot <span className="text-gray-400 text-[11px] font-normal">(Optional)</span>
+              {/* SCREENSHOT OR PHOTO UPLOAD (CAMERA OR GALLERY) */}
+              <div className="space-y-2 pt-1">
+                <label className="block text-xs font-semibold text-devotional-gold-200">
+                  Payment Proof Photo / Screenshot <span className="text-gray-400 text-[11px] font-normal">(Camera or Gallery)</span>
                 </label>
-                <label className="flex items-center justify-center p-3 border-2 border-dashed border-devotional-gold-500/30 rounded-xl cursor-pointer bg-devotional-blue-900/60 hover:bg-devotional-blue-900 transition-colors">
-                  {screenshotPreview ? (
-                    <div className="flex items-center gap-3">
+
+                {/* Hidden real file inputs */}
+                {/* 1. Camera capture input */}
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                {/* 2. Gallery picker input */}
+                <input
+                  ref={galleryInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+
+                {screenshotPreview ? (
+                  /* Attached Photo Preview with Remove button */
+                  <div className="bg-devotional-blue-900/90 border border-emerald-500/40 rounded-2xl p-3 flex items-center justify-between gap-3 animate-fadeIn">
+                    <div className="flex items-center gap-3 overflow-hidden">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={screenshotPreview}
-                        alt="Screenshot"
-                        className="w-10 h-10 object-cover rounded-lg border border-devotional-gold-400"
+                        alt="Payment Proof"
+                        className="w-14 h-14 object-cover rounded-xl border border-devotional-gold-400 shadow-sm shrink-0"
                       />
-                      <span className="text-xs text-emerald-400 font-bold">Screenshot Attached ✓</span>
+                      <div className="truncate">
+                        <p className="text-xs font-bold text-emerald-300">Photo Attached ✓</p>
+                        <p className="text-[11px] text-gray-300 truncate font-mono">
+                          {screenshotFile?.name || 'payment_proof.jpg'}
+                        </p>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="flex items-center gap-2 text-xs text-devotional-gold-300">
-                      <UploadCloud className="w-4 h-4 text-devotional-gold-400" />
-                      <span>Upload payment screenshot</span>
-                    </div>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={handleScreenshotChange}
-                    className="hidden"
-                  />
-                </label>
+
+                    <button
+                      type="button"
+                      onClick={handleRemovePhoto}
+                      className="p-2 rounded-xl bg-red-950/70 border border-red-500/40 text-red-300 hover:text-red-100 hover:bg-red-900 text-xs flex items-center gap-1 shrink-0 transition-colors"
+                      title="Remove Photo"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span className="hidden sm:inline">Remove</span>
+                    </button>
+                  </div>
+                ) : (
+                  /* Two Mobile-Friendly Buttons: Camera vs Gallery */
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {/* CAMERA BUTTON */}
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="p-3.5 rounded-xl border border-devotional-gold-500/40 bg-devotional-blue-900/80 hover:bg-devotional-blue-800 text-devotional-gold-200 hover:text-white flex flex-col items-center justify-center gap-1.5 transition-all active:scale-[0.98] shadow-sm"
+                    >
+                      <Camera className="w-5 h-5 text-devotional-gold-400" />
+                      <span className="text-xs font-bold">Use Camera</span>
+                      <span className="text-[10px] text-gray-400">Snap donor screen</span>
+                    </button>
+
+                    {/* GALLERY BUTTON */}
+                    <button
+                      type="button"
+                      onClick={() => galleryInputRef.current?.click()}
+                      className="p-3.5 rounded-xl border border-devotional-gold-500/40 bg-devotional-blue-900/80 hover:bg-devotional-blue-800 text-devotional-gold-200 hover:text-white flex flex-col items-center justify-center gap-1.5 transition-all active:scale-[0.98] shadow-sm"
+                    >
+                      <ImageIcon className="w-5 h-5 text-devotional-gold-400" />
+                      <span className="text-xs font-bold">From Gallery</span>
+                      <span className="text-[10px] text-gray-400">Choose screenshot</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -604,7 +654,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
         </form>
       </div>
 
-      {/* MODAL: SHOW UPI QR (If donor wants to scan right now) */}
+      {/* MODAL: SHOW UPI QR */}
       {showQrModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
           <div className="w-full max-w-sm rounded-3xl border-2 border-devotional-gold-500/50 bg-devotional-blue-950 p-6 shadow-2xl space-y-4 text-center">
