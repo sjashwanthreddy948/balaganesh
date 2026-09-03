@@ -82,10 +82,22 @@ export async function POST(req: NextRequest) {
     });
 
     return response;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Login error:', error);
+    let errorMessage = 'Something went wrong. Please try again.';
+
+    if (!process.env.DATABASE_URL) {
+      errorMessage = 'Database configuration missing: DATABASE_URL is not set in Vercel Environment Variables.';
+    } else if (error?.message?.includes("Can't reach database server") || error?.code === 'P1001') {
+      errorMessage = 'Cannot reach database server. Please check your Supabase connection string in Vercel.';
+    } else if (error?.message?.includes('authentication failed') || error?.code === 'P1000') {
+      errorMessage = 'Database authentication failed. Please verify your database password in Vercel.';
+    } else if (error?.message) {
+      errorMessage = `Database error: ${error.message}`;
+    }
+
     return NextResponse.json(
-      { success: false, error: 'Something went wrong. Please try again.' },
+      { success: false, error: errorMessage },
       { status: 500 }
     );
   }
