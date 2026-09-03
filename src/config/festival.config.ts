@@ -16,10 +16,13 @@ export const FESTIVAL_CONFIG = {
   maxAmount: 1000000,
 
   // Images
-  heroImage: '/images/ganesh-festival.jpg',
+  heroImage: '/images/ganesh-landscape-pandal.jpg',
+  pandalLandscapeImage: '/images/ganesh-landscape-pandal.jpg',
+  portraitPandalImage: '/images/ganesh-festival.jpg',
   bannerImage: '/images/ganesh-banner.jpg',
 
   // Devotional mantras & strings
+  sanskritMantra: 'ॐ गं गणपतये नमः • वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ',
   mantraHeader: '🙏 Ganpati Bappa Morya 🙏',
   heroSubtitle: 'Ganesh Festival Chanda',
   heroDescription:
