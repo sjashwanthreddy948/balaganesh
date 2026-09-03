@@ -37,12 +37,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create session token with role
+    // Create session token with role & permissions
     const token = await createAuthToken({
       id: user.id,
       username: user.username,
       name: user.name,
       role: user.role as 'ADMIN' | 'VOLUNTEER',
+      canAddExpenses: user.canAddExpenses,
     });
 
     const response = NextResponse.json({
@@ -53,6 +54,7 @@ export async function POST(req: NextRequest) {
         username: user.username,
         name: user.name,
         role: user.role,
+        canAddExpenses: user.canAddExpenses,
       },
     });
 

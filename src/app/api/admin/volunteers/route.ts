@@ -17,6 +17,7 @@ export async function GET() {
         name: true,
         username: true,
         mobile: true,
+        canAddExpenses: true,
         isActive: true,
         createdAt: true,
         _count: {
@@ -49,6 +50,7 @@ export async function GET() {
           name: v.name,
           username: v.username,
           mobile: v.mobile,
+          canAddExpenses: v.canAddExpenses,
           isActive: v.isActive,
           createdAt: v.createdAt,
           contributionCount: v._count.createdContributions,
@@ -81,7 +83,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: firstError }, { status: 400 });
     }
 
-    const { name, username, password, mobile } = validation.data;
+    const { name, username, password, mobile, canAddExpenses } = validation.data;
 
     const existing = await prisma.user.findUnique({
       where: { username },
@@ -102,6 +104,7 @@ export async function POST(req: NextRequest) {
         username,
         password: hashedPassword,
         mobile: mobile || null,
+        canAddExpenses: !!canAddExpenses,
         role: 'VOLUNTEER',
         isActive: true,
       },
@@ -110,6 +113,7 @@ export async function POST(req: NextRequest) {
         name: true,
         username: true,
         role: true,
+        canAddExpenses: true,
         createdAt: true,
       },
     });
@@ -122,5 +126,38 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error creating volunteer:', error);
     return NextResponse.json({ error: 'Failed to create volunteer' }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  const session = await getUserSession();
+  if (!session || session.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Admin access required.' }, { status: 403 });
+  }
+
+  try {
+    const { id, canAddExpenses, isActive } = await req.json();
+    if (!id) {
+      return NextResponse.json({ error: 'Volunteer ID is required' }, { status: 400 });
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: {
+        ...(canAddExpenses !== undefined ? { canAddExpenses } : {}),
+        ...(isActive !== undefined ? { isActive } : {}),
+      },
+      select: {
+        id: true,
+        name: true,
+        canAddExpenses: true,
+        isActive: true,
+      },
+    });
+
+    return NextResponse.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Error updating volunteer:', error);
+    return NextResponse.json({ error: 'Failed to update volunteer' }, { status: 500 });
   }
 }

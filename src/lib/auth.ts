@@ -13,6 +13,7 @@ export interface UserSession {
   username: string;
   name: string;
   role: 'ADMIN' | 'VOLUNTEER';
+  canAddExpenses?: boolean;
 }
 
 export async function hashPassword(plainText: string): Promise<string> {
@@ -30,6 +31,7 @@ export async function createAuthToken(user: UserSession): Promise<string> {
     username: user.username,
     name: user.name,
     role: user.role,
+    canAddExpenses: user.canAddExpenses || false,
   })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -55,6 +57,7 @@ export async function verifyAuthToken(token: string): Promise<UserSession | null
         username: payload.username,
         name: payload.name,
         role: payload.role as 'ADMIN' | 'VOLUNTEER',
+        canAddExpenses: !!payload.canAddExpenses,
       };
     }
     return null;

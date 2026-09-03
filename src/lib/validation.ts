@@ -13,7 +13,23 @@ export const cleanIndianMobile = (val: string): string => {
   return digits;
 };
 
-// Fast Contribution Form Schema: UTR is now OPTIONAL for both cash and online
+// Standard preset expense categories
+export const EXPENSE_CATEGORIES = [
+  'Decorations',
+  'Flowers',
+  'Ganesh Idol',
+  'Electrical',
+  'Sound System',
+  'Lighting',
+  'Pooja Materials',
+  'Food / Prasadam',
+  'Printing',
+  'Transport',
+  'Cleaning',
+  'Miscellaneous',
+] as const;
+
+// Fast Contribution Form Schema
 export const createContributionSchema = z.object({
   fullName: z
     .string()
@@ -83,6 +99,45 @@ export const editContributionSchema = z.object({
   notes: z.string().trim().max(300).optional(),
 });
 
+// Expense Creation Schema
+export const createExpenseSchema = z.object({
+  shopName: z
+    .string()
+    .trim()
+    .min(2, 'Shop or Vendor Name must be at least 2 characters.')
+    .max(150, 'Shop name cannot exceed 150 characters.'),
+  category: z
+    .string()
+    .trim()
+    .min(2, 'Expense category is required.')
+    .max(80),
+  description: z.string().trim().max(300).optional().or(z.literal('')),
+  amount: z.coerce
+    .number({ invalid_type_error: 'Please enter a valid amount.' })
+    .int('Amount must be a whole number in rupees.')
+    .positive('Amount must be greater than zero.'),
+  paymentMethod: z.enum(['CASH', 'ONLINE'], {
+    errorMap: () => ({ message: 'Please select CASH or ONLINE.' }),
+  }),
+  date: z.string().refine((val) => !isNaN(Date.parse(val)), {
+    message: 'Please provide a valid date.',
+  }),
+  notes: z.string().trim().max(400).optional().or(z.literal('')),
+  billImage: z.string().optional().nullable(),
+});
+
+// Expense Editing Schema
+export const editExpenseSchema = z.object({
+  shopName: z.string().trim().min(2).max(150),
+  category: z.string().trim().min(2).max(80),
+  description: z.string().trim().max(300).optional().or(z.literal('')),
+  amount: z.coerce.number().int().positive(),
+  paymentMethod: z.enum(['CASH', 'ONLINE']),
+  date: z.string().refine((val) => !isNaN(Date.parse(val))),
+  notes: z.string().trim().max(400).optional().or(z.literal('')),
+  billImage: z.string().optional().nullable(),
+});
+
 // Volunteer Creation Schema (Admin only)
 export const createVolunteerSchema = z.object({
   name: z.string().trim().min(2, 'Volunteer name is required (at least 2 characters).'),
@@ -93,6 +148,7 @@ export const createVolunteerSchema = z.object({
     .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores.'),
   password: z.string().min(6, 'Password must be at least 6 characters.'),
   mobile: z.string().trim().optional(),
+  canAddExpenses: z.boolean().optional(),
 });
 
 // User Login Schema
@@ -103,5 +159,7 @@ export const loginSchema = z.object({
 
 export type CreateContributionInput = z.infer<typeof createContributionSchema>;
 export type EditContributionInput = z.infer<typeof editContributionSchema>;
+export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
+export type EditExpenseInput = z.infer<typeof editExpenseSchema>;
 export type CreateVolunteerInput = z.infer<typeof createVolunteerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

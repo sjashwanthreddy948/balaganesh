@@ -15,9 +15,11 @@ model User {
   email                 String?
   password              String         // bcrypt hash
   role                  String         @default("VOLUNTEER") // ADMIN, VOLUNTEER
+  canAddExpenses        Boolean        @default(false)
   isActive              Boolean        @default(true)
   createdContributions  Contribution[] @relation("CreatedBy")
   verifiedContributions Contribution[] @relation("VerifiedBy")
+  createdExpenses       Expense[]      @relation("ExpenseCreatedBy")
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
 }
@@ -31,7 +33,7 @@ model Contribution {
   amount            Int
   paymentMethod     String    // CASH, ONLINE
   paymentStatus     String    // CASH_RECEIVED, PENDING, VERIFIED, REJECTED
-  utr               String?   // Transaction ID (required for online, unique if provided)
+  utr               String?   // Transaction ID (optional, unique if provided)
   paymentScreenshot String?
   notes             String?
 
@@ -51,4 +53,29 @@ model Contribution {
   @@index([paymentStatus])
   @@index([createdById])
   @@index([createdAt])
+}
+
+model Expense {
+  id            String   @id @default(cuid())
+  expenseNumber String   @unique // e.g. EXP-2026-000001
+  shopName      String
+  category      String   // Decorations, Flowers, Ganesh Idol, Electrical, Sound System, Lighting, Pooja Materials, Food / Prasadam, Printing, Transport, Cleaning, Miscellaneous
+  description   String?
+  amount        Int      // Amount in whole rupees
+  paymentMethod String   // CASH, ONLINE
+  date          DateTime // Date of the expense
+  notes         String?
+  billImage     String?  // URL of optional receipt / bill image
+
+  createdById   String
+  createdBy     User     @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([category])
+  @@index([paymentMethod])
+  @@index([date])
+  @@index([createdById])
+  @@index([expenseNumber])
 }

@@ -3,10 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { FESTIVAL_CONFIG } from '@/config/festival.config';
-import { User, LogIn, LayoutDashboard } from 'lucide-react';
+import { LogIn, LayoutDashboard, Receipt, FileText } from 'lucide-react';
 
 export default function Header() {
-  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; role: string; canAddExpenses?: boolean } | null>(null);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -20,10 +20,10 @@ export default function Header() {
   }, []);
 
   return (
-    <header className="w-full border-b border-devotional-gold-500/20 bg-devotional-blue-950/85 backdrop-blur-md sticky top-0 z-40">
-      <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+    <header className="w-full border-b border-devotional-gold-500/20 bg-[#050b1d]/85 backdrop-blur-md sticky top-0 z-40">
+      <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-full border border-devotional-gold-500/50 bg-devotional-blue-900 overflow-hidden flex items-center justify-center shadow-gold-sm">
+          <div className="w-9 h-9 rounded-full border border-devotional-gold-500/50 bg-[#0c1a45] overflow-hidden flex items-center justify-center shadow-gold-sm">
             <span className="text-devotional-gold-400 text-lg font-bold">🕉️</span>
           </div>
           <div>
@@ -31,23 +31,46 @@ export default function Header() {
               {FESTIVAL_CONFIG.associationName}
             </h1>
             <p className="text-[10px] text-devotional-gold-100/70 font-medium tracking-wide">
-              {FESTIVAL_CONFIG.festivalYear} Ganesh Utsav Chanda
+              {FESTIVAL_CONFIG.festivalYear} Ganesh Utsav Management
             </p>
           </div>
         </Link>
 
         <div className="flex items-center gap-2">
           {user ? (
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/40 text-devotional-gold-300 hover:text-white text-xs font-bold transition-all shadow-sm"
-            >
-              <LayoutDashboard className="w-3.5 h-3.5" />
-              <span>Dashboard</span>
-              <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-devotional-gold-500 text-devotional-blue-950 ml-1 font-black">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/40 text-devotional-gold-300 hover:text-white text-xs font-bold transition-all shadow-sm"
+              >
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Dashboard</span>
+              </Link>
+
+              {(user.role === 'ADMIN' || user.canAddExpenses) && (
+                <Link
+                  href="/expenses"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/40 text-devotional-gold-300 hover:text-white text-xs font-bold transition-all shadow-sm"
+                >
+                  <Receipt className="w-3.5 h-3.5 text-rose-400" />
+                  <span className="hidden sm:inline">Expenses</span>
+                </Link>
+              )}
+
+              {user.role === 'ADMIN' && (
+                <Link
+                  href="/finance"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/40 text-devotional-gold-300 hover:text-white text-xs font-bold transition-all shadow-sm"
+                >
+                  <FileText className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="hidden sm:inline">Finance</span>
+                </Link>
+              )}
+
+              <span className="text-[9px] px-2 py-1 rounded-full bg-devotional-gold-500 text-devotional-blue-950 font-black ml-1">
                 {user.role}
               </span>
-            </Link>
+            </div>
           ) : (
             <Link
               href="/login"

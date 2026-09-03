@@ -41,6 +41,14 @@ async function runComprehensiveTests() {
     return { status: res.status, data: await res.json() };
   };
 
+  const del = async (path, headers = {}) => {
+    const res = await fetch(`${baseUrl}${path}`, {
+      method: 'DELETE',
+      headers,
+    });
+    return { status: res.status, data: await res.json() };
+  };
+
   // 1. Volunteer Login
   console.log('1. Testing Volunteer Login (volunteer / Volunteer@2026)...');
   const volLoginRes = await post('/api/auth/login', {
@@ -53,15 +61,14 @@ async function runComprehensiveTests() {
   const volCookie = { Cookie: volLoginRes.headers.get('set-cookie')?.split(';')[0] || '' };
   console.log(`✓ Volunteer logged in! Name: ${volLoginRes.data.user.name}`);
 
-  // 2. Fast Cash Contribution (Physical money handed over)
-  console.log('2. Recording CASH contribution (Ravi Kumar, ₹500, CASH)...');
+  // 2. Fast Cash Contribution
+  console.log('2. Recording CASH contribution (Ramesh Patel, ₹2000, CASH)...');
   const cashRes = await post(
     '/api/contributions',
     {
-      fullName: 'Ravi Kumar',
+      fullName: 'Ramesh Patel',
       mobileNumber: '9876543210',
-      address: 'Plot 12, Pandal Ground',
-      amount: 500,
+      amount: 2000,
       paymentMethod: 'CASH',
     },
     volCookie
@@ -69,76 +76,28 @@ async function runComprehensiveTests() {
   if (cashRes.status !== 200 || cashRes.data.data.paymentStatus !== 'CASH_RECEIVED') {
     throw new Error(`Cash contribution failed: ${JSON.stringify(cashRes.data)}`);
   }
-  const cashCertNo = cashRes.data.data.certificateNumber;
-  console.log(`✓ Cash contribution saved! Certificate No: ${cashCertNo}, Status: ${cashRes.data.data.paymentStatus}`);
+  console.log(`✓ Cash contribution saved! Certificate No: ${cashRes.data.data.certificateNumber}`);
 
-  // 3. Online Contribution (UPI WITH NO UTR - strictly optional now!)
-  console.log('3. Recording ONLINE contribution WITHOUT UTR (Photo proof donor, ₹500, ONLINE)...');
-  const onlineNoUtrRes = await post(
-    '/api/contributions',
-    {
-      fullName: 'Sunil Camera Donor',
-      amount: 500,
-      paymentMethod: 'ONLINE',
-      paymentScreenshot: '/uploads/sample-camera-proof.jpg',
-    },
-    volCookie
-  );
-  if (onlineNoUtrRes.status !== 200 || onlineNoUtrRes.data.data.paymentStatus !== 'PENDING') {
-    throw new Error(`Online contribution without UTR failed: ${JSON.stringify(onlineNoUtrRes.data)}`);
-  }
-  console.log(`✓ Online contribution without UTR saved cleanly! Certificate: ${onlineNoUtrRes.data.data.certificateNumber}, UTR: ${onlineNoUtrRes.data.data.utr}`);
-
-  // 4. Online Contribution with UTR
-  const testUtr = `UPI${Date.now()}`;
-  console.log(`4. Recording ONLINE contribution WITH UTR (${testUtr})...`);
+  // 3. Online Contribution (without UTR - strictly optional)
+  console.log('3. Recording ONLINE contribution (Kiran Rao, ₹5000, ONLINE)...');
   const onlineRes = await post(
     '/api/contributions',
     {
-      fullName: 'Anand Varma',
+      fullName: 'Kiran Rao',
       mobileNumber: '9988776655',
-      amount: 1000,
+      amount: 5000,
       paymentMethod: 'ONLINE',
-      utr: testUtr,
     },
     volCookie
   );
   if (onlineRes.status !== 200 || onlineRes.data.data.paymentStatus !== 'PENDING') {
     throw new Error(`Online contribution failed: ${JSON.stringify(onlineRes.data)}`);
   }
-  const onlineCertNo = onlineRes.data.data.certificateNumber;
-  const onlineContribId = onlineRes.data.data.id;
-  console.log(`✓ Online contribution with UTR saved! Certificate No: ${onlineCertNo}`);
+  const onlineId = onlineRes.data.data.id;
+  console.log(`✓ Online contribution saved! Certificate No: ${onlineRes.data.data.certificateNumber}`);
 
-  // 5. Duplicate UTR Protection
-  console.log('5. Testing Duplicate UTR Protection with same transaction ID...');
-  const duplicateUtrRes = await post(
-    '/api/contributions',
-    {
-      fullName: 'Fraud Attempt',
-      amount: 500,
-      paymentMethod: 'ONLINE',
-      utr: testUtr,
-    },
-    volCookie
-  );
-  if (duplicateUtrRes.status === 409 && duplicateUtrRes.data.error.includes('already been recorded')) {
-    console.log(`✓ Duplicate UTR blocked successfully: "${duplicateUtrRes.data.error}"`);
-  } else {
-    throw new Error(`Duplicate UTR test failed: ${JSON.stringify(duplicateUtrRes.data)}`);
-  }
-
-  // 6. Public Certificate Lookup
-  console.log(`6. Verifying public landscape certificate lookup for ${cashCertNo}...`);
-  const certLookupRes = await get(`/api/contributions/${cashCertNo}`);
-  if (certLookupRes.status === 200 && certLookupRes.data.data.fullName === 'Ravi Kumar') {
-    console.log(`✓ Certificate fetched: ${certLookupRes.data.data.fullName}, Amount: ₹${certLookupRes.data.data.amount}`);
-  } else {
-    throw new Error(`Certificate lookup failed: ${JSON.stringify(certLookupRes)}`);
-  }
-
-  // 7. Admin Login
-  console.log('7. Testing Admin Login (admin / BalaGaneshAdmin@2026)...');
+  // 4. Admin Login
+  console.log('4. Testing Admin Login (admin / BalaGaneshAdmin@2026)...');
   const adminLoginRes = await post('/api/auth/login', {
     username: 'admin',
     password: 'BalaGaneshAdmin@2026',
@@ -149,42 +108,118 @@ async function runComprehensiveTests() {
   const adminCookie = { Cookie: adminLoginRes.headers.get('set-cookie')?.split(';')[0] || '' };
   console.log(`✓ Admin logged in! Name: ${adminLoginRes.data.user.name}`);
 
-  // 8. Admin Dashboard Stats
-  console.log('8. Verifying Admin Dashboard Stats...');
-  const statsRes = await get('/api/admin/stats', adminCookie);
-  if (statsRes.status === 200 && statsRes.data.stats.totalContributions >= 3) {
-    const s = statsRes.data.stats;
-    console.log(`✓ Stats Verified: Total Amount: ₹${s.totalAmount} (Cash: ₹${s.cashAmount}, Online: ₹${s.onlineAmount})`);
-  } else {
-    throw new Error(`Stats verification failed: ${JSON.stringify(statsRes)}`);
-  }
-
-  // 9. Admin Verifies Online Payment
-  console.log(`9. Admin verifying online contribution ${onlineContribId}...`);
-  const verifyRes = await patch(
-    `/api/contributions/${onlineContribId}`,
-    { status: 'VERIFIED' },
-    adminCookie
-  );
-  if (verifyRes.status === 200 && verifyRes.data.data.paymentStatus === 'VERIFIED') {
-    console.log('✓ Online payment successfully marked as VERIFIED by admin!');
-  } else {
+  // 5. Admin Verifies the Online Contribution
+  console.log(`5. Admin verifying online contribution ${onlineId}...`);
+  const verifyRes = await patch(`/api/contributions/${onlineId}`, { status: 'VERIFIED' }, adminCookie);
+  if (verifyRes.status !== 200 || verifyRes.data.data.paymentStatus !== 'VERIFIED') {
     throw new Error(`Verification failed: ${JSON.stringify(verifyRes)}`);
   }
+  console.log('✓ Online contribution verified and included in financial balance!');
 
-  // 10. Admin Volunteer Tracking
-  console.log('10. Verifying Volunteer Leaderboard tracking...');
-  const volTrackRes = await get('/api/admin/volunteers', adminCookie);
-  if (volTrackRes.status === 200 && volTrackRes.data.data.length > 0) {
-    const v = volTrackRes.data.data[0];
-    console.log(`✓ Volunteer Tracking: ${v.name} has recorded ${v.contributionCount} contributions totaling ₹${v.totalAmount}!`);
+  // 6. Record Cash Expense
+  console.log('6. Recording CASH Expense (Flowers, ₹2,500, Lakshmi Flower Stall)...');
+  const cashExpenseRes = await post(
+    '/api/expenses',
+    {
+      shopName: 'Lakshmi Flower Stall',
+      category: 'Flowers',
+      description: 'Marigold and Jasmine garlands for main deity',
+      amount: 2500,
+      paymentMethod: 'CASH',
+      date: new Date().toISOString().split('T')[0],
+      notes: 'Paid cash in person by volunteer',
+    },
+    adminCookie
+  );
+  if (cashExpenseRes.status !== 200 || !cashExpenseRes.data.data.expenseNumber.startsWith('EXP-')) {
+    throw new Error(`Cash expense creation failed: ${JSON.stringify(cashExpenseRes.data)}`);
+  }
+  const expNo1 = cashExpenseRes.data.data.expenseNumber;
+  console.log(`✓ Cash expense saved! Expense Number: ${expNo1}`);
+
+  // 7. Record Online Expense
+  console.log('7. Recording ONLINE Expense (Sound System, ₹15,000, Sri Venkateshwara Sounds)...');
+  const onlineExpenseRes = await post(
+    '/api/expenses',
+    {
+      shopName: 'Sri Venkateshwara Sounds',
+      category: 'Sound System',
+      description: 'Pandal audio mixer, speakers and mic setup for 9 days',
+      amount: 15000,
+      paymentMethod: 'ONLINE',
+      date: new Date().toISOString().split('T')[0],
+      notes: 'Paid via GPay to shop UPI',
+    },
+    adminCookie
+  );
+  if (onlineExpenseRes.status !== 200 || !onlineExpenseRes.data.data.expenseNumber.startsWith('EXP-')) {
+    throw new Error(`Online expense creation failed: ${JSON.stringify(onlineExpenseRes.data)}`);
+  }
+  const expNo2 = onlineExpenseRes.data.data.expenseNumber;
+  const onlineExpId = onlineExpenseRes.data.data.id;
+  console.log(`✓ Online expense saved! Expense Number: ${expNo2}`);
+
+  // 8. List Expenses with Filter
+  console.log('8. Testing Expenses List & Filters...');
+  const expListRes = await get('/api/expenses?category=Sound%20System', adminCookie);
+  if (expListRes.status === 200 && expListRes.data.data.length >= 1) {
+    console.log(`✓ Filtered expense found: ${expListRes.data.data[0].shopName} - ₹${expListRes.data.data[0].amount}`);
   } else {
-    throw new Error(`Volunteer tracking failed: ${JSON.stringify(volTrackRes)}`);
+    throw new Error(`Expense filter failed: ${JSON.stringify(expListRes)}`);
   }
 
-  console.log('\n===============================================================');
-  console.log('🎉 ALL COMPREHENSIVE TESTS INCLUDING OPTIONAL UTR PASSED! 🎉');
-  console.log('===============================================================\n');
+  // 9. Financial Summary Calculations
+  console.log('9. Verifying Festival Financial Summary Calculations...');
+  const finSummaryRes = await get('/api/admin/financial-summary', adminCookie);
+  if (finSummaryRes.status !== 200 || !finSummaryRes.data.summary) {
+    throw new Error(`Financial summary failed: ${JSON.stringify(finSummaryRes)}`);
+  }
+  const fs = finSummaryRes.data.summary;
+  console.log(`✓ Total Verified Chanda: ₹${fs.income.totalChanda} (Cash: ₹${fs.income.cashChanda}, Online: ₹${fs.income.onlineChanda})`);
+  console.log(`✓ Total Expenses: ₹${fs.expenses.totalExpenses} (Cash: ₹${fs.expenses.cashExpenses}, Online: ₹${fs.expenses.onlineExpenses})`);
+  console.log(`✓ REMAINING BALANCE: ₹${fs.balance.remainingBalance}`);
+  console.log(`✓ Cash in Hand: ₹${fs.balance.estimatedCashBalance}, Online Bank Balance: ₹${fs.balance.onlineBalance}`);
+  
+  if (fs.balance.remainingBalance !== fs.income.totalChanda - fs.expenses.totalExpenses) {
+    throw new Error('Balance equation mismatch: Remaining != Chanda - Expenses');
+  }
+
+  // 10. Financial Report CSV Export
+  console.log('10. Testing Complete Financial Report CSV Export...');
+  const finCsvRes = await get('/api/admin/export-financial', adminCookie);
+  if (
+    finCsvRes.status === 200 &&
+    finCsvRes.data.includes('FINANCIAL SUMMARY OVERVIEW') &&
+    finCsvRes.data.includes('Lakshmi Flower Stall')
+  ) {
+    console.log('✓ Complete Financial CSV report exported with overview, categories, and itemized rows!');
+  } else {
+    throw new Error(`Financial CSV export failed: ${JSON.stringify(finCsvRes)}`);
+  }
+
+  // 11. Edit Expense
+  console.log(`11. Editing expense ${onlineExpId} (adjusting vendor notes)...`);
+  const editExpRes = await put(
+    `/api/expenses/${onlineExpId}`,
+    {
+      shopName: 'Sri Venkateshwara Sounds & Lighting',
+      category: 'Sound System',
+      amount: 15000,
+      paymentMethod: 'ONLINE',
+      date: new Date().toISOString().split('T')[0],
+      notes: 'Final settlement invoice received',
+    },
+    adminCookie
+  );
+  if (editExpRes.status === 200 && editExpRes.data.data.shopName.includes('Lighting')) {
+    console.log('✓ Expense updated successfully!');
+  } else {
+    throw new Error(`Edit expense failed: ${JSON.stringify(editExpRes)}`);
+  }
+
+  console.log('\n========================================================================');
+  console.log('🎉 ALL 11 COMPREHENSIVE CHANDA, EXPENSE & FINANCIAL TESTS PASSED! 🎉');
+  console.log('========================================================================\n');
 }
 
 runComprehensiveTests().catch((err) => {

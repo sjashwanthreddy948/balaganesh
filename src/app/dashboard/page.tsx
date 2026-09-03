@@ -27,6 +27,11 @@ import {
   UserPlus,
   FileSpreadsheet,
   Calendar,
+  Receipt,
+  FileText,
+  Scale,
+  TrendingUp,
+  TrendingDown,
 } from 'lucide-react';
 
 interface UserProfile {
@@ -34,6 +39,7 @@ interface UserProfile {
   username: string;
   name: string;
   role: 'ADMIN' | 'VOLUNTEER';
+  canAddExpenses?: boolean;
 }
 
 interface ContributionItem {
@@ -56,6 +62,7 @@ export default function DashboardPage() {
 
   const [user, setUser] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState<any>(null);
+  const [financialSummary, setFinancialSummary] = useState<any>(null);
   const [contributions, setContributions] = useState<ContributionItem[]>([]);
   const [volunteersList, setVolunteersList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +93,7 @@ export default function DashboardPage() {
   const [newVolUsername, setNewVolUsername] = useState('');
   const [newVolPassword, setNewVolPassword] = useState('');
   const [newVolMobile, setNewVolMobile] = useState('');
+  const [newVolCanAddExpenses, setNewVolCanAddExpenses] = useState(false);
   const [volunteerError, setVolunteerError] = useState<string | null>(null);
 
   // Load Session & Initial Data
@@ -108,7 +116,16 @@ export default function DashboardPage() {
         setStats(statsJson.stats);
       }
 
-      // 3. Fetch contributions with filters
+      // 3. If Admin, fetch financial summary
+      if (meJson.user.role === 'ADMIN') {
+        const finRes = await fetch('/api/admin/financial-summary');
+        if (finRes.ok) {
+          const finJson = await finRes.json();
+          setFinancialSummary(finJson.summary);
+        }
+      }
+
+      // 4. Fetch contributions with filters
       const params = new URLSearchParams();
       if (searchQuery) params.append('search', searchQuery);
       if (methodFilter !== 'ALL') params.append('method', methodFilter);
@@ -121,7 +138,7 @@ export default function DashboardPage() {
         setContributions(listJson.data);
       }
 
-      // 4. If Admin, fetch volunteers
+      // 5. If Admin, fetch volunteers
       if (meJson.user.role === 'ADMIN') {
         const volRes = await fetch('/api/admin/volunteers');
         if (volRes.ok) {
@@ -157,6 +174,10 @@ export default function DashboardPage() {
         if (statsRes.ok) {
           const statsJson = await statsRes.json();
           setStats(statsJson.stats);
+        }
+        const finRes = await fetch('/api/admin/financial-summary');
+        if (finRes.ok) {
+          setFinancialSummary((await finRes.json()).summary);
         }
       }
     } catch (err) {
@@ -201,6 +222,7 @@ export default function DashboardPage() {
           username: newVolUsername,
           password: newVolPassword,
           mobile: newVolMobile || undefined,
+          canAddExpenses: newVolCanAddExpenses,
         }),
       });
       const json = await res.json();
@@ -210,7 +232,7 @@ export default function DashboardPage() {
         setNewVolUsername('');
         setNewVolPassword('');
         setNewVolMobile('');
-        // Refresh volunteer list
+        setNewVolCanAddExpenses(false);
         const volRes = await fetch('/api/admin/volunteers');
         if (volRes.ok) setVolunteersList((await volRes.json()).data);
       } else {
@@ -229,7 +251,7 @@ export default function DashboardPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#07112c]">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-3 border-devotional-gold-400 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -238,7 +260,7 @@ export default function DashboardPage() {
   const isAdmin = user.role === 'ADMIN';
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-[#07112c]">
+    <div className="min-h-screen flex flex-col justify-between">
       <Header />
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-6 space-y-6">
@@ -253,7 +275,7 @@ export default function DashboardPage() {
             </h1>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => loadDashboardData()}
               className="p-2.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white transition-colors"
@@ -262,14 +284,36 @@ export default function DashboardPage() {
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
 
+            {/* Quick Link to Expenses */}
+            {(isAdmin || user.canAddExpenses) && (
+              <button
+                onClick={() => router.push('/expenses')}
+                className="px-3 py-2 rounded-xl bg-devotional-blue-900 hover:bg-devotional-blue-800 border border-devotional-gold-500/30 text-devotional-gold-200 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+              >
+                <Receipt className="w-4 h-4 text-rose-400" />
+                <span>Expenses</span>
+              </button>
+            )}
+
+            {/* Quick Link to Financial Summary */}
+            {isAdmin && (
+              <button
+                onClick={() => router.push('/finance')}
+                className="px-3 py-2 rounded-xl bg-devotional-blue-900 hover:bg-devotional-blue-800 border border-devotional-gold-500/30 text-devotional-gold-200 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+              >
+                <FileText className="w-4 h-4 text-emerald-400" />
+                <span className="hidden sm:inline">Financial Summary</span>
+              </button>
+            )}
+
             {isAdmin && (
               <a
-                href="/api/admin/export"
+                href="/api/admin/export-financial"
                 download
                 className="px-3 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-200 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
               >
                 <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-                <span className="hidden sm:inline">Export CSV</span>
+                <span className="hidden md:inline">Report CSV</span>
               </a>
             )}
 
@@ -284,20 +328,93 @@ export default function DashboardPage() {
         </div>
 
         {/* PRIMARY ACTION: HUGE TOUCH-FRIENDLY "+ ADD CONTRIBUTION" CTA */}
-        <div className="w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
             onClick={() => setShowAddForm(true)}
-            className="w-full py-4 px-6 rounded-2xl btn-gold text-devotional-blue-950 font-black text-lg sm:text-xl tracking-wide shadow-gold-md flex items-center justify-center gap-3 transition-transform active:scale-[0.99]"
+            className="py-4 px-6 rounded-2xl btn-gold text-devotional-blue-950 font-black text-lg tracking-wide shadow-gold-md flex items-center justify-center gap-3 transition-transform active:scale-[0.99]"
           >
             <PlusCircle className="w-6 h-6 text-devotional-blue-950" />
             <span>+ ADD CONTRIBUTION</span>
           </button>
+
+          {(isAdmin || user.canAddExpenses) && (
+            <button
+              onClick={() => router.push('/expenses')}
+              className="py-4 px-6 rounded-2xl bg-devotional-blue-900/90 hover:bg-devotional-blue-800 border-2 border-devotional-gold-500/40 text-devotional-gold-200 hover:text-white font-black text-lg tracking-wide shadow-md flex items-center justify-center gap-3 transition-transform active:scale-[0.99]"
+            >
+              <Receipt className="w-6 h-6 text-devotional-gold-400" />
+              <span>MANAGE EXPENSES</span>
+            </button>
+          )}
         </div>
+
+        {/* ADMIN FINANCIAL HERO: REMAINING BALANCE & NET POSITION */}
+        {isAdmin && financialSummary && (
+          <div className="rounded-3xl border-2 border-devotional-gold-500/50 bg-gradient-to-br from-[#0c1e54] via-[#071338] to-[#050b1d] p-5 sm:p-6 shadow-2xl space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-devotional-gold-500/20 pb-3">
+              <div>
+                <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-devotional-gold-400">
+                  Real-time Festival Financial Position
+                </span>
+                <h2 className="text-xl sm:text-2xl font-black text-white">
+                  Remaining Balance: <span className="text-devotional-gold-300">₹{financialSummary.balance.remainingBalance.toLocaleString('en-IN')}</span>
+                </h2>
+              </div>
+              <button
+                onClick={() => router.push('/finance')}
+                className="text-xs font-bold text-devotional-gold-300 hover:text-white underline underline-offset-4"
+              >
+                View Complete Statement →
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              <div className="bg-devotional-blue-950/80 p-3 rounded-2xl border border-emerald-500/30">
+                <span className="text-gray-400 block text-[11px]">Total Chanda Collected</span>
+                <span className="text-lg font-black text-emerald-300">
+                  ₹{financialSummary.income.totalChanda.toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] text-gray-400 block">
+                  {financialSummary.income.totalContributors} verified donors
+                </span>
+              </div>
+
+              <div className="bg-devotional-blue-950/80 p-3 rounded-2xl border border-rose-500/30">
+                <span className="text-gray-400 block text-[11px]">Total Expenses Paid</span>
+                <span className="text-lg font-black text-rose-300">
+                  ₹{financialSummary.expenses.totalExpenses.toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] text-gray-400 block">
+                  {financialSummary.expenses.totalExpenseCount} bills recorded
+                </span>
+              </div>
+
+              <div className="bg-devotional-blue-950/80 p-3 rounded-2xl border border-emerald-500/30">
+                <span className="text-gray-400 block text-[11px]">Cash in Hand</span>
+                <span className="text-lg font-black text-emerald-300">
+                  ₹{financialSummary.balance.estimatedCashBalance.toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] text-gray-400 block">
+                  Cash Chanda − Cash Expenses
+                </span>
+              </div>
+
+              <div className="bg-devotional-blue-950/80 p-3 rounded-2xl border border-devotional-gold-500/30">
+                <span className="text-gray-400 block text-[11px]">Online Bank Balance</span>
+                <span className="text-lg font-black text-devotional-gold-300">
+                  ₹{financialSummary.balance.onlineBalance.toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] text-gray-400 block">
+                  Verified Online − Online Exp.
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* SUMMARY STATS CARDS */}
         {stats && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            {/* Today's Contributions */}
             <div className="rounded-2xl border border-devotional-gold-500/30 bg-devotional-blue-900/50 p-4 space-y-1 shadow-md">
               <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-devotional-gold-400">
                 Today&apos;s Count
@@ -310,7 +427,6 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            {/* Today's Amount */}
             <div className="rounded-2xl border border-devotional-gold-500/30 bg-devotional-blue-900/50 p-4 space-y-1 shadow-md">
               <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-devotional-gold-400">
                 Today&apos;s Amount
@@ -323,7 +439,6 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            {/* Cash Collected */}
             <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-4 space-y-1 shadow-md">
               <div className="flex items-center justify-between text-emerald-400">
                 <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">
@@ -339,7 +454,6 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            {/* Online Collected */}
             <div className="rounded-2xl border border-devotional-gold-500/30 bg-devotional-blue-900/50 p-4 space-y-1 shadow-md">
               <div className="flex items-center justify-between text-devotional-gold-400">
                 <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">
@@ -458,7 +572,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Contributions Table / Cards */}
+            {/* Contributions Table */}
             <div className="rounded-2xl border border-devotional-gold-500/30 bg-devotional-blue-900/40 overflow-hidden shadow-xl">
               {loading ? (
                 <div className="p-12 text-center text-devotional-gold-300 space-y-2">
@@ -491,7 +605,6 @@ export default function DashboardPage() {
                       {contributions.map((c) => {
                         const isCash = c.paymentMethod === 'CASH';
                         const isPending = c.paymentStatus === 'PENDING';
-                        const isVerified = c.paymentStatus === 'VERIFIED' || isCash;
 
                         return (
                           <tr
@@ -549,7 +662,6 @@ export default function DashboardPage() {
                               </td>
                             )}
                             <td className="py-3 px-3 sm:px-4 text-right space-x-1.5 whitespace-nowrap">
-                              {/* Certificate Preview button */}
                               <button
                                 onClick={() =>
                                   setViewingCertificate({
@@ -569,7 +681,6 @@ export default function DashboardPage() {
                                 <Eye className="w-3.5 h-3.5" />
                               </button>
 
-                              {/* Admin Verification buttons for Online */}
                               {isAdmin && !isCash && isPending && (
                                 <>
                                   <button
@@ -587,7 +698,6 @@ export default function DashboardPage() {
                                 </>
                               )}
 
-                              {/* Admin Edit button */}
                               {isAdmin && (
                                 <button
                                   onClick={() => {
@@ -850,6 +960,22 @@ export default function DashboardPage() {
                     onChange={(e) => setNewVolMobile(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white"
                   />
+                </div>
+
+                <div className="pt-1 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="canAddExpensesCheckbox"
+                    checked={newVolCanAddExpenses}
+                    onChange={(e) => setNewVolCanAddExpenses(e.target.checked)}
+                    className="w-4 h-4 rounded text-devotional-gold-500 focus:ring-0 cursor-pointer"
+                  />
+                  <label
+                    htmlFor="canAddExpensesCheckbox"
+                    className="text-gray-300 cursor-pointer text-xs"
+                  >
+                    Allow this volunteer to record expenses
+                  </label>
                 </div>
 
                 <div className="pt-2 flex gap-2">
