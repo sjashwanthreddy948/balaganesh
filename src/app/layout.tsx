@@ -46,7 +46,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="min-h-screen flex flex-col bg-black text-white selection:bg-devotional-gold-500 selection:text-devotional-blue-950 antialiased relative">
-        {/* Fullscreen Background Layer with 75% Black Tint */}
+        {/* Fullscreen Background Layer with 85% Black Tint */}
         <div className="fixed inset-0 pointer-events-none z-[-1] overflow-hidden">
           <Image
             src="/images/ganesh-landscape-pandal.jpg"
@@ -55,8 +55,8 @@ export default function RootLayout({
             priority
             className="object-cover object-center transform scale-100"
           />
-          {/* 75% Black Tint Overlay */}
-          <div className="absolute inset-0 bg-black/75" />
+          {/* 85% Black Tint Overlay */}
+          <div className="absolute inset-0 bg-black/85" />
           
           {/* Subtle Warm Golden Accent from Top Chandelier */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-gradient-radial from-amber-400/15 via-transparent to-transparent pointer-events-none" />
