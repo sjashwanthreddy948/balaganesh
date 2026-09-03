@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { FESTIVAL_CONFIG } from '@/config/festival.config';
-import { Lock, PlusCircle, ArrowRight, Receipt, MapPin, Phone } from 'lucide-react';
+import { Lock, PlusCircle, ArrowRight, MapPin, Phone } from 'lucide-react';
 
 export default function HomePage() {
   return (
@@ -63,19 +63,8 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {/* Secondary Expense Shortcut */}
-        <div className="flex items-center justify-center gap-3 pt-2">
-          <Link
-            href="/expenses"
-            className="px-4 py-2 rounded-xl bg-devotional-blue-950/80 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
-          >
-            <Receipt className="w-3.5 h-3.5 text-rose-400" />
-            <span>Expense Tracker & Remaining Balance →</span>
-          </Link>
-        </div>
-
         {/* Pandal Info Footer */}
-        <div className="text-[11px] text-gray-400 space-y-1 pt-4 border-t border-devotional-gold-500/10 max-w-sm">
+        <div className="text-[11px] text-gray-400 space-y-1 pt-6 border-t border-devotional-gold-500/10 max-w-sm">
           <p className="flex items-center justify-center gap-1.5">
             <MapPin className="w-3.5 h-3.5 text-devotional-gold-400 shrink-0" />
             <span>{FESTIVAL_CONFIG.associationAddress}</span>
