@@ -20,6 +20,7 @@ export const FESTIVAL_CONFIG = {
   pandalLandscapeImage: '/images/ganesh-landscape-pandal.jpg',
   portraitPandalImage: '/images/ganesh-festival.jpg',
   bannerImage: '/images/ganesh-banner.jpg',
+  officialStampBlueImage: '/images/bala-ganesh-stamp-blue.png',
 
   // Devotional mantras & strings
   sanskritMantra: 'ॐ गं गणपतये नमः • वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ',

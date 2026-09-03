@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { FESTIVAL_CONFIG, buildWhatsAppCertificateShareUrl } from '@/config/festival.config';
-import { Download, MessageCircle, Share2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Download, MessageCircle } from 'lucide-react';
 
 export interface CertificateData {
   certificateNumber: string;
@@ -42,7 +42,12 @@ export default function LandscapeCertificate({ data, onImageReady }: LandscapeCe
     bgImage.src = FESTIVAL_CONFIG.pandalLandscapeImage;
     bgImage.crossOrigin = 'anonymous';
 
-    const renderLayers = (imgLoaded: boolean) => {
+    // Load official blue Bala Ganesh stamp
+    const stampImage = new Image();
+    stampImage.src = FESTIVAL_CONFIG.officialStampBlueImage;
+    stampImage.crossOrigin = 'anonymous';
+
+    const renderLayers = (imgLoaded: boolean, stampLoaded: boolean) => {
       // 1. BASE BACKGROUND: Pure Luxury Ivory / White Paper Stock
       const paperGradient = ctx.createLinearGradient(0, 0, width, height);
       paperGradient.addColorStop(0, '#ffffff');
@@ -324,7 +329,18 @@ export default function LandscapeCertificate({ data, onImageReady }: LandscapeCe
         820
       );
 
-      // 14. OFFICIAL TRUST SIGN-OFF (Center Bottom)
+      // 14. OFFICIAL BALA GANESH BLUE STAMP (Left Bottom Small Icon)
+      if (stampLoaded && stampImage.width > 0) {
+        ctx.save();
+        const blueStampW = 210;
+        const blueStampH = 140;
+        const blueStampX = 140;
+        const blueStampY = 835;
+        ctx.drawImage(stampImage, blueStampX, blueStampY, blueStampW, blueStampH);
+        ctx.restore();
+      }
+
+      // 15. OFFICIAL TRUST SIGN-OFF (Center Bottom)
       ctx.font = 'bold 15px sans-serif';
       ctx.fillStyle = '#b8860b';
       ctx.letterSpacing = '3px';
@@ -340,7 +356,7 @@ export default function LandscapeCertificate({ data, onImageReady }: LandscapeCe
       ctx.letterSpacing = '1px';
       ctx.fillText('Ganpati Bappa Morya! 🙏', width / 2, 962);
 
-      // 15. OFFICIAL GOLD EMBLEM SEAL (Right Bottom)
+      // 16. OFFICIAL GOLD EMBLEM SEAL (Right Bottom)
       const sealX = width - 210;
       const sealY = 890;
       const sealRadius = 58;
@@ -379,7 +395,7 @@ export default function LandscapeCertificate({ data, onImageReady }: LandscapeCe
       ctx.fillStyle = '#ffffff';
       ctx.fillText(FESTIVAL_CONFIG.festivalYear, sealX, sealY + 28);
 
-      // 16. FOOTNOTE FINE PRINT
+      // 17. FOOTNOTE FINE PRINT
       ctx.font = '13px monospace';
       ctx.fillStyle = '#64748b';
       ctx.fillText(
@@ -397,10 +413,33 @@ export default function LandscapeCertificate({ data, onImageReady }: LandscapeCe
       }
     };
 
-    bgImage.onload = () => renderLayers(true);
-    bgImage.onerror = () => renderLayers(false);
-    if (bgImage.complete) {
-      renderLayers(true);
+    let bgDone = bgImage.complete;
+    let stampDone = stampImage.complete;
+
+    const tryRender = () => {
+      renderLayers(bgDone, stampDone);
+    };
+
+    bgImage.onload = () => {
+      bgDone = true;
+      tryRender();
+    };
+    bgImage.onerror = () => {
+      bgDone = false;
+      tryRender();
+    };
+
+    stampImage.onload = () => {
+      stampDone = true;
+      tryRender();
+    };
+    stampImage.onerror = () => {
+      stampDone = false;
+      tryRender();
+    };
+
+    if (bgDone || stampDone) {
+      tryRender();
     }
   }, [data, onImageReady]);
 
