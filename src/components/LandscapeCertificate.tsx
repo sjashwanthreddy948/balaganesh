@@ -329,18 +329,7 @@ export default function LandscapeCertificate({ data, onImageReady }: LandscapeCe
         820
       );
 
-      // 14. OFFICIAL BALA GANESH BLUE STAMP (Left Bottom Small Icon)
-      if (stampLoaded && stampImage.width > 0) {
-        ctx.save();
-        const blueStampW = 210;
-        const blueStampH = 140;
-        const blueStampX = 140;
-        const blueStampY = 835;
-        ctx.drawImage(stampImage, blueStampX, blueStampY, blueStampW, blueStampH);
-        ctx.restore();
-      }
-
-      // 15. OFFICIAL TRUST SIGN-OFF (Center Bottom)
+      // 14. OFFICIAL TRUST SIGN-OFF (Center Bottom)
       ctx.font = 'bold 15px sans-serif';
       ctx.fillStyle = '#b8860b';
       ctx.letterSpacing = '3px';
@@ -356,46 +345,18 @@ export default function LandscapeCertificate({ data, onImageReady }: LandscapeCe
       ctx.letterSpacing = '1px';
       ctx.fillText('Ganpati Bappa Morya! 🙏', width / 2, 962);
 
-      // 16. OFFICIAL GOLD EMBLEM SEAL (Right Bottom)
-      const sealX = width - 210;
-      const sealY = 890;
-      const sealRadius = 58;
+      // 15. OFFICIAL BALA GANESH BLUE STAMP (RIGHT BOTTOM in place of official seal)
+      if (stampLoaded && stampImage.width > 0) {
+        ctx.save();
+        const blueStampW = 225;
+        const blueStampH = 150;
+        const blueStampX = width - 350; // Right side position
+        const blueStampY = 840;
+        ctx.drawImage(stampImage, blueStampX, blueStampY, blueStampW, blueStampH);
+        ctx.restore();
+      }
 
-      // Outer Gold Scallop / Serrated Ring
-      ctx.strokeStyle = '#c69214';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(sealX, sealY, sealRadius, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // Inner Royal Blue Ring
-      ctx.fillStyle = '#0c1e54';
-      ctx.beginPath();
-      ctx.arc(sealX, sealY, sealRadius - 6, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Seal Gold Center
-      ctx.strokeStyle = '#dfb135';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(sealX, sealY, sealRadius - 12, 0, Math.PI * 2);
-      ctx.stroke();
-
-      ctx.textAlign = 'center';
-      ctx.font = 'bold 24px Georgia, serif';
-      ctx.fillStyle = '#fef08a';
-      ctx.fillText('ॐ', sealX, sealY - 4);
-
-      ctx.font = 'bold 10px sans-serif';
-      ctx.fillStyle = '#fef08a';
-      ctx.letterSpacing = '1px';
-      ctx.fillText('OFFICIAL SEAL', sealX, sealY + 14);
-
-      ctx.font = 'bold 9px sans-serif';
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(FESTIVAL_CONFIG.festivalYear, sealX, sealY + 28);
-
-      // 17. FOOTNOTE FINE PRINT
+      // 16. FOOTNOTE FINE PRINT
       ctx.font = '13px monospace';
       ctx.fillStyle = '#64748b';
       ctx.fillText(
