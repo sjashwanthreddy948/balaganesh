@@ -2,11 +2,14 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { FESTIVAL_CONFIG } from '@/config/festival.config';
 import { LogIn, LayoutDashboard, Receipt } from 'lucide-react';
 
 export default function Header() {
-  const [user, setUser] = useState<{ name: string; role: string; canAddExpenses?: boolean } | null>(null);
+  const pathname = usePathname();
+  const isHomePage = pathname === '/';
+  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -36,18 +39,19 @@ export default function Header() {
           </div>
         </Link>
 
-        <div className="flex items-center gap-2">
-          {user ? (
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <Link
-                href="/dashboard"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/40 text-devotional-gold-300 hover:text-white text-xs font-bold transition-all shadow-sm"
-              >
-                <LayoutDashboard className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Chanda Dashboard</span>
-              </Link>
+        {/* Removed from home page per user request */}
+        {!isHomePage && (
+          <div className="flex items-center gap-2">
+            {user ? (
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <Link
+                  href="/dashboard"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/40 text-devotional-gold-300 hover:text-white text-xs font-bold transition-all shadow-sm"
+                >
+                  <LayoutDashboard className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Chanda Dashboard</span>
+                </Link>
 
-              {(user.role === 'ADMIN' || user.canAddExpenses) && (
                 <Link
                   href="/expenses"
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/40 text-devotional-gold-300 hover:text-white text-xs font-bold transition-all shadow-sm"
@@ -55,22 +59,22 @@ export default function Header() {
                   <Receipt className="w-3.5 h-3.5 text-rose-400" />
                   <span className="hidden sm:inline">Expenses</span>
                 </Link>
-              )}
 
-              <span className="text-[9px] px-2 py-1 rounded-full bg-devotional-gold-500 text-devotional-blue-950 font-black ml-1">
-                {user.role}
-              </span>
-            </div>
-          ) : (
-            <Link
-              href="/login"
-              className="flex items-center gap-1.5 text-xs font-bold text-devotional-gold-300 hover:text-white px-3 py-1.5 rounded-xl border border-devotional-gold-500/30 bg-devotional-blue-900/60 transition-colors"
-            >
-              <LogIn className="w-3.5 h-3.5 text-devotional-gold-400" />
-              <span>Staff Login</span>
-            </Link>
-          )}
-        </div>
+                <span className="text-[9px] px-2 py-1 rounded-full bg-devotional-gold-500 text-devotional-blue-950 font-black ml-1">
+                  {user.role}
+                </span>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="flex items-center gap-1.5 text-xs font-bold text-devotional-gold-300 hover:text-white px-3 py-1.5 rounded-xl border border-devotional-gold-500/30 bg-devotional-blue-900/60 transition-colors"
+              >
+                <LogIn className="w-3.5 h-3.5 text-devotional-gold-400" />
+                <span>Login</span>
+              </Link>
+            )}
+          </div>
+        )}
       </div>
     </header>
   );
