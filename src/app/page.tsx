@@ -170,7 +170,7 @@ export default function HomePage() {
                 <input
                   type="text"
                   required
-                  placeholder="admin"
+                  placeholder="Enter your Login ID"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 rounded-xl bg-devotional-blue-950 border border-devotional-gold-500/30 text-white placeholder-gray-500 text-sm font-medium focus:outline-none focus:border-devotional-gold-400"
@@ -188,7 +188,7 @@ export default function HomePage() {
                 <input
                   type="password"
                   required
-                  placeholder="••••••••"
+                  placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 rounded-xl bg-devotional-blue-950 border border-devotional-gold-500/30 text-white placeholder-gray-500 text-sm font-medium focus:outline-none focus:border-devotional-gold-400"
@@ -214,13 +214,6 @@ export default function HomePage() {
               )}
             </button>
           </form>
-
-          {/* Quick Credentials Info Box */}
-          <div className="bg-devotional-blue-950/80 border border-devotional-gold-500/20 rounded-xl p-3 text-[11px] text-gray-400 space-y-1">
-            <p className="font-semibold text-devotional-gold-300">Default Access Credentials:</p>
-            <p>• <b>Login ID:</b> <code className="text-white">admin</code></p>
-            <p>• <b>Password:</b> <code className="text-white">BalaGaneshAdmin@2026</code></p>
-          </div>
         </div>
 
         {/* Pandal Info Footer */}
