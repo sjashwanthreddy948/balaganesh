@@ -6,15 +6,12 @@ const prisma = new PrismaClient();
 async function main() {
   const adminUsername = process.env.ADMIN_DEFAULT_USER || 'admin';
   const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'Bala@2026Ganesh';
-  const volunteerUsername = 'volunteer';
-  const volunteerPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'Bala@2026Ganesh';
 
-  console.log('Seeding initial users...');
+  console.log('Seeding production admin account...');
 
-  // 1. Admin User
+  // 1. Production Admin User
   const salt = await bcrypt.genSalt(10);
   const hashedAdminPassword = await bcrypt.hash(adminPassword, salt);
-  const hashedVolunteerPassword = await bcrypt.hash(volunteerPassword, salt);
 
   const admin = await prisma.user.upsert({
     where: { username: adminUsername },
@@ -23,6 +20,7 @@ async function main() {
       role: 'ADMIN',
       name: 'Association Admin',
       isActive: true,
+      canAddExpenses: true,
     },
     create: {
       username: adminUsername,
@@ -30,30 +28,19 @@ async function main() {
       password: hashedAdminPassword,
       role: 'ADMIN',
       isActive: true,
+      canAddExpenses: true,
     },
   });
 
   console.log(`✓ Admin user configured: ${admin.username} (Role: ${admin.role})`);
 
-  // 2. Sample Volunteer User
-  const volunteer = await prisma.user.upsert({
-    where: { username: volunteerUsername },
-    update: {
-      password: hashedVolunteerPassword,
-      role: 'VOLUNTEER',
-      name: 'Suresh (Volunteer)',
-      isActive: true,
-    },
-    create: {
-      username: volunteerUsername,
-      name: 'Suresh (Volunteer)',
-      password: hashedVolunteerPassword,
-      role: 'VOLUNTEER',
-      isActive: true,
-    },
+  // Remove any obsolete sample volunteer test accounts
+  const deletedVolunteers = await prisma.user.deleteMany({
+    where: { username: 'volunteer' },
   });
-
-  console.log(`✓ Volunteer user configured: ${volunteer.username} (Role: ${volunteer.role})`);
+  if (deletedVolunteers.count > 0) {
+    console.log(`✓ Removed ${deletedVolunteers.count} sample volunteer test accounts.`);
+  }
 }
 
 main()

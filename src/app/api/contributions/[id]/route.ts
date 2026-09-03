@@ -136,3 +136,37 @@ export async function PUT(
     return NextResponse.json({ error: 'Failed to edit contribution' }, { status: 500 });
   }
 }
+
+// DELETE: Delete contribution (Admin Only)
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const session = await getUserSession();
+  if (!session || session.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Admin access required.' }, { status: 403 });
+  }
+
+  try {
+    const contribution = await prisma.contribution.findUnique({
+      where: { id: params.id },
+    });
+
+    if (!contribution) {
+      return NextResponse.json({ error: 'Contribution not found' }, { status: 404 });
+    }
+
+    await prisma.contribution.delete({
+      where: { id: params.id },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Contribution deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting contribution:', error);
+    return NextResponse.json({ error: 'Failed to delete contribution' }, { status: 500 });
+  }
+}
+
