@@ -114,7 +114,7 @@ export async function GET(req: NextRequest) {
         e.amount,
         e.paymentMethod,
         escapeCsv(new Date(e.date).toLocaleDateString('en-IN')),
-        escapeCsv(e.createdBy.name),
+        escapeCsv(e.enteredBy || e.createdBy.name),
         escapeCsv(e.notes || ''),
       ].join(','));
     }

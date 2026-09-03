@@ -8,44 +8,46 @@ datasource db {
 }
 
 model User {
-  id                    String         @id @default(cuid())
-  name                  String
-  username              String         @unique
-  mobile                String?
-  email                 String?
-  password              String         // bcrypt hash
-  role                  String         @default("VOLUNTEER") // ADMIN, VOLUNTEER
-  canAddExpenses        Boolean        @default(false)
-  isActive              Boolean        @default(true)
-  createdContributions  Contribution[] @relation("CreatedBy")
+  id             String         @id @default(cuid())
+  username       String         @unique
+  password       String         // Hashed password
+  name           String
+  role           String         @default("VOLUNTEER") // ADMIN or VOLUNTEER
+  mobile         String?
+  isActive       Boolean        @default(true)
+  canAddExpenses Boolean        @default(false)       // Permission to add expenses
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  createdContributions Contribution[] @relation("CreatedBy")
   verifiedContributions Contribution[] @relation("VerifiedBy")
-  createdExpenses       Expense[]      @relation("ExpenseCreatedBy")
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
+  createdExpenses      Expense[]      @relation("ExpenseCreatedBy")
+
+  @@index([username])
 }
 
 model Contribution {
-  id                String    @id @default(cuid())
-  certificateNumber String    @unique // e.g. BG2026-000001
+  id                String   @id @default(cuid())
+  certificateNumber String   @unique // e.g. BG2026-000001
   fullName          String
   mobileNumber      String?
   address           String?
-  amount            Int
-  paymentMethod     String    // CASH, ONLINE
-  paymentStatus     String    // CASH_RECEIVED, PENDING, VERIFIED, REJECTED
-  utr               String?   // Transaction ID (optional, unique if provided)
-  paymentScreenshot String?
+  amount            Int      // Amount in whole rupees
+  paymentMethod     String   // CASH or ONLINE
+  paymentStatus     String   // CASH_RECEIVED, PENDING, VERIFIED, REJECTED
+  utr               String?  // Optional UTR for online payments
+  paymentScreenshot String?  // Optional uploaded payment screenshot
   notes             String?
 
   createdById       String
-  createdBy         User      @relation("CreatedBy", fields: [createdById], references: [id])
+  createdBy         User     @relation("CreatedBy", fields: [createdById], references: [id])
 
   verifiedById      String?
-  verifiedBy        User?     @relation("VerifiedBy", fields: [verifiedById], references: [id])
+  verifiedBy        User?    @relation("VerifiedBy", fields: [verifiedById], references: [id])
   verifiedAt        DateTime?
 
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@index([mobileNumber])
   @@index([certificateNumber])
@@ -66,6 +68,7 @@ model Expense {
   date          DateTime // Date of the expense
   notes         String?
   billImage     String?  // URL of optional receipt / bill image
+  enteredBy     String   @default("Admin") // Name of the person who entered this expense
 
   createdById   String
   createdBy     User     @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
@@ -78,4 +81,5 @@ model Expense {
   @@index([date])
   @@index([createdById])
   @@index([expenseNumber])
+  @@index([enteredBy])
 }

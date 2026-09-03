@@ -7,23 +7,13 @@ import { getUserSession } from '@/lib/auth';
 export async function POST(req: NextRequest) {
   try {
     const session = await getUserSession();
-    
-    // Find creator ID: session user or default admin
-    let creatorId: string;
-    if (session) {
-      creatorId = session.id;
-    } else {
-      const defaultAdmin = await prisma.user.findFirst({
-        where: { role: 'ADMIN' },
-      });
-      if (!defaultAdmin) {
-        return NextResponse.json(
-          { success: false, error: 'Authentication required to record contribution.' },
-          { status: 401 }
-        );
-      }
-      creatorId = defaultAdmin.id;
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: 'Login required. Please login to record contributions.' },
+        { status: 401 }
+      );
     }
+    const creatorId = session.id;
 
     const body = await req.json();
 

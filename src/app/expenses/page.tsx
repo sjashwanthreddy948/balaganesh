@@ -22,8 +22,8 @@ import {
   ArrowLeft,
   RefreshCw,
   FileSpreadsheet,
-  TrendingDown,
   Scale,
+  User,
 } from 'lucide-react';
 
 interface ExpenseItem {
@@ -37,6 +37,7 @@ interface ExpenseItem {
   date: string;
   notes?: string | null;
   billImage?: string | null;
+  enteredBy: string;
   addedByName: string;
   createdAt: string;
 }
@@ -74,6 +75,7 @@ export default function ExpensesPage() {
   const [financialSummary, setFinancialSummary] = useState<FinancialSummaryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<'ADMIN' | 'VOLUNTEER' | null>(null);
+  const [currentUserName, setCurrentUserName] = useState('');
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -89,6 +91,7 @@ export default function ExpensesPage() {
 
   // Add Form Inputs
   const [shopName, setShopName] = useState('');
+  const [enteredBy, setEnteredBy] = useState('');
   const [category, setCategory] = useState<string>(EXPENSE_CATEGORIES[0]);
   const [customCategory, setCustomCategory] = useState('');
   const [description, setDescription] = useState('');
@@ -113,6 +116,13 @@ export default function ExpensesPage() {
       if (meRes.ok) {
         const meJson = await meRes.json();
         setUserRole(meJson.user.role);
+        setCurrentUserName(meJson.user.name || '');
+        if (!enteredBy) {
+          setEnteredBy(meJson.user.name || '');
+        }
+      } else {
+        router.replace('/login?redirect=/expenses');
+        return;
       }
 
       // 2. Fetch Financial Summary (Remaining Balance & Totals)
@@ -139,7 +149,7 @@ export default function ExpensesPage() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, categoryFilter, methodFilter, dateFilter]);
+  }, [searchQuery, categoryFilter, methodFilter, dateFilter, router, enteredBy]);
 
   useEffect(() => {
     fetchExpensesAndSummary();
@@ -167,6 +177,11 @@ export default function ExpensesPage() {
     const parsedAmount = parseInt(amount, 10);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       setFormError('Please enter a valid amount.');
+      return;
+    }
+
+    if (!enteredBy.trim()) {
+      setFormError('Please enter who is recording this expense.');
       return;
     }
 
@@ -205,6 +220,7 @@ export default function ExpensesPage() {
           date,
           notes: notes || undefined,
           billImage: uploadedBillUrl,
+          enteredBy: enteredBy.trim(),
         }),
       });
 
@@ -248,6 +264,7 @@ export default function ExpensesPage() {
           paymentMethod: editingExpense.paymentMethod,
           date: editingExpense.date,
           notes: editingExpense.notes || undefined,
+          enteredBy: editingExpense.enteredBy || undefined,
         }),
       });
 
@@ -300,16 +317,14 @@ export default function ExpensesPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {userRole === 'ADMIN' && (
-              <a
-                href="/api/admin/export-financial"
-                download
-                className="px-3.5 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-200 hover:text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
-              >
-                <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-                <span>Export Report CSV</span>
-              </a>
-            )}
+            <a
+              href="/api/admin/export-financial"
+              download
+              className="px-3.5 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-200 hover:text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+              <span>Export Report CSV</span>
+            </a>
 
             <button
               onClick={fetchExpensesAndSummary}
@@ -428,7 +443,12 @@ export default function ExpensesPage() {
 
         {/* PRIMARY CTA: [ + ADD EXPENSE ] */}
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={() => {
+            if (!enteredBy && currentUserName) {
+              setEnteredBy(currentUserName);
+            }
+            setShowAddModal(true);
+          }}
           className="w-full py-4 px-6 rounded-2xl btn-gold text-devotional-blue-950 font-black text-lg tracking-wide shadow-gold-md flex items-center justify-center gap-3 transition-transform active:scale-[0.99]"
         >
           <PlusCircle className="w-6 h-6" />
@@ -441,7 +461,7 @@ export default function ExpensesPage() {
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by shop/vendor, expense #, or description..."
+              placeholder="Search by shop/vendor, entered by person, expense #, or description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-devotional-blue-950 border border-devotional-gold-500/20 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-devotional-gold-400"
@@ -532,7 +552,7 @@ export default function ExpensesPage() {
                     <th className="py-3 px-3 sm:px-4">Amount</th>
                     <th className="py-3 px-3 sm:px-4">Method</th>
                     <th className="py-3 px-3 sm:px-4">Date</th>
-                    <th className="py-3 px-3 sm:px-4">Added By</th>
+                    <th className="py-3 px-3 sm:px-4">Entered By</th>
                     <th className="py-3 px-3 sm:px-4 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -577,8 +597,8 @@ export default function ExpensesPage() {
                         <td className="py-3 px-3 sm:px-4 text-gray-300 whitespace-nowrap">
                           {new Date(e.date).toLocaleDateString('en-IN')}
                         </td>
-                        <td className="py-3 px-3 sm:px-4 text-[11px] text-gray-400 whitespace-nowrap">
-                          {e.addedByName}
+                        <td className="py-3 px-3 sm:px-4 text-white font-semibold whitespace-nowrap">
+                          {e.enteredBy || e.addedByName}
                         </td>
                         <td className="py-3 px-3 sm:px-4 text-right space-x-1.5 whitespace-nowrap">
                           {/* View Bill Button */}
@@ -671,6 +691,25 @@ export default function ExpensesPage() {
                   />
                 </div>
 
+                {/* Person Entering Expense (REQUIRED) */}
+                <div>
+                  <label className="block text-devotional-gold-200 font-semibold mb-1 flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-devotional-gold-400" />
+                    <span>Who is entering this expense? (Your Name) <span className="text-amber-400 font-bold">*</span></span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Ramesh Reddy, Suresh, Committee Member"
+                    value={enteredBy}
+                    onChange={(e) => setEnteredBy(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white placeholder-gray-500 text-sm font-medium focus:outline-none focus:border-devotional-gold-400"
+                  />
+                  <span className="text-[10px] text-gray-400 mt-0.5 block">
+                    This person will be recorded as the author of this expense.
+                  </span>
+                </div>
+
                 {/* Category Selection */}
                 <div>
                   <label className="block text-devotional-gold-200 font-semibold mb-1">
@@ -734,7 +773,7 @@ export default function ExpensesPage() {
                       required
                       value={date}
                       onChange={(e) => setDate(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white font-medium focus:outline-none focus:border-devotional-gold-400"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white font-medium focus:outline-none focus:border-devotional-gold-400"
                     />
                   </div>
                 </div>
@@ -923,6 +962,19 @@ export default function ExpensesPage() {
                       setEditingExpense({ ...editingExpense, shopName: e.target.value })
                     }
                     className="w-full px-3 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-300 mb-1 font-semibold">Entered By Person *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingExpense.enteredBy || ''}
+                    onChange={(e) =>
+                      setEditingExpense({ ...editingExpense, enteredBy: e.target.value })
+                    }
+                    className="w-full px-3 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white font-medium"
                   />
                 </div>
 

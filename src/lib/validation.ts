@@ -124,6 +124,11 @@ export const createExpenseSchema = z.object({
   }),
   notes: z.string().trim().max(400).optional().or(z.literal('')),
   billImage: z.string().optional().nullable(),
+  enteredBy: z
+    .string()
+    .trim()
+    .min(2, 'Please enter who is recording this expense.')
+    .max(100),
 });
 
 // Expense Editing Schema
@@ -136,6 +141,7 @@ export const editExpenseSchema = z.object({
   date: z.string().refine((val) => !isNaN(Date.parse(val))),
   notes: z.string().trim().max(400).optional().or(z.literal('')),
   billImage: z.string().optional().nullable(),
+  enteredBy: z.string().trim().min(2).max(100).optional(),
 });
 
 // Volunteer Creation Schema (Admin only)

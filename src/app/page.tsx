@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { FESTIVAL_CONFIG } from '@/config/festival.config';
-import { Users, PlusCircle, ArrowRight, Receipt, MapPin, Phone } from 'lucide-react';
+import { Lock, PlusCircle, ArrowRight, Receipt, MapPin, Phone } from 'lucide-react';
 
 export default function HomePage() {
   return (
@@ -43,25 +43,23 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* Primary Action Buttons */}
+        {/* Primary Action Buttons (Entry Only With Login) */}
         <div className="w-full max-w-md space-y-3 pt-2">
-          {/* Volunteer & Staff Portal CTA */}
           <Link
             href="/dashboard"
             className="w-full py-4 px-6 rounded-2xl btn-gold text-devotional-blue-950 font-black text-base sm:text-lg tracking-wide shadow-gold-md flex items-center justify-center gap-2.5 transition-transform active:scale-[0.98]"
           >
-            <Users className="w-5 h-5 text-devotional-blue-950" />
-            <span>Volunteer & Staff Portal</span>
+            <Lock className="w-5 h-5 text-devotional-blue-950" />
+            <span>Association Staff Portal (Login)</span>
             <ArrowRight className="w-5 h-5 text-devotional-blue-950" />
           </Link>
 
-          {/* Rapid Add Contribution Link */}
           <Link
             href="/contribute"
             className="w-full py-3.5 px-6 rounded-2xl bg-[#0c1a45]/90 hover:bg-[#122561] border border-devotional-gold-500/40 text-devotional-gold-200 hover:text-white font-extrabold text-sm flex items-center justify-center gap-2 transition-colors shadow-sm"
           >
             <PlusCircle className="w-4 h-4 text-devotional-gold-400" />
-            <span>+ Fast Add Contribution (Cash / Online)</span>
+            <span>+ Enter Contribution (Staff Login Required)</span>
           </Link>
         </div>
 

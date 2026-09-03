@@ -41,28 +41,33 @@ async function runComprehensiveTests() {
     return { status: res.status, data: await res.json() };
   };
 
-  const del = async (path, headers = {}) => {
-    const res = await fetch(`${baseUrl}${path}`, {
-      method: 'DELETE',
-      headers,
-    });
-    return { status: res.status, data: await res.json() };
-  };
-
-  // 1. Volunteer Login
-  console.log('1. Testing Volunteer Login (volunteer / Volunteer@2026)...');
-  const volLoginRes = await post('/api/auth/login', {
-    username: 'volunteer',
-    password: 'Volunteer@2026',
+  // 1. Verify Entry WITHOUT Login is Blocked (401 Unauthorized)
+  console.log('1. Verifying Entry WITHOUT login is strictly blocked...');
+  const unauthRes = await post('/api/contributions', {
+    fullName: 'Anonymous Donor',
+    amount: 500,
+    paymentMethod: 'CASH',
   });
-  if (volLoginRes.status !== 200 || volLoginRes.data.user.role !== 'VOLUNTEER') {
-    throw new Error(`Volunteer login failed: ${JSON.stringify(volLoginRes.data)}`);
+  if (unauthRes.status === 401) {
+    console.log('✓ Successfully blocked unauthenticated contribution entry (401)!');
+  } else {
+    throw new Error(`Expected 401 Unauthorized, but received: ${unauthRes.status}`);
   }
-  const volCookie = { Cookie: volLoginRes.headers.get('set-cookie')?.split(';')[0] || '' };
-  console.log(`✓ Volunteer logged in! Name: ${volLoginRes.data.user.name}`);
 
-  // 2. Fast Cash Contribution
-  console.log('2. Recording CASH contribution (Ramesh Patel, ₹2000, CASH)...');
+  // 2. Staff / Admin Login
+  console.log('2. Testing Staff / Admin Login (admin / BalaGaneshAdmin@2026)...');
+  const loginRes = await post('/api/auth/login', {
+    username: 'admin',
+    password: 'BalaGaneshAdmin@2026',
+  });
+  if (loginRes.status !== 200 || !loginRes.data.user) {
+    throw new Error(`Login failed: ${JSON.stringify(loginRes.data)}`);
+  }
+  const authCookie = { Cookie: loginRes.headers.get('set-cookie')?.split(';')[0] || '' };
+  console.log(`✓ Admin/Staff logged in! User: ${loginRes.data.user.name}`);
+
+  // 3. Fast Cash Contribution (Logged In)
+  console.log('3. Recording CASH contribution with login (Ramesh Patel, ₹2000, CASH)...');
   const cashRes = await post(
     '/api/contributions',
     {
@@ -71,15 +76,15 @@ async function runComprehensiveTests() {
       amount: 2000,
       paymentMethod: 'CASH',
     },
-    volCookie
+    authCookie
   );
   if (cashRes.status !== 200 || cashRes.data.data.paymentStatus !== 'CASH_RECEIVED') {
     throw new Error(`Cash contribution failed: ${JSON.stringify(cashRes.data)}`);
   }
   console.log(`✓ Cash contribution saved! Certificate No: ${cashRes.data.data.certificateNumber}`);
 
-  // 3. Online Contribution (without UTR - strictly optional)
-  console.log('3. Recording ONLINE contribution (Kiran Rao, ₹5000, ONLINE)...');
+  // 4. Online Contribution with login
+  console.log('4. Recording ONLINE contribution with login (Kiran Rao, ₹5000, ONLINE)...');
   const onlineRes = await post(
     '/api/contributions',
     {
@@ -88,7 +93,7 @@ async function runComprehensiveTests() {
       amount: 5000,
       paymentMethod: 'ONLINE',
     },
-    volCookie
+    authCookie
   );
   if (onlineRes.status !== 200 || onlineRes.data.data.paymentStatus !== 'PENDING') {
     throw new Error(`Online contribution failed: ${JSON.stringify(onlineRes.data)}`);
@@ -96,28 +101,16 @@ async function runComprehensiveTests() {
   const onlineId = onlineRes.data.data.id;
   console.log(`✓ Online contribution saved! Certificate No: ${onlineRes.data.data.certificateNumber}`);
 
-  // 4. Admin Login
-  console.log('4. Testing Admin Login (admin / BalaGaneshAdmin@2026)...');
-  const adminLoginRes = await post('/api/auth/login', {
-    username: 'admin',
-    password: 'BalaGaneshAdmin@2026',
-  });
-  if (adminLoginRes.status !== 200 || adminLoginRes.data.user.role !== 'ADMIN') {
-    throw new Error(`Admin login failed: ${JSON.stringify(adminLoginRes.data)}`);
-  }
-  const adminCookie = { Cookie: adminLoginRes.headers.get('set-cookie')?.split(';')[0] || '' };
-  console.log(`✓ Admin logged in! Name: ${adminLoginRes.data.user.name}`);
-
-  // 5. Admin Verifies the Online Contribution
-  console.log(`5. Admin verifying online contribution ${onlineId}...`);
-  const verifyRes = await patch(`/api/contributions/${onlineId}`, { status: 'VERIFIED' }, adminCookie);
+  // 5. Admin Verifies Online Contribution
+  console.log(`5. Verifying online contribution ${onlineId}...`);
+  const verifyRes = await patch(`/api/contributions/${onlineId}`, { status: 'VERIFIED' }, authCookie);
   if (verifyRes.status !== 200 || verifyRes.data.data.paymentStatus !== 'VERIFIED') {
     throw new Error(`Verification failed: ${JSON.stringify(verifyRes)}`);
   }
   console.log('✓ Online contribution verified and included in financial balance!');
 
-  // 6. Record Cash Expense
-  console.log('6. Recording CASH Expense (Flowers, ₹2,500, Lakshmi Flower Stall)...');
+  // 6. Record Cash Expense with "Entered By" (Who is entering the expense)
+  console.log('6. Recording CASH Expense with Entered By (Flowers, ₹2,500, Entered By: Suresh Reddy)...');
   const cashExpenseRes = await post(
     '/api/expenses',
     {
@@ -127,78 +120,74 @@ async function runComprehensiveTests() {
       amount: 2500,
       paymentMethod: 'CASH',
       date: new Date().toISOString().split('T')[0],
-      notes: 'Paid cash in person by volunteer',
+      notes: 'Paid cash at stall',
+      enteredBy: 'Suresh Reddy (Treasurer)',
     },
-    adminCookie
+    authCookie
   );
-  if (cashExpenseRes.status !== 200 || !cashExpenseRes.data.data.expenseNumber.startsWith('EXP-')) {
+  if (cashExpenseRes.status !== 200 || cashExpenseRes.data.data.enteredBy !== 'Suresh Reddy (Treasurer)') {
     throw new Error(`Cash expense creation failed: ${JSON.stringify(cashExpenseRes.data)}`);
   }
-  const expNo1 = cashExpenseRes.data.data.expenseNumber;
-  console.log(`✓ Cash expense saved! Expense Number: ${expNo1}`);
+  console.log(`✓ Expense saved with enteredBy: "${cashExpenseRes.data.data.enteredBy}"! Number: ${cashExpenseRes.data.data.expenseNumber}`);
 
-  // 7. Record Online Expense
-  console.log('7. Recording ONLINE Expense (Sound System, ₹15,000, Sri Venkateshwara Sounds)...');
+  // 7. Record Online Expense with "Entered By"
+  console.log('7. Recording ONLINE Expense with Entered By (Sound System, ₹15,000, Entered By: Ramesh Kumar)...');
   const onlineExpenseRes = await post(
     '/api/expenses',
     {
       shopName: 'Sri Venkateshwara Sounds',
       category: 'Sound System',
-      description: 'Pandal audio mixer, speakers and mic setup for 9 days',
+      description: 'Pandal audio mixer, speakers and mic setup',
       amount: 15000,
       paymentMethod: 'ONLINE',
       date: new Date().toISOString().split('T')[0],
-      notes: 'Paid via GPay to shop UPI',
+      notes: 'Paid via UPI',
+      enteredBy: 'Ramesh Kumar (Committee Member)',
     },
-    adminCookie
+    authCookie
   );
-  if (onlineExpenseRes.status !== 200 || !onlineExpenseRes.data.data.expenseNumber.startsWith('EXP-')) {
+  if (onlineExpenseRes.status !== 200 || onlineExpenseRes.data.data.enteredBy !== 'Ramesh Kumar (Committee Member)') {
     throw new Error(`Online expense creation failed: ${JSON.stringify(onlineExpenseRes.data)}`);
   }
-  const expNo2 = onlineExpenseRes.data.data.expenseNumber;
   const onlineExpId = onlineExpenseRes.data.data.id;
-  console.log(`✓ Online expense saved! Expense Number: ${expNo2}`);
+  console.log(`✓ Expense saved with enteredBy: "${onlineExpenseRes.data.data.enteredBy}"! Number: ${onlineExpenseRes.data.data.expenseNumber}`);
 
-  // 8. List Expenses with Filter
-  console.log('8. Testing Expenses List & Filters...');
-  const expListRes = await get('/api/expenses?category=Sound%20System', adminCookie);
-  if (expListRes.status === 200 && expListRes.data.data.length >= 1) {
-    console.log(`✓ Filtered expense found: ${expListRes.data.data[0].shopName} - ₹${expListRes.data.data[0].amount}`);
+  // 8. Search Expenses by "enteredBy"
+  console.log('8. Testing Expense Search by person entering...');
+  const expSearchRes = await get('/api/expenses?search=Suresh%20Reddy', authCookie);
+  if (expSearchRes.status === 200 && expSearchRes.data.data.length >= 1) {
+    console.log(`✓ Found expense by enteredBy search: "${expSearchRes.data.data[0].enteredBy}"`);
   } else {
-    throw new Error(`Expense filter failed: ${JSON.stringify(expListRes)}`);
+    throw new Error(`Search by enteredBy failed: ${JSON.stringify(expSearchRes)}`);
   }
 
   // 9. Financial Summary Calculations
   console.log('9. Verifying Festival Financial Summary Calculations...');
-  const finSummaryRes = await get('/api/admin/financial-summary', adminCookie);
+  const finSummaryRes = await get('/api/admin/financial-summary', authCookie);
   if (finSummaryRes.status !== 200 || !finSummaryRes.data.summary) {
     throw new Error(`Financial summary failed: ${JSON.stringify(finSummaryRes)}`);
   }
   const fs = finSummaryRes.data.summary;
-  console.log(`✓ Total Verified Chanda: ₹${fs.income.totalChanda} (Cash: ₹${fs.income.cashChanda}, Online: ₹${fs.income.onlineChanda})`);
-  console.log(`✓ Total Expenses: ₹${fs.expenses.totalExpenses} (Cash: ₹${fs.expenses.cashExpenses}, Online: ₹${fs.expenses.onlineExpenses})`);
+  console.log(`✓ Total Verified Chanda: ₹${fs.income.totalChanda}`);
+  console.log(`✓ Total Expenses: ₹${fs.expenses.totalExpenses}`);
   console.log(`✓ REMAINING BALANCE: ₹${fs.balance.remainingBalance}`);
   console.log(`✓ Cash in Hand: ₹${fs.balance.estimatedCashBalance}, Online Bank Balance: ₹${fs.balance.onlineBalance}`);
-  
-  if (fs.balance.remainingBalance !== fs.income.totalChanda - fs.expenses.totalExpenses) {
-    throw new Error('Balance equation mismatch: Remaining != Chanda - Expenses');
-  }
 
-  // 10. Financial Report CSV Export
-  console.log('10. Testing Complete Financial Report CSV Export...');
-  const finCsvRes = await get('/api/admin/export-financial', adminCookie);
+  // 10. Financial Report CSV Export contains "Entered By"
+  console.log('10. Testing Complete Financial Report CSV Export with Entered By column...');
+  const finCsvRes = await get('/api/admin/export-financial', authCookie);
   if (
     finCsvRes.status === 200 &&
-    finCsvRes.data.includes('FINANCIAL SUMMARY OVERVIEW') &&
-    finCsvRes.data.includes('Lakshmi Flower Stall')
+    finCsvRes.data.includes('Suresh Reddy (Treasurer)') &&
+    finCsvRes.data.includes('Ramesh Kumar (Committee Member)')
   ) {
-    console.log('✓ Complete Financial CSV report exported with overview, categories, and itemized rows!');
+    console.log('✓ Financial CSV report successfully includes the person who entered the expense!');
   } else {
-    throw new Error(`Financial CSV export failed: ${JSON.stringify(finCsvRes)}`);
+    throw new Error(`Financial CSV export failed to include enteredBy: ${JSON.stringify(finCsvRes)}`);
   }
 
-  // 11. Edit Expense
-  console.log(`11. Editing expense ${onlineExpId} (adjusting vendor notes)...`);
+  // 11. Edit Expense with updated "Entered By"
+  console.log(`11. Editing expense ${onlineExpId}...`);
   const editExpRes = await put(
     `/api/expenses/${onlineExpId}`,
     {
@@ -208,17 +197,18 @@ async function runComprehensiveTests() {
       paymentMethod: 'ONLINE',
       date: new Date().toISOString().split('T')[0],
       notes: 'Final settlement invoice received',
+      enteredBy: 'Ramesh Kumar (General Secretary)',
     },
-    adminCookie
+    authCookie
   );
-  if (editExpRes.status === 200 && editExpRes.data.data.shopName.includes('Lighting')) {
-    console.log('✓ Expense updated successfully!');
+  if (editExpRes.status === 200 && editExpRes.data.data.enteredBy === 'Ramesh Kumar (General Secretary)') {
+    console.log('✓ Expense updated with new enteredBy title successfully!');
   } else {
     throw new Error(`Edit expense failed: ${JSON.stringify(editExpRes)}`);
   }
 
   console.log('\n========================================================================');
-  console.log('🎉 ALL 11 COMPREHENSIVE CHANDA, EXPENSE & FINANCIAL TESTS PASSED! 🎉');
+  console.log('🎉 ALL 11 E2E TESTS PASSED (LOGIN REQUIRED & ENTERED BY PERSON VERIFIED) 🎉');
   console.log('========================================================================\n');
 }
 

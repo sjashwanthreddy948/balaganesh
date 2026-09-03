@@ -72,6 +72,7 @@ export async function PUT(
         date: new Date(data.date),
         notes: data.notes?.trim() || null,
         billImage: data.billImage || undefined,
+        ...(data.enteredBy ? { enteredBy: data.enteredBy.trim() } : {}),
       },
       include: {
         createdBy: {
@@ -85,7 +86,8 @@ export async function PUT(
       message: 'Expense updated successfully.',
       data: {
         ...updated,
-        addedByName: updated.createdBy.name,
+        enteredBy: updated.enteredBy || updated.createdBy.name,
+        addedByName: updated.enteredBy || updated.createdBy.name,
       },
     });
   } catch (error) {
