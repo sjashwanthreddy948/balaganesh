@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { FESTIVAL_CONFIG } from '@/config/festival.config';
-import { Lock, User, AlertCircle, LogIn, MapPin, Phone } from 'lucide-react';
+import { Lock, User, AlertCircle, LogIn, MapPin } from 'lucide-react';
 
 export default function HomePage() {
   const router = useRouter();
@@ -191,10 +191,6 @@ export default function HomePage() {
           <p className="flex items-center justify-center gap-1.5">
             <MapPin className="w-3.5 h-3.5 text-devotional-gold-400 shrink-0" />
             <span>{FESTIVAL_CONFIG.associationAddress}</span>
-          </p>
-          <p className="flex items-center justify-center gap-1.5">
-            <Phone className="w-3.5 h-3.5 text-devotional-gold-400 shrink-0" />
-            <span>Hotline: {FESTIVAL_CONFIG.contactNumber}</span>
           </p>
         </div>
       </main>
