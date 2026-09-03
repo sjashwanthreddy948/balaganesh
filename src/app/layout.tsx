@@ -35,7 +35,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#050b1d',
+  themeColor: '#000000',
 };
 
 export default function RootLayout({
@@ -45,21 +45,21 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className="min-h-screen flex flex-col bg-[#050b1d] text-white selection:bg-devotional-gold-500 selection:text-devotional-blue-950 antialiased relative">
-        {/* Fullscreen Background Layer with 50% Transparency */}
+      <body className="min-h-screen flex flex-col bg-black text-white selection:bg-devotional-gold-500 selection:text-devotional-blue-950 antialiased relative">
+        {/* Fullscreen Background Layer with 75% Black Tint */}
         <div className="fixed inset-0 pointer-events-none z-[-1] overflow-hidden">
           <Image
             src="/images/ganesh-landscape-pandal.jpg"
             alt="Bala Ganesh Pandal Background"
             fill
             priority
-            className="object-cover object-center opacity-50 transform scale-100"
+            className="object-cover object-center transform scale-100"
           />
-          {/* Subtle 50% Translucent Royal Blue Tint & Vignette */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#050b1d]/40 via-[#071338]/30 to-[#050b1d]/60" />
+          {/* 75% Black Tint Overlay */}
+          <div className="absolute inset-0 bg-black/75" />
           
-          {/* Warm Golden Glow radiating from the Top Chandelier */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[550px] bg-gradient-radial from-amber-400/25 via-amber-500/10 to-transparent pointer-events-none" />
+          {/* Subtle Warm Golden Accent from Top Chandelier */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-gradient-radial from-amber-400/15 via-transparent to-transparent pointer-events-none" />
         </div>
 
         {children}

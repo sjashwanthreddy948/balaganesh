@@ -43,16 +43,12 @@ export default function LandscapeCertificate({ data, onImageReady }: LandscapeCe
     bgImage.crossOrigin = 'anonymous';
 
     const renderLayers = (imgLoaded: boolean) => {
-      // 1. Draw Authentic Pandal Background with 50% transparency wash
+      // 1. Draw Authentic Pandal Background with 75% black tint
       if (imgLoaded) {
         ctx.drawImage(bgImage, 0, 0, width, height);
 
-        // 50% Translucent Royal Blue Wash Overlay
-        const washGradient = ctx.createLinearGradient(0, 0, 0, height);
-        washGradient.addColorStop(0, 'rgba(5, 11, 29, 0.50)');
-        washGradient.addColorStop(0.5, 'rgba(7, 18, 48, 0.48)');
-        washGradient.addColorStop(1, 'rgba(4, 9, 24, 0.55)');
-        ctx.fillStyle = washGradient;
+        // 75% Black Tint Overlay
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
         ctx.fillRect(0, 0, width, height);
       } else {
         // Fallback rich gradient if image is still loading
