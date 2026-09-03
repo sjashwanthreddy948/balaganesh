@@ -36,7 +36,7 @@ export default function HomePage() {
       }
 
       // Successful login -> route directly into Chanda Dashboard
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     } catch {
       setError('Unable to reach authentication server. Please try again.');
       setLoading(false);
@@ -106,6 +106,9 @@ export default function HomePage() {
                   placeholder="Enter your Login ID"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   className="w-full pl-10 pr-4 py-3 rounded-xl bg-devotional-blue-950 border border-devotional-gold-500/30 text-white placeholder-gray-500 text-sm font-medium focus:outline-none focus:border-devotional-gold-400"
                   autoFocus
                 />

@@ -16,10 +16,16 @@ export async function POST(req: NextRequest) {
     }
 
     const { username, password } = validation.data;
+    const cleanUsername = username.trim().toLowerCase();
 
-    // Lookup user by username
-    const user = await prisma.user.findUnique({
-      where: { username },
+    // Lookup user case-insensitively (handles mobile auto-capitalization like "Admin")
+    const user = await prisma.user.findFirst({
+      where: {
+        username: {
+          equals: cleanUsername,
+          mode: 'insensitive',
+        },
+      },
     });
 
     if (!user || !user.isActive) {
@@ -58,12 +64,18 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Detect if running on localhost (HTTP) vs production cloud (HTTPS)
+    const host = req.headers.get('host') || '';
+    const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+    const isHttps = req.headers.get('x-forwarded-proto') === 'https' || req.nextUrl.protocol === 'https:';
+    const isSecure = isHttps || (!isLocal && process.env.NODE_ENV === 'production');
+
     // Set secure HTTP-only cookie
     response.cookies.set({
       name: AUTH_COOKIE_NAME,
       value: token,
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure,
       sameSite: 'lax',
       path: '/',
       maxAge: 14 * 24 * 60 * 60, // 14 days
