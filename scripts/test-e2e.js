@@ -55,10 +55,10 @@ async function runComprehensiveTests() {
   }
 
   // 2. Staff / Admin Login
-  console.log('2. Testing Staff / Admin Login (admin / BalaGaneshAdmin@2026)...');
+  console.log('2. Testing Staff / Admin Login (admin / Bala@2026Ganesh)...');
   const loginRes = await post('/api/auth/login', {
     username: 'admin',
-    password: 'BalaGaneshAdmin@2026',
+    password: 'Bala@2026Ganesh',
   });
   if (loginRes.status !== 200 || !loginRes.data.user) {
     throw new Error(`Login failed: ${JSON.stringify(loginRes.data)}`);

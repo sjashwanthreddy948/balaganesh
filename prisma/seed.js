@@ -5,9 +5,9 @@ const prisma = new PrismaClient();
 
 async function main() {
   const adminUsername = process.env.ADMIN_DEFAULT_USER || 'admin';
-  const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'BalaGaneshAdmin@2026';
+  const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'Bala@2026Ganesh';
   const volunteerUsername = 'volunteer';
-  const volunteerPassword = 'Volunteer@2026';
+  const volunteerPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'Bala@2026Ganesh';
 
   console.log('Seeding initial users...');
 
