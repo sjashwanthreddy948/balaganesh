@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { FESTIVAL_CONFIG } from '@/config/festival.config';
-import { Users, PlusCircle, ArrowRight, Receipt, FileText, MapPin, Phone } from 'lucide-react';
+import { Users, PlusCircle, ArrowRight, Receipt, MapPin, Phone } from 'lucide-react';
 
 export default function HomePage() {
   return (
@@ -65,22 +65,14 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {/* Secondary Navigation Shortcuts */}
+        {/* Secondary Expense Shortcut */}
         <div className="flex items-center justify-center gap-3 pt-2">
           <Link
             href="/expenses"
-            className="px-3 py-1.5 rounded-xl bg-devotional-blue-950/80 border border-devotional-gold-500/20 text-devotional-gold-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
+            className="px-4 py-2 rounded-xl bg-devotional-blue-950/80 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
           >
             <Receipt className="w-3.5 h-3.5 text-rose-400" />
-            <span>Expenses</span>
-          </Link>
-
-          <Link
-            href="/finance"
-            className="px-3 py-1.5 rounded-xl bg-devotional-blue-950/80 border border-devotional-gold-500/20 text-devotional-gold-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
-          >
-            <FileText className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Financial Summary</span>
+            <span>Expense Tracker & Remaining Balance →</span>
           </Link>
         </div>
 

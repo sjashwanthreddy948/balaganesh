@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { FESTIVAL_CONFIG } from '@/config/festival.config';
-import { LogIn, LayoutDashboard, Receipt, FileText } from 'lucide-react';
+import { LogIn, LayoutDashboard, Receipt } from 'lucide-react';
 
 export default function Header() {
   const [user, setUser] = useState<{ name: string; role: string; canAddExpenses?: boolean } | null>(null);
@@ -44,7 +44,7 @@ export default function Header() {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/40 text-devotional-gold-300 hover:text-white text-xs font-bold transition-all shadow-sm"
               >
                 <LayoutDashboard className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Dashboard</span>
+                <span className="hidden sm:inline">Chanda Dashboard</span>
               </Link>
 
               {(user.role === 'ADMIN' || user.canAddExpenses) && (
@@ -54,16 +54,6 @@ export default function Header() {
                 >
                   <Receipt className="w-3.5 h-3.5 text-rose-400" />
                   <span className="hidden sm:inline">Expenses</span>
-                </Link>
-              )}
-
-              {user.role === 'ADMIN' && (
-                <Link
-                  href="/finance"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/40 text-devotional-gold-300 hover:text-white text-xs font-bold transition-all shadow-sm"
-                >
-                  <FileText className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="hidden sm:inline">Finance</span>
                 </Link>
               )}
 

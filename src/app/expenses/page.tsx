@@ -9,7 +9,6 @@ import {
   PlusCircle,
   Receipt,
   Search,
-  Filter,
   Calendar,
   Banknote,
   Smartphone,
@@ -20,10 +19,11 @@ import {
   Image as ImageIcon,
   X,
   AlertCircle,
-  CheckCircle,
   ArrowLeft,
   RefreshCw,
-  FileText,
+  FileSpreadsheet,
+  TrendingDown,
+  Scale,
 } from 'lucide-react';
 
 interface ExpenseItem {
@@ -41,10 +41,37 @@ interface ExpenseItem {
   createdAt: string;
 }
 
+interface FinancialSummaryData {
+  income: {
+    totalChanda: number;
+    cashChanda: number;
+    onlineChanda: number;
+    totalContributors: number;
+  };
+  expenses: {
+    totalExpenses: number;
+    cashExpenses: number;
+    onlineExpenses: number;
+    totalExpenseCount: number;
+  };
+  balance: {
+    remainingBalance: number;
+    estimatedCashBalance: number;
+    onlineBalance: number;
+  };
+  categoryBreakdown: {
+    category: string;
+    totalAmount: number;
+    count: number;
+    percentage: number;
+  }[];
+}
+
 export default function ExpensesPage() {
   const router = useRouter();
 
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
+  const [financialSummary, setFinancialSummary] = useState<FinancialSummaryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<'ADMIN' | 'VOLUNTEER' | null>(null);
 
@@ -78,16 +105,24 @@ export default function ExpensesPage() {
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
 
-  const fetchExpenses = useCallback(async () => {
+  const fetchExpensesAndSummary = useCallback(async () => {
     setLoading(true);
     try {
-      // Session check
+      // 1. Session check
       const meRes = await fetch('/api/auth/me');
       if (meRes.ok) {
         const meJson = await meRes.json();
         setUserRole(meJson.user.role);
       }
 
+      // 2. Fetch Financial Summary (Remaining Balance & Totals)
+      const sumRes = await fetch('/api/admin/financial-summary');
+      if (sumRes.ok) {
+        const sumJson = await sumRes.json();
+        setFinancialSummary(sumJson.summary);
+      }
+
+      // 3. Fetch Expenses list
       const params = new URLSearchParams();
       if (searchQuery) params.append('search', searchQuery);
       if (categoryFilter !== 'ALL') params.append('category', categoryFilter);
@@ -100,15 +135,15 @@ export default function ExpensesPage() {
         setExpenses(json.data);
       }
     } catch (err) {
-      console.error('Error loading expenses:', err);
+      console.error('Error loading expenses & summary:', err);
     } finally {
       setLoading(false);
     }
   }, [searchQuery, categoryFilter, methodFilter, dateFilter]);
 
   useEffect(() => {
-    fetchExpenses();
-  }, [fetchExpenses]);
+    fetchExpensesAndSummary();
+  }, [fetchExpensesAndSummary]);
 
   // Handle Photo selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -188,7 +223,7 @@ export default function ExpensesPage() {
       setNotes('');
       setBillFile(null);
       setBillPreview(null);
-      fetchExpenses();
+      fetchExpensesAndSummary();
     } catch {
       setFormError('Server error while saving expense.');
     } finally {
@@ -218,7 +253,7 @@ export default function ExpensesPage() {
 
       if (res.ok) {
         setEditingExpense(null);
-        fetchExpenses();
+        fetchExpensesAndSummary();
       }
     } catch (err) {
       console.error('Error updating expense:', err);
@@ -231,66 +266,165 @@ export default function ExpensesPage() {
       const res = await fetch(`/api/expenses/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setDeletingId(null);
-        fetchExpenses();
+        fetchExpensesAndSummary();
       }
     } catch (err) {
       console.error('Error deleting expense:', err);
     }
   };
 
-  // Summary computations
-  const totalAmount = expenses.reduce((acc, e) => acc + e.amount, 0);
-  const cashTotal = expenses
-    .filter((e) => e.paymentMethod === 'CASH')
-    .reduce((acc, e) => acc + e.amount, 0);
-  const onlineTotal = expenses
-    .filter((e) => e.paymentMethod === 'ONLINE')
-    .reduce((acc, e) => acc + e.amount, 0);
-
   return (
     <div className="min-h-screen flex flex-col justify-between">
       <Header />
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-6 space-y-6">
-        {/* Top Header & Breadcrumb */}
+        {/* Top Header & Navigation */}
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-devotional-gold-500/20 pb-4">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.push('/dashboard')}
               className="p-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white transition-colors"
-              title="Back to Dashboard"
+              title="Back to Chanda Dashboard"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
             <div>
               <span className="text-[11px] font-bold uppercase tracking-wider text-devotional-gold-400">
-                Pandal Festival Accounts
+                Festival Expenditures & Net Balance
               </span>
               <h1 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
                 <Receipt className="w-6 h-6 text-devotional-gold-300" />
-                <span>EXPENSE TRACKER</span>
+                <span>EXPENSES & REMAINING AMOUNT</span>
               </h1>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => router.push('/finance')}
-              className="px-3.5 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-200 hover:text-white text-xs font-bold flex items-center gap-1.5 shadow-sm"
-            >
-              <FileText className="w-4 h-4 text-emerald-400" />
-              <span>Financial Summary</span>
-            </button>
+            {userRole === 'ADMIN' && (
+              <a
+                href="/api/admin/export-financial"
+                download
+                className="px-3.5 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-200 hover:text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                <span>Export Report CSV</span>
+              </a>
+            )}
 
             <button
-              onClick={fetchExpenses}
+              onClick={fetchExpensesAndSummary}
               className="p-2.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white"
-              title="Refresh Expenses"
+              title="Refresh Expenses & Balance"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
+
+        {/* PROMINENT REMAINING AMOUNT HERO CARD */}
+        {financialSummary && (
+          <div className="rounded-3xl border-2 border-devotional-gold-500/50 bg-gradient-to-br from-[#0c1e54] via-[#071338] to-[#050b1d] p-5 sm:p-6 shadow-2xl space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-devotional-gold-500/20 pb-3">
+              <div>
+                <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-devotional-gold-400 flex items-center gap-1.5">
+                  <Scale className="w-4 h-4 text-devotional-gold-400" />
+                  <span>Net Festival Liquidity</span>
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-black text-white mt-1">
+                  REMAINING AMOUNT:{' '}
+                  <span
+                    className={
+                      financialSummary.balance.remainingBalance >= 0
+                        ? 'text-emerald-300'
+                        : 'text-rose-400'
+                    }
+                  >
+                    ₹{financialSummary.balance.remainingBalance.toLocaleString('en-IN')}
+                  </span>
+                </h2>
+                <p className="text-xs text-gray-300 mt-1">
+                  Total Chanda (₹{financialSummary.income.totalChanda.toLocaleString('en-IN')}) − Total Expenses (₹{financialSummary.expenses.totalExpenses.toLocaleString('en-IN')})
+                </p>
+              </div>
+
+              <div className="text-right">
+                <span className="text-[11px] text-gray-400 block">Total Bills Recorded</span>
+                <span className="text-xl font-black text-devotional-gold-300">
+                  {financialSummary.expenses.totalExpenseCount}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              <div className="bg-devotional-blue-950/80 p-3.5 rounded-2xl border border-rose-500/30 space-y-1">
+                <span className="text-gray-400 block text-[11px]">Total Expenses Paid</span>
+                <span className="text-lg sm:text-xl font-black text-rose-300">
+                  ₹{financialSummary.expenses.totalExpenses.toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] text-gray-400 block">All vendor expenditures</span>
+              </div>
+
+              <div className="bg-devotional-blue-950/80 p-3.5 rounded-2xl border border-emerald-500/30 space-y-1">
+                <span className="text-gray-400 block text-[11px]">Cash in Hand</span>
+                <span className="text-lg sm:text-xl font-black text-emerald-300">
+                  ₹{financialSummary.balance.estimatedCashBalance.toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] text-gray-400 block">
+                  Cash Chanda − Cash Expenses
+                </span>
+              </div>
+
+              <div className="bg-devotional-blue-950/80 p-3.5 rounded-2xl border border-devotional-gold-500/30 space-y-1">
+                <span className="text-gray-400 block text-[11px]">Online Bank Balance</span>
+                <span className="text-lg sm:text-xl font-black text-devotional-gold-300">
+                  ₹{financialSummary.balance.onlineBalance.toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] text-gray-400 block">
+                  Verified Online − Online Exp.
+                </span>
+              </div>
+
+              <div className="bg-devotional-blue-950/80 p-3.5 rounded-2xl border border-devotional-gold-500/30 space-y-1">
+                <span className="text-gray-400 block text-[11px]">Total Chanda Collected</span>
+                <span className="text-lg sm:text-xl font-black text-white">
+                  ₹{financialSummary.income.totalChanda.toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] text-gray-400 block">
+                  {financialSummary.income.totalContributors} verified donors
+                </span>
+              </div>
+            </div>
+
+            {/* Category Breakdown Bars */}
+            {financialSummary.categoryBreakdown.length > 0 && (
+              <div className="border-t border-devotional-gold-500/15 pt-3 space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-devotional-gold-300">
+                  Category Spending Distribution
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-[11px]">
+                  {financialSummary.categoryBreakdown.map((cat) => (
+                    <div
+                      key={cat.category}
+                      className="bg-devotional-blue-950/90 p-2 rounded-xl border border-devotional-gold-500/15 flex flex-col justify-between gap-1"
+                    >
+                      <div className="flex justify-between items-center text-gray-300">
+                        <span className="font-semibold text-white truncate">{cat.category}</span>
+                        <span className="font-bold text-rose-300">₹{cat.totalAmount.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="w-full bg-devotional-blue-900 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="bg-devotional-gold-400 h-1.5 rounded-full"
+                          style={{ width: `${Math.min(100, Math.max(5, cat.percentage))}%` }}
+                        />
+                      </div>
+                      <span className="text-[9px] text-gray-400 text-right">{cat.percentage}% of expenses</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* PRIMARY CTA: [ + ADD EXPENSE ] */}
         <button
@@ -300,55 +434,6 @@ export default function ExpensesPage() {
           <PlusCircle className="w-6 h-6" />
           <span>+ ADD EXPENSE</span>
         </button>
-
-        {/* SUMMARY CARDS */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="rounded-2xl border border-devotional-gold-500/30 bg-devotional-blue-900/50 p-4 space-y-1 shadow-md">
-            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-devotional-gold-400">
-              Total Expenses
-            </span>
-            <p className="text-2xl sm:text-3xl font-black text-white">
-              ₹{totalAmount.toLocaleString('en-IN')}
-            </p>
-            <p className="text-[10px] text-gray-400">{expenses.length} bills recorded</p>
-          </div>
-
-          <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-4 space-y-1 shadow-md">
-            <div className="flex items-center justify-between text-emerald-400">
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">
-                Cash Expenses
-              </span>
-              <Banknote className="w-4 h-4" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-emerald-300">
-              ₹{cashTotal.toLocaleString('en-IN')}
-            </p>
-            <p className="text-[10px] text-gray-400">Paid from cash in hand</p>
-          </div>
-
-          <div className="rounded-2xl border border-devotional-gold-500/30 bg-devotional-blue-900/50 p-4 space-y-1 shadow-md">
-            <div className="flex items-center justify-between text-devotional-gold-400">
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">
-                Online Expenses
-              </span>
-              <Smartphone className="w-4 h-4" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-devotional-gold-300">
-              ₹{onlineTotal.toLocaleString('en-IN')}
-            </p>
-            <p className="text-[10px] text-gray-400">Paid via UPI / Bank</p>
-          </div>
-
-          <div className="rounded-2xl border border-devotional-gold-500/30 bg-devotional-blue-900/50 p-4 space-y-1 shadow-md flex flex-col justify-between">
-            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-devotional-gold-400">
-              Categories
-            </span>
-            <p className="text-2xl sm:text-3xl font-black text-white">
-              {new Set(expenses.map((e) => e.category)).size}
-            </p>
-            <span className="text-[10px] text-gray-400">Active spending heads</span>
-          </div>
-        </div>
 
         {/* SEARCH AND FILTERS */}
         <div className="bg-devotional-blue-900/50 border border-devotional-gold-500/20 p-3.5 rounded-2xl space-y-3">
@@ -800,12 +885,9 @@ export default function ExpensesPage() {
                     className="flex-1 py-3 rounded-xl btn-gold text-devotional-blue-950 font-black shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50"
                   >
                     {formSubmitting ? (
-                      <span>Saving...</span>
+                      <div className="w-4 h-4 border-2 border-devotional-blue-950 border-t-transparent rounded-full animate-spin" />
                     ) : (
-                      <>
-                        <CheckCircle className="w-4 h-4" />
-                        <span>SAVE EXPENSE</span>
-                      </>
+                      <span>Save Expense</span>
                     )}
                   </button>
                 </div>
@@ -814,49 +896,12 @@ export default function ExpensesPage() {
           </div>
         )}
 
-        {/* MODAL: VIEW BILL PHOTO */}
-        {viewingBillUrl && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
-            <div className="w-full max-w-lg bg-devotional-blue-950 border border-devotional-gold-500/40 rounded-3xl p-5 space-y-4 shadow-2xl">
-              <div className="flex items-center justify-between border-b border-devotional-gold-500/20 pb-2">
-                <h3 className="font-bold text-devotional-gold-300 text-sm">Receipt / Bill Image</h3>
-                <button
-                  onClick={() => setViewingBillUrl(null)}
-                  className="p-1 rounded-lg text-gray-400 hover:text-white"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="max-h-[75vh] overflow-auto rounded-2xl border border-devotional-gold-500/20 bg-black/40 flex items-center justify-center p-2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={viewingBillUrl}
-                  alt="Bill Receipt"
-                  className="max-w-full max-h-[70vh] object-contain rounded-xl"
-                />
-              </div>
-
-              <div className="text-center">
-                <a
-                  href={viewingBillUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-xs font-bold text-devotional-gold-200 inline-block hover:text-white"
-                >
-                  Open Full Size ↗
-                </a>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* MODAL: EDIT EXPENSE (Admin only) */}
         {editingExpense && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
-            <div className="w-full max-w-md rounded-3xl border-2 border-devotional-gold-500/40 bg-devotional-blue-950 p-6 shadow-2xl space-y-4 text-white text-xs">
+            <div className="w-full max-w-md rounded-3xl border-2 border-devotional-gold-500/40 bg-devotional-blue-950 p-6 shadow-2xl space-y-4 text-white">
               <div className="flex items-center justify-between border-b border-devotional-gold-500/20 pb-2">
-                <h3 className="font-bold text-devotional-gold-300 text-sm">
+                <h3 className="font-black text-devotional-gold-300 text-sm">
                   Edit Expense ({editingExpense.expenseNumber})
                 </h3>
                 <button
@@ -867,9 +912,9 @@ export default function ExpensesPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleSaveEdit} className="space-y-3">
+              <form onSubmit={handleSaveEdit} className="space-y-3 text-xs">
                 <div>
-                  <label className="block text-gray-300 font-semibold mb-1">Shop / Vendor *</label>
+                  <label className="block text-gray-300 mb-1 font-semibold">Shop / Vendor *</label>
                   <input
                     type="text"
                     required
@@ -882,7 +927,7 @@ export default function ExpensesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-gray-300 font-semibold mb-1">Category *</label>
+                  <label className="block text-gray-300 mb-1 font-semibold">Category *</label>
                   <select
                     value={editingExpense.category}
                     onChange={(e) =>
@@ -890,9 +935,9 @@ export default function ExpensesPage() {
                     }
                     className="w-full px-3 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white"
                   >
-                    {EXPENSE_CATEGORIES.map((c) => (
-                      <option key={c} value={c} className="bg-devotional-blue-950">
-                        {c}
+                    {EXPENSE_CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat} className="bg-devotional-blue-950">
+                        {cat}
                       </option>
                     ))}
                   </select>
@@ -900,45 +945,74 @@ export default function ExpensesPage() {
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-gray-300 font-semibold mb-1">Amount (₹) *</label>
+                    <label className="block text-gray-300 mb-1 font-semibold">Amount (₹) *</label>
                     <input
                       type="number"
                       required
+                      min={1}
                       value={editingExpense.amount}
                       onChange={(e) =>
-                        setEditingExpense({ ...editingExpense, amount: Number(e.target.value) })
+                        setEditingExpense({
+                          ...editingExpense,
+                          amount: Number(e.target.value),
+                        })
                       }
                       className="w-full px-3 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white font-bold"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-gray-300 font-semibold mb-1">Method *</label>
-                    <select
-                      value={editingExpense.paymentMethod}
+                    <label className="block text-gray-300 mb-1 font-semibold">Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={editingExpense.date.split('T')[0]}
                       onChange={(e) =>
-                        setEditingExpense({
-                          ...editingExpense,
-                          paymentMethod: e.target.value as 'CASH' | 'ONLINE',
-                        })
+                        setEditingExpense({ ...editingExpense, date: e.target.value })
                       }
                       className="w-full px-3 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white"
-                    >
-                      <option value="CASH">CASH</option>
-                      <option value="ONLINE">ONLINE</option>
-                    </select>
+                    />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-gray-300 font-semibold mb-1">Description</label>
+                  <label className="block text-gray-300 mb-1 font-semibold">Method *</label>
+                  <select
+                    value={editingExpense.paymentMethod}
+                    onChange={(e) =>
+                      setEditingExpense({
+                        ...editingExpense,
+                        paymentMethod: e.target.value as 'CASH' | 'ONLINE',
+                      })
+                    }
+                    className="w-full px-3 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white"
+                  >
+                    <option value="CASH">CASH</option>
+                    <option value="ONLINE">ONLINE / UPI</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-gray-300 mb-1 font-semibold">Description</label>
                   <input
                     type="text"
                     value={editingExpense.description || ''}
                     onChange={(e) =>
                       setEditingExpense({ ...editingExpense, description: e.target.value })
                     }
-                    className="w-full px-3 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white"
+                    className="w-full px-3 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/20 text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-300 mb-1 font-semibold">Notes</label>
+                  <input
+                    type="text"
+                    value={editingExpense.notes || ''}
+                    onChange={(e) =>
+                      setEditingExpense({ ...editingExpense, notes: e.target.value })
+                    }
+                    className="w-full px-3 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/20 text-white"
                   />
                 </div>
 
@@ -946,13 +1020,13 @@ export default function ExpensesPage() {
                   <button
                     type="button"
                     onClick={() => setEditingExpense(null)}
-                    className="flex-1 py-2.5 rounded-xl bg-gray-800 text-gray-300 font-bold"
+                    className="flex-1 py-2 rounded-xl bg-gray-800 text-gray-300 font-bold"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-2.5 rounded-xl btn-gold text-devotional-blue-950 font-bold"
+                    className="flex-1 py-2 rounded-xl btn-gold text-devotional-blue-950 font-bold"
                   >
                     Save Changes
                   </button>
@@ -962,33 +1036,73 @@ export default function ExpensesPage() {
           </div>
         )}
 
-        {/* MODAL: DELETE CONFIRMATION */}
+        {/* MODAL: VIEW BILL PHOTO */}
+        {viewingBillUrl && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fadeIn">
+            <div className="relative max-w-2xl w-full bg-devotional-blue-950 border border-devotional-gold-500/40 rounded-3xl p-4 shadow-2xl space-y-3">
+              <div className="flex items-center justify-between border-b border-devotional-gold-500/20 pb-2">
+                <span className="text-sm font-bold text-devotional-gold-300 flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-emerald-400" />
+                  <span>Original Bill / Receipt Preview</span>
+                </span>
+                <button
+                  onClick={() => setViewingBillUrl(null)}
+                  className="p-1 rounded-lg text-gray-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="relative w-full max-h-[70vh] flex items-center justify-center overflow-auto rounded-2xl bg-black/40 p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={viewingBillUrl}
+                  alt="Bill full size"
+                  className="max-h-[65vh] w-auto object-contain rounded-xl shadow-lg"
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <a
+                  href={viewingBillUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-4 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white text-xs font-bold"
+                >
+                  Open in New Tab ↗
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL: DELETE EXPENSE CONFIRMATION */}
         {deletingId && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
-            <div className="w-full max-w-sm rounded-3xl border-2 border-red-500/40 bg-devotional-blue-950 p-6 shadow-2xl space-y-4 text-center text-white">
-              <div className="w-12 h-12 rounded-full bg-red-500/20 border border-red-500 flex items-center justify-center mx-auto text-red-400">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
+            <div className="w-full max-w-sm rounded-3xl border border-red-500/50 bg-devotional-blue-950 p-6 shadow-2xl space-y-4 text-center">
+              <div className="w-12 h-12 rounded-full bg-red-950 border border-red-500/40 mx-auto flex items-center justify-center text-red-400">
                 <Trash2 className="w-6 h-6" />
               </div>
 
-              <div>
-                <h3 className="font-bold text-base">Delete Expense Record?</h3>
-                <p className="text-xs text-gray-300 mt-1">
-                  Are you sure you want to delete this expense? This will recalculate the festival balance.
+              <div className="space-y-1">
+                <h3 className="font-bold text-white text-base">Delete Expense?</h3>
+                <p className="text-xs text-gray-400">
+                  This expenditure will be permanently removed and the festival remaining balance will be updated.
                 </p>
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex gap-2 pt-2 text-xs">
                 <button
                   onClick={() => setDeletingId(null)}
-                  className="flex-1 py-2.5 rounded-xl bg-gray-800 text-gray-300 font-bold text-xs"
+                  className="flex-1 py-2.5 rounded-xl bg-gray-800 text-gray-300 font-bold"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => handleDeleteExpense(deletingId)}
-                  className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs"
+                  className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold"
                 >
-                  Delete
+                  Confirm Delete
                 </button>
               </div>
             </div>

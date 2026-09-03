@@ -14,12 +14,9 @@ import {
   Banknote,
   Smartphone,
   Clock,
-  CheckCircle,
-  XCircle,
   Search,
   LogOut,
   RefreshCw,
-  Download,
   Eye,
   Edit2,
   Check,
@@ -28,10 +25,6 @@ import {
   FileSpreadsheet,
   Calendar,
   Receipt,
-  FileText,
-  Scale,
-  TrendingUp,
-  TrendingDown,
 } from 'lucide-react';
 
 interface UserProfile {
@@ -62,7 +55,6 @@ export default function DashboardPage() {
 
   const [user, setUser] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState<any>(null);
-  const [financialSummary, setFinancialSummary] = useState<any>(null);
   const [contributions, setContributions] = useState<ContributionItem[]>([]);
   const [volunteersList, setVolunteersList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,7 +88,7 @@ export default function DashboardPage() {
   const [newVolCanAddExpenses, setNewVolCanAddExpenses] = useState(false);
   const [volunteerError, setVolunteerError] = useState<string | null>(null);
 
-  // Load Session & Initial Data
+  // Load Session & Chanda Data
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     try {
@@ -109,23 +101,14 @@ export default function DashboardPage() {
       const meJson = await meRes.json();
       setUser(meJson.user);
 
-      // 2. Fetch stats
+      // 2. Fetch Chanda stats only
       const statsRes = await fetch('/api/admin/stats');
       if (statsRes.ok) {
         const statsJson = await statsRes.json();
         setStats(statsJson.stats);
       }
 
-      // 3. If Admin, fetch financial summary
-      if (meJson.user.role === 'ADMIN') {
-        const finRes = await fetch('/api/admin/financial-summary');
-        if (finRes.ok) {
-          const finJson = await finRes.json();
-          setFinancialSummary(finJson.summary);
-        }
-      }
-
-      // 4. Fetch contributions with filters
+      // 3. Fetch contributions with filters
       const params = new URLSearchParams();
       if (searchQuery) params.append('search', searchQuery);
       if (methodFilter !== 'ALL') params.append('method', methodFilter);
@@ -138,7 +121,7 @@ export default function DashboardPage() {
         setContributions(listJson.data);
       }
 
-      // 5. If Admin, fetch volunteers
+      // 4. If Admin, fetch volunteers
       if (meJson.user.role === 'ADMIN') {
         const volRes = await fetch('/api/admin/volunteers');
         if (volRes.ok) {
@@ -169,15 +152,9 @@ export default function DashboardPage() {
         setContributions((prev) =>
           prev.map((c) => (c.id === id ? { ...c, paymentStatus: newStatus } : c))
         );
-        // Refresh stats
         const statsRes = await fetch('/api/admin/stats');
         if (statsRes.ok) {
-          const statsJson = await statsRes.json();
-          setStats(statsJson.stats);
-        }
-        const finRes = await fetch('/api/admin/financial-summary');
-        if (finRes.ok) {
-          setFinancialSummary((await finRes.json()).summary);
+          setStats((await statsRes.json()).stats);
         }
       }
     } catch (err) {
@@ -268,7 +245,7 @@ export default function DashboardPage() {
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-devotional-gold-500/20 pb-4">
           <div>
             <span className="text-[11px] font-bold tracking-widest text-devotional-gold-400 uppercase">
-              {isAdmin ? '🛡️ Admin Workspace' : '🤝 Volunteer Portal'}
+              {isAdmin ? '🛡️ Admin Workspace • Chanda Collection' : '🤝 Volunteer Portal • Chanda Collection'}
             </span>
             <h1 className="text-xl sm:text-2xl font-black text-white">
               Welcome, <span className="text-devotional-gold-300">{user.name}</span>
@@ -284,36 +261,25 @@ export default function DashboardPage() {
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
 
-            {/* Quick Link to Expenses */}
+            {/* Link to Expenses page */}
             {(isAdmin || user.canAddExpenses) && (
               <button
                 onClick={() => router.push('/expenses')}
                 className="px-3 py-2 rounded-xl bg-devotional-blue-900 hover:bg-devotional-blue-800 border border-devotional-gold-500/30 text-devotional-gold-200 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
               >
                 <Receipt className="w-4 h-4 text-rose-400" />
-                <span>Expenses</span>
-              </button>
-            )}
-
-            {/* Quick Link to Financial Summary */}
-            {isAdmin && (
-              <button
-                onClick={() => router.push('/finance')}
-                className="px-3 py-2 rounded-xl bg-devotional-blue-900 hover:bg-devotional-blue-800 border border-devotional-gold-500/30 text-devotional-gold-200 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
-              >
-                <FileText className="w-4 h-4 text-emerald-400" />
-                <span className="hidden sm:inline">Financial Summary</span>
+                <span>Expenses & Balance →</span>
               </button>
             )}
 
             {isAdmin && (
               <a
-                href="/api/admin/export-financial"
+                href="/api/admin/export"
                 download
                 className="px-3 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-200 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
               >
                 <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-                <span className="hidden md:inline">Report CSV</span>
+                <span className="hidden sm:inline">Export Chanda CSV</span>
               </a>
             )}
 
@@ -327,92 +293,18 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* PRIMARY ACTION: HUGE TOUCH-FRIENDLY "+ ADD CONTRIBUTION" CTA */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* PRIMARY ACTION: [ + ADD CONTRIBUTION ] */}
+        <div>
           <button
             onClick={() => setShowAddForm(true)}
-            className="py-4 px-6 rounded-2xl btn-gold text-devotional-blue-950 font-black text-lg tracking-wide shadow-gold-md flex items-center justify-center gap-3 transition-transform active:scale-[0.99]"
+            className="w-full py-4 px-6 rounded-2xl btn-gold text-devotional-blue-950 font-black text-lg sm:text-xl tracking-wide shadow-gold-md flex items-center justify-center gap-3 transition-transform active:scale-[0.99]"
           >
             <PlusCircle className="w-6 h-6 text-devotional-blue-950" />
             <span>+ ADD CONTRIBUTION</span>
           </button>
-
-          {(isAdmin || user.canAddExpenses) && (
-            <button
-              onClick={() => router.push('/expenses')}
-              className="py-4 px-6 rounded-2xl bg-devotional-blue-900/90 hover:bg-devotional-blue-800 border-2 border-devotional-gold-500/40 text-devotional-gold-200 hover:text-white font-black text-lg tracking-wide shadow-md flex items-center justify-center gap-3 transition-transform active:scale-[0.99]"
-            >
-              <Receipt className="w-6 h-6 text-devotional-gold-400" />
-              <span>MANAGE EXPENSES</span>
-            </button>
-          )}
         </div>
 
-        {/* ADMIN FINANCIAL HERO: REMAINING BALANCE & NET POSITION */}
-        {isAdmin && financialSummary && (
-          <div className="rounded-3xl border-2 border-devotional-gold-500/50 bg-gradient-to-br from-[#0c1e54] via-[#071338] to-[#050b1d] p-5 sm:p-6 shadow-2xl space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-devotional-gold-500/20 pb-3">
-              <div>
-                <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-devotional-gold-400">
-                  Real-time Festival Financial Position
-                </span>
-                <h2 className="text-xl sm:text-2xl font-black text-white">
-                  Remaining Balance: <span className="text-devotional-gold-300">₹{financialSummary.balance.remainingBalance.toLocaleString('en-IN')}</span>
-                </h2>
-              </div>
-              <button
-                onClick={() => router.push('/finance')}
-                className="text-xs font-bold text-devotional-gold-300 hover:text-white underline underline-offset-4"
-              >
-                View Complete Statement →
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-              <div className="bg-devotional-blue-950/80 p-3 rounded-2xl border border-emerald-500/30">
-                <span className="text-gray-400 block text-[11px]">Total Chanda Collected</span>
-                <span className="text-lg font-black text-emerald-300">
-                  ₹{financialSummary.income.totalChanda.toLocaleString('en-IN')}
-                </span>
-                <span className="text-[10px] text-gray-400 block">
-                  {financialSummary.income.totalContributors} verified donors
-                </span>
-              </div>
-
-              <div className="bg-devotional-blue-950/80 p-3 rounded-2xl border border-rose-500/30">
-                <span className="text-gray-400 block text-[11px]">Total Expenses Paid</span>
-                <span className="text-lg font-black text-rose-300">
-                  ₹{financialSummary.expenses.totalExpenses.toLocaleString('en-IN')}
-                </span>
-                <span className="text-[10px] text-gray-400 block">
-                  {financialSummary.expenses.totalExpenseCount} bills recorded
-                </span>
-              </div>
-
-              <div className="bg-devotional-blue-950/80 p-3 rounded-2xl border border-emerald-500/30">
-                <span className="text-gray-400 block text-[11px]">Cash in Hand</span>
-                <span className="text-lg font-black text-emerald-300">
-                  ₹{financialSummary.balance.estimatedCashBalance.toLocaleString('en-IN')}
-                </span>
-                <span className="text-[10px] text-gray-400 block">
-                  Cash Chanda − Cash Expenses
-                </span>
-              </div>
-
-              <div className="bg-devotional-blue-950/80 p-3 rounded-2xl border border-devotional-gold-500/30">
-                <span className="text-gray-400 block text-[11px]">Online Bank Balance</span>
-                <span className="text-lg font-black text-devotional-gold-300">
-                  ₹{financialSummary.balance.onlineBalance.toLocaleString('en-IN')}
-                </span>
-                <span className="text-[10px] text-gray-400 block">
-                  Verified Online − Online Exp.
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* SUMMARY STATS CARDS */}
+        {/* CHANDA ONLY SUMMARY METRICS */}
         {stats && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="rounded-2xl border border-devotional-gold-500/30 bg-devotional-blue-900/50 p-4 space-y-1 shadow-md">
