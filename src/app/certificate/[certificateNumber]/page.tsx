@@ -105,7 +105,12 @@ export default function CertificateViewPage() {
             </div>
 
             {/* 16:9 Landscape Certificate */}
-            <LandscapeCertificate data={certData} />
+            <LandscapeCertificate
+              data={certData}
+              showStatusShare={!user}
+              showGroupLink={!user}
+              showCertificateLink={true}
+            />
 
             {user && (
               <div className="pt-2 text-center">

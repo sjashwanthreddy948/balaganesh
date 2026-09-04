@@ -323,61 +323,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
       // 3. Exact greeting message for this donor & certificate
       const message = buildWhatsAppCertificateMessage(createdCertificate);
 
-      // 4. Try WhatsApp Business Cloud API (if configured on server)
-      try {
-        let uploadedCertUrl: string | null = null;
-        if (blob) {
-          try {
-            const uploadFormData = new FormData();
-            uploadFormData.append(
-              'file',
-              blob,
-              `BalaGanesh_Certificate_${createdCertificate.certificateNumber}.jpg`
-            );
-            const uploadRes = await fetch('/api/upload', {
-              method: 'POST',
-              body: uploadFormData,
-            });
-            if (uploadRes.ok) {
-              const uploadJson = await uploadRes.json();
-              if (uploadJson.url) {
-                uploadedCertUrl = uploadJson.url.startsWith('http')
-                  ? uploadJson.url
-                  : `${window.location.origin}${uploadJson.url}`;
-              }
-            }
-          } catch (uploadErr) {
-            console.warn('Certificate upload skipped for WhatsApp Cloud API:', uploadErr);
-          }
-        }
-
-        const apiRes = await fetch('/api/whatsapp/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            certificateNumber: createdCertificate.certificateNumber,
-            mobileNumber: createdCertificate.mobileNumber,
-            fullName: createdCertificate.fullName,
-            amount: createdCertificate.amount,
-            paymentMethod: createdCertificate.paymentMethod,
-            certificateImageUrl: uploadedCertUrl,
-          }),
-        });
-        const apiData = await apiRes.json();
-        if (apiData.success && apiData.apiConfigured) {
-          setWhatsAppNotice({
-            type: 'success',
-            message: `✓ Certificate and VIEW GROUP button sent via WhatsApp to ${phoneResult.displayPhone}!`,
-          });
-          setIsSharingWhatsApp(false);
-          return;
-        }
-      } catch (err) {
-        console.warn('WhatsApp API check, using direct WhatsApp share flow:', err);
-      }
-
-      // 5. Direct WhatsApp Flow to contributor's saved phone:
-      // Download contributor's exact Certificate JPG so it's ready on their device
+      // 4. Download contributor's exact Certificate JPG so it's ready on their device
       if (blob) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -413,12 +359,28 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
       }
 
       // Directly open WhatsApp targeting the contributor's saved phone number (+91XXXXXXXXXX)
-      const whatsAppChatUrl = `https://api.whatsapp.com/send?phone=${phoneResult.whatsappPhone}&text=${encodeURIComponent(message)}`;
-      window.open(whatsAppChatUrl, '_blank');
+      const phoneParam = phoneResult ? `phone=${phoneResult.whatsappPhone}&` : '';
+      const whatsAppChatUrl = `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(message)}`;
+
+      const isMobile =
+        typeof navigator !== 'undefined' &&
+        /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+      if (isMobile) {
+        window.location.href = whatsAppChatUrl;
+      } else {
+        const a = document.createElement('a');
+        a.href = whatsAppChatUrl;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
 
       setWhatsAppNotice({
         type: 'info',
-        message: `WhatsApp chat opened for ${phoneResult.displayPhone}. Certificate JPG downloaded to device.`,
+        message: `WhatsApp opened for ${phoneResult?.displayPhone || 'devotee'}. Certificate JPG downloaded to device.`,
       });
       setIsSharingWhatsApp(false);
     };

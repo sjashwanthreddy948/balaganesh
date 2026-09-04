@@ -232,10 +232,7 @@ export default function DashboardPage() {
 
   const handleDashboardWhatsAppShare = (c: ContributionItem) => {
     const phoneResult = normalizeIndianMobileForWhatsApp(c.mobileNumber);
-    if (!phoneResult) {
-      alert('Please enter a valid mobile number for this contributor.');
-      return;
-    }
+    const phoneParam = phoneResult ? `phone=${phoneResult.whatsappPhone}&` : '';
 
     const message = buildWhatsAppCertificateMessage({
       fullName: c.fullName,
@@ -245,11 +242,28 @@ export default function DashboardPage() {
     });
 
     if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(message).catch(() => {});
+      try {
+        navigator.clipboard.writeText(message);
+      } catch {}
     }
 
-    const url = `https://api.whatsapp.com/send?phone=${phoneResult.whatsappPhone}&text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+    const url = `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(message)}`;
+
+    const isMobile =
+      typeof navigator !== 'undefined' &&
+      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      window.location.href = url;
+    } else {
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
   };
 
   // Edit Save
