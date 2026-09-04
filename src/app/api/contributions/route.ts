@@ -45,7 +45,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Determine initial status based on payment method
-    const paymentStatus = data.paymentMethod === 'CASH' ? 'CASH_RECEIVED' : 'PENDING';
+    const paymentStatus =
+      data.paymentMethod === 'CASH'
+        ? 'CASH_RECEIVED'
+        : data.paymentMethod === 'PAY_LATER'
+        ? 'PAY_LATER'
+        : 'PENDING';
 
     // Generate next sequential certificate number
     const certificateNumber = await generateNextCertificateNumber();
@@ -130,11 +135,11 @@ export async function GET(req: NextRequest) {
       whereClause.createdById = volunteerId;
     }
 
-    if (paymentMethod && ['CASH', 'ONLINE'].includes(paymentMethod)) {
+    if (paymentMethod && ['CASH', 'ONLINE', 'PAY_LATER'].includes(paymentMethod)) {
       whereClause.paymentMethod = paymentMethod;
     }
 
-    if (status && ['CASH_RECEIVED', 'PENDING', 'VERIFIED', 'REJECTED'].includes(status)) {
+    if (status && ['CASH_RECEIVED', 'PENDING', 'VERIFIED', 'REJECTED', 'PAY_LATER'].includes(status)) {
       whereClause.paymentStatus = status;
     }
 

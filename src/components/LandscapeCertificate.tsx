@@ -284,12 +284,13 @@ export default function LandscapeCertificate({
       ctx.fillText(`₹${data.amount.toLocaleString('en-IN')}`, boxX + colW * 0.5, colY2);
 
       // Col 2: Payment Method
+      const methodDisplay = data.paymentMethod === 'PAY_LATER' ? 'PAY LATER' : data.paymentMethod;
       ctx.font = 'bold 15px sans-serif';
       ctx.fillStyle = '#64748b';
       ctx.fillText('PAYMENT METHOD', boxX + colW * 1.5, colY1);
-      ctx.font = 'bold 28px sans-serif';
+      ctx.font = methodDisplay.length > 7 ? 'bold 24px sans-serif' : 'bold 28px sans-serif';
       ctx.fillStyle = '#0c1e54';
-      ctx.fillText(data.paymentMethod, boxX + colW * 1.5, colY2);
+      ctx.fillText(methodDisplay, boxX + colW * 1.5, colY2);
 
       // Col 3: Certificate No
       ctx.font = 'bold 15px sans-serif';

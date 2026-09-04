@@ -53,8 +53,8 @@ interface ContributionItem {
   mobileNumber?: string | null;
   address?: string | null;
   amount: number;
-  paymentMethod: 'CASH' | 'ONLINE';
-  paymentStatus: 'CASH_RECEIVED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
+  paymentMethod: 'CASH' | 'ONLINE' | 'PAY_LATER';
+  paymentStatus: 'CASH_RECEIVED' | 'PENDING' | 'VERIFIED' | 'REJECTED' | 'PAY_LATER';
   utr?: string | null;
   paymentScreenshot?: string | null;
   volunteerName?: string;
@@ -75,8 +75,8 @@ export default function DashboardPage() {
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [methodFilter, setMethodFilter] = useState<'ALL' | 'CASH' | 'ONLINE'>('ALL');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'CASH_RECEIVED' | 'PENDING' | 'VERIFIED' | 'REJECTED'>('ALL');
+  const [methodFilter, setMethodFilter] = useState<'ALL' | 'CASH' | 'ONLINE' | 'PAY_LATER'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'CASH_RECEIVED' | 'PENDING' | 'VERIFIED' | 'REJECTED' | 'PAY_LATER'>('ALL');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
 
   // Certificate Modal
@@ -92,6 +92,8 @@ export default function DashboardPage() {
   const [editMobile, setEditMobile] = useState('');
   const [editAddress, setEditAddress] = useState('');
   const [editAmount, setEditAmount] = useState<number>(0);
+  const [editMethod, setEditMethod] = useState<'CASH' | 'ONLINE' | 'PAY_LATER'>('CASH');
+  const [editStatus, setEditStatus] = useState<'CASH_RECEIVED' | 'PENDING' | 'VERIFIED' | 'REJECTED' | 'PAY_LATER'>('CASH_RECEIVED');
 
   // Admin Settings Modal (Admin only)
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -208,8 +210,11 @@ export default function DashboardPage() {
     }
   };
 
-  // Status Update (Verify/Reject)
-  const handleStatusUpdate = async (id: string, newStatus: 'VERIFIED' | 'REJECTED' | 'PENDING') => {
+  // Status Update (Verify/Reject/Cash Paid)
+  const handleStatusUpdate = async (
+    id: string,
+    newStatus: 'VERIFIED' | 'REJECTED' | 'PENDING' | 'CASH_RECEIVED' | 'PAY_LATER'
+  ) => {
     try {
       const res = await fetch(`/api/contributions/${id}`, {
         method: 'PATCH',
@@ -218,11 +223,23 @@ export default function DashboardPage() {
       });
       if (res.ok) {
         setContributions((prev) =>
-          prev.map((c) => (c.id === id ? { ...c, paymentStatus: newStatus } : c))
+          prev.map((c) =>
+            c.id === id
+              ? {
+                  ...c,
+                  paymentStatus: newStatus,
+                  paymentMethod: newStatus === 'CASH_RECEIVED' ? 'CASH' : c.paymentMethod,
+                }
+              : c
+          )
         );
         const statsRes = await fetch('/api/admin/stats');
         if (statsRes.ok) {
           setStats((await statsRes.json()).stats);
+        }
+        const finRes = await fetch('/api/admin/financial-summary');
+        if (finRes.ok) {
+          setFinancialSummary((await finRes.json()).summary);
         }
       }
     } catch (err) {
@@ -279,6 +296,8 @@ export default function DashboardPage() {
           mobileNumber: editMobile || undefined,
           address: editAddress || undefined,
           amount: editAmount,
+          paymentMethod: editMethod,
+          paymentStatus: editStatus,
         }),
       });
       if (res.ok) {
@@ -421,8 +440,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* TIER 2: PAYMENT METHOD BREAKDOWN (CASH CHANDA & ONLINE CHANDA ONLY) */}
-          <div className="grid grid-cols-2 gap-3 text-xs">
+          {/* TIER 2: PAYMENT METHOD BREAKDOWN (CASH, ONLINE & PAY LATER PLEDGES) */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
             {/* Cash Chanda */}
             <div className="rounded-2xl border border-emerald-500/40 bg-devotional-blue-950/80 p-4 space-y-1 shadow-sm">
               <div className="flex items-center justify-between text-emerald-400">
@@ -448,6 +467,26 @@ export default function DashboardPage() {
               </p>
               <p className="text-[10px] text-devotional-gold-300/70">
                 UPI & QR payments
+              </p>
+            </div>
+
+            {/* Pay Later Pledges */}
+            <div
+              onClick={() => {
+                setMethodFilter('PAY_LATER');
+              }}
+              className="col-span-2 sm:col-span-1 rounded-2xl border border-amber-500/40 bg-amber-950/30 p-4 space-y-1 shadow-sm cursor-pointer hover:bg-amber-950/50 transition-colors"
+              title="Click to view Pay Later contributions"
+            >
+              <div className="flex items-center justify-between text-amber-400">
+                <span className="text-[11px] font-bold uppercase tracking-wider">Pay Later Pledges</span>
+                <Clock className="w-4 h-4" />
+              </div>
+              <p className="text-xl sm:text-2xl font-black text-amber-300">
+                ₹{(financialSummary?.income?.payLaterChanda ?? stats?.payLaterAmount ?? 0).toLocaleString('en-IN')}
+              </p>
+              <p className="text-[10px] text-amber-200/70">
+                {financialSummary?.income?.payLaterCount ?? stats?.payLaterContributions ?? 0} pledges to collect
               </p>
             </div>
           </div>
@@ -515,7 +554,7 @@ export default function DashboardPage() {
               {/* Method Filter */}
               <div className="flex items-center gap-1 bg-devotional-blue-950 p-1 rounded-xl border border-devotional-gold-500/20">
                 <span className="text-[10px] text-gray-400 px-2 font-semibold">METHOD:</span>
-                {(['ALL', 'CASH', 'ONLINE'] as const).map((m) => (
+                {(['ALL', 'CASH', 'ONLINE', 'PAY_LATER'] as const).map((m) => (
                   <button
                     key={m}
                     onClick={() => setMethodFilter(m)}
@@ -525,7 +564,7 @@ export default function DashboardPage() {
                         : 'text-gray-300 hover:text-white'
                     }`}
                   >
-                    {m}
+                    {m === 'PAY_LATER' ? 'PAY LATER' : m}
                   </button>
                 ))}
               </div>
@@ -533,7 +572,7 @@ export default function DashboardPage() {
               {/* Status Filter */}
               <div className="flex items-center gap-1 bg-devotional-blue-950 p-1 rounded-xl border border-devotional-gold-500/20 overflow-x-auto">
                 <span className="text-[10px] text-gray-400 px-2 font-semibold">STATUS:</span>
-                {(['ALL', 'CASH_RECEIVED', 'PENDING', 'VERIFIED'] as const).map((s) => (
+                {(['ALL', 'CASH_RECEIVED', 'PENDING', 'VERIFIED', 'PAY_LATER'] as const).map((s) => (
                   <button
                     key={s}
                     onClick={() => setStatusFilter(s)}
@@ -543,7 +582,7 @@ export default function DashboardPage() {
                         : 'text-gray-300 hover:text-white'
                     }`}
                   >
-                    {s.replace('_', ' ')}
+                    {s === 'PAY_LATER' ? 'PAY LATER' : s.replace('_', ' ')}
                   </button>
                 ))}
               </div>
@@ -589,6 +628,7 @@ export default function DashboardPage() {
                 <div className="md:hidden space-y-3 p-3">
                   {contributions.map((c) => {
                     const isCash = c.paymentMethod === 'CASH';
+                    const isPayLater = c.paymentMethod === 'PAY_LATER' || c.paymentStatus === 'PAY_LATER';
                     const isPending = c.paymentStatus === 'PENDING';
 
                     return (
@@ -632,25 +672,31 @@ export default function DashboardPage() {
                             {/* Method */}
                             <span
                               className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase ${
-                                isCash
+                                isPayLater
+                                  ? 'bg-amber-950/80 text-amber-300 border border-amber-500/40'
+                                  : isCash
                                   ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40'
                                   : 'bg-devotional-blue-950 text-devotional-gold-300 border border-devotional-gold-500/30'
                               }`}
                             >
-                              {c.paymentMethod}
+                              {c.paymentMethod === 'PAY_LATER' ? '⏱ PAY LATER' : c.paymentMethod}
                             </span>
 
                             {/* Status */}
                             <span
                               className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase ${
-                                c.paymentStatus === 'VERIFIED' || c.paymentStatus === 'CASH_RECEIVED'
+                                c.paymentStatus === 'PAY_LATER'
+                                  ? 'bg-amber-950/80 text-amber-300 border border-amber-500/40'
+                                  : c.paymentStatus === 'VERIFIED' || c.paymentStatus === 'CASH_RECEIVED'
                                   ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40'
                                   : c.paymentStatus === 'REJECTED'
                                   ? 'bg-red-950/80 text-red-300 border border-red-500/40'
                                   : 'bg-amber-950/80 text-amber-300 border border-amber-500/40 animate-pulse'
                               }`}
                             >
-                              {c.paymentStatus === 'CASH_RECEIVED'
+                              {c.paymentStatus === 'PAY_LATER'
+                                ? '⏱ PAY LATER'
+                                : c.paymentStatus === 'CASH_RECEIVED'
                                 ? '✓ CASH RECEIVED'
                                 : c.paymentStatus === 'VERIFIED'
                                 ? '✓ VERIFIED'
@@ -667,7 +713,7 @@ export default function DashboardPage() {
                         </div>
 
                         {/* UTR Info (if online) */}
-                        {!isCash && c.utr && (
+                        {!isCash && !isPayLater && c.utr && (
                           <div className="text-[11px] text-gray-300 bg-devotional-blue-950/60 px-2.5 py-1 rounded-lg border border-devotional-gold-500/15 flex items-center justify-between">
                             <span className="text-gray-400">UTR:</span>
                             <span className="font-mono text-devotional-gold-200 font-bold">{c.utr}</span>
@@ -677,7 +723,7 @@ export default function DashboardPage() {
                         {/* Action Buttons */}
                         <div className="space-y-2 pt-2 border-t border-devotional-gold-500/15">
                           {/* 🖼 VIEW PAYMENT SCREENSHOT (ONLINE ONLY with screenshot) */}
-                          {!isCash && c.paymentScreenshot && (
+                          {!isCash && !isPayLater && c.paymentScreenshot && (
                             <button
                               type="button"
                               onClick={() => {
@@ -725,8 +771,21 @@ export default function DashboardPage() {
                               <span>Certificate</span>
                             </button>
 
+                            {/* Admin Pay Later Collected Cash inline */}
+                            {isAdmin && isPayLater && (
+                              <button
+                                type="button"
+                                onClick={() => handleStatusUpdate(c.id, 'CASH_RECEIVED')}
+                                className="px-2.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 shadow-sm"
+                                title="Devotee paid cash - Mark Cash Received"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                <span>Paid Cash</span>
+                              </button>
+                            )}
+
                             {/* Admin Verify/Reject inline */}
-                            {isAdmin && !isCash && isPending && (
+                            {isAdmin && !isCash && !isPayLater && isPending && (
                               <div className="flex items-center gap-1">
                                 <button
                                   type="button"
@@ -755,6 +814,8 @@ export default function DashboardPage() {
                                   setEditMobile(c.mobileNumber || '');
                                   setEditAddress(c.address || '');
                                   setEditAmount(c.amount);
+                                  setEditMethod(c.paymentMethod);
+                                  setEditStatus(c.paymentStatus);
                                 }}
                                 className="p-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white text-xs active:scale-95 transition-all"
                                 title="Edit Contribution"
@@ -797,6 +858,7 @@ export default function DashboardPage() {
                     <tbody className="divide-y divide-devotional-gold-500/10 text-xs">
                       {contributions.map((c) => {
                         const isCash = c.paymentMethod === 'CASH';
+                        const isPayLater = c.paymentMethod === 'PAY_LATER' || c.paymentStatus === 'PAY_LATER';
                         const isPending = c.paymentStatus === 'PENDING';
 
                         return (
@@ -819,31 +881,38 @@ export default function DashboardPage() {
                             <td className="py-3 px-4">
                               <span
                                 className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                                  isCash
+                                  isPayLater
+                                    ? 'bg-amber-950 text-amber-300 border border-amber-500/40'
+                                    : isCash
                                     ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40'
                                     : 'bg-devotional-blue-950 text-devotional-gold-300 border border-devotional-gold-500/30'
                                 }`}
                               >
-                                {c.paymentMethod}
+                                {c.paymentMethod === 'PAY_LATER' ? '⏱ PAY LATER' : c.paymentMethod}
                               </span>
                             </td>
                             <td className="py-3 px-4 whitespace-nowrap">
-                              {isCash && (
+                              {isPayLater && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-950/60 px-2 py-0.5 rounded-full border border-amber-500/30">
+                                  <Clock className="w-3 h-3" /> PAY LATER
+                                </span>
+                              )}
+                              {!isPayLater && isCash && (
                                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400">
                                   <Check className="w-3 h-3" /> RECEIVED
                                 </span>
                               )}
-                              {!isCash && isPending && (
+                              {!isPayLater && !isCash && isPending && (
                                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-950/60 px-2 py-0.5 rounded-full border border-amber-500/30">
                                   <Clock className="w-3 h-3" /> PENDING
                                 </span>
                               )}
-                              {!isCash && c.paymentStatus === 'VERIFIED' && (
+                              {!isPayLater && !isCash && c.paymentStatus === 'VERIFIED' && (
                                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-500/30">
                                   <Check className="w-3 h-3" /> VERIFIED
                                 </span>
                               )}
-                              {!isCash && c.paymentStatus === 'REJECTED' && (
+                              {!isPayLater && !isCash && c.paymentStatus === 'REJECTED' && (
                                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-400 bg-red-950/60 px-2 py-0.5 rounded-full border border-red-500/30">
                                   <X className="w-3 h-3" /> REJECTED
                                 </span>
@@ -882,7 +951,7 @@ export default function DashboardPage() {
                               </button>
 
                               {/* Screenshot Lightbox (ONLINE ONLY with screenshot) */}
-                              {!isCash && c.paymentScreenshot && (
+                              {!isCash && !isPayLater && c.paymentScreenshot && (
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -896,8 +965,20 @@ export default function DashboardPage() {
                                 </button>
                               )}
 
+                              {/* Admin Pay Later Collected Cash inline */}
+                              {isAdmin && isPayLater && (
+                                <button
+                                  onClick={() => handleStatusUpdate(c.id, 'CASH_RECEIVED')}
+                                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] inline-flex items-center gap-1 shadow-sm"
+                                  title="Devotee paid cash - Mark Cash Received"
+                                >
+                                  <Check className="w-3 h-3" />
+                                  <span>Paid Cash</span>
+                                </button>
+                              )}
+
                               {/* Admin Verify / Reject */}
-                              {isAdmin && !isCash && isPending && (
+                              {isAdmin && !isCash && !isPayLater && isPending && (
                                 <>
                                   <button
                                     onClick={() => handleStatusUpdate(c.id, 'VERIFIED')}
@@ -923,6 +1004,8 @@ export default function DashboardPage() {
                                     setEditMobile(c.mobileNumber || '');
                                     setEditAddress(c.address || '');
                                     setEditAmount(c.amount);
+                                    setEditMethod(c.paymentMethod);
+                                    setEditStatus(c.paymentStatus);
                                   }}
                                   className="p-1.5 rounded-lg bg-devotional-blue-950 border border-devotional-gold-500/20 text-gray-300 hover:text-white inline-flex items-center"
                                   title="Edit Contribution"
@@ -1050,6 +1133,42 @@ export default function DashboardPage() {
                     onChange={(e) => setEditAddress(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white"
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-gray-300 mb-1 font-semibold">Payment Method</label>
+                    <select
+                      value={editMethod}
+                      onChange={(e) => {
+                        const newM = e.target.value as 'CASH' | 'ONLINE' | 'PAY_LATER';
+                        setEditMethod(newM);
+                        if (newM === 'CASH') setEditStatus('CASH_RECEIVED');
+                        else if (newM === 'PAY_LATER') setEditStatus('PAY_LATER');
+                        else if (newM === 'ONLINE' && editStatus === 'CASH_RECEIVED') setEditStatus('PENDING');
+                      }}
+                      className="w-full px-3 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white"
+                    >
+                      <option value="CASH">CASH</option>
+                      <option value="ONLINE">ONLINE (UPI)</option>
+                      <option value="PAY_LATER">PAY LATER</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-gray-300 mb-1 font-semibold">Payment Status</label>
+                    <select
+                      value={editStatus}
+                      onChange={(e) => setEditStatus(e.target.value as any)}
+                      className="w-full px-3 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white"
+                    >
+                      <option value="CASH_RECEIVED">CASH RECEIVED</option>
+                      <option value="VERIFIED">VERIFIED</option>
+                      <option value="PENDING">PENDING</option>
+                      <option value="PAY_LATER">PAY LATER</option>
+                      <option value="REJECTED">REJECTED</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="pt-2 flex gap-2">

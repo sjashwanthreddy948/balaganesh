@@ -27,6 +27,7 @@ import {
   Trash2,
   Eye,
   MessageCircle,
+  Clock,
 } from 'lucide-react';
 
 interface FastContributionFormProps {
@@ -42,7 +43,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
   const [selectedAmount, setSelectedAmount] = useState<number>(FESTIVAL_CONFIG.defaultAmount);
   const [isCustomAmount, setIsCustomAmount] = useState(false);
   const [customAmountInput, setCustomAmountInput] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'ONLINE'>('CASH');
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'ONLINE' | 'PAY_LATER'>('CASH');
   const [utr, setUtr] = useState('');
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
@@ -648,7 +649,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
               Payment Method <span className="text-amber-400 font-bold">*</span>
             </label>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
               {/* CASH */}
               <button
                 type="button"
@@ -656,15 +657,15 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
                   setPaymentMethod('CASH');
                   setErrorMessage(null);
                 }}
-                className={`p-4 rounded-2xl border-2 flex flex-col items-center justify-center gap-1.5 transition-all text-center ${
+                className={`p-3 sm:p-4 rounded-2xl border-2 flex flex-col items-center justify-center gap-1 sm:gap-1.5 transition-all text-center ${
                   paymentMethod === 'CASH'
                     ? 'bg-emerald-950/80 border-emerald-400 text-emerald-300 shadow-lg ring-2 ring-emerald-400/50 scale-[1.02]'
                     : 'bg-devotional-blue-950/80 border-devotional-gold-500/20 text-gray-300 hover:border-devotional-gold-500/40'
                 }`}
               >
-                <Banknote className="w-7 h-7 text-emerald-400" />
-                <span className="text-base font-black tracking-wide">CASH</span>
-                <span className="text-[10px] text-gray-400 font-medium">Cash Contribution</span>
+                <Banknote className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-400" />
+                <span className="text-sm sm:text-base font-black tracking-wide">CASH</span>
+                <span className="text-[9px] sm:text-[10px] text-gray-400 font-medium">Received Cash</span>
               </button>
 
               {/* ONLINE / UPI */}
@@ -674,20 +675,38 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
                   setPaymentMethod('ONLINE');
                   setErrorMessage(null);
                 }}
-                className={`p-4 rounded-2xl border-2 flex flex-col items-center justify-center gap-1.5 transition-all text-center ${
+                className={`p-3 sm:p-4 rounded-2xl border-2 flex flex-col items-center justify-center gap-1 sm:gap-1.5 transition-all text-center ${
                   paymentMethod === 'ONLINE'
                     ? 'bg-devotional-blue-800/90 border-devotional-gold-400 text-devotional-gold-300 shadow-lg ring-2 ring-devotional-gold-400/50 scale-[1.02]'
                     : 'bg-devotional-blue-950/80 border-devotional-gold-500/20 text-gray-300 hover:border-devotional-gold-500/40'
                 }`}
               >
-                <Smartphone className="w-7 h-7 text-devotional-gold-400" />
-                <span className="text-base font-black tracking-wide">ONLINE</span>
-                <span className="text-[10px] text-gray-400 font-medium">UPI / QR Payment</span>
+                <Smartphone className="w-6 h-6 sm:w-7 sm:h-7 text-devotional-gold-400" />
+                <span className="text-sm sm:text-base font-black tracking-wide">ONLINE</span>
+                <span className="text-[9px] sm:text-[10px] text-gray-400 font-medium">UPI / QR</span>
+              </button>
+
+              {/* PAY LATER */}
+              <button
+                type="button"
+                onClick={() => {
+                  setPaymentMethod('PAY_LATER');
+                  setErrorMessage(null);
+                }}
+                className={`p-3 sm:p-4 rounded-2xl border-2 flex flex-col items-center justify-center gap-1 sm:gap-1.5 transition-all text-center ${
+                  paymentMethod === 'PAY_LATER'
+                    ? 'bg-amber-950/80 border-amber-400 text-amber-300 shadow-lg ring-2 ring-amber-400/50 scale-[1.02]'
+                    : 'bg-devotional-blue-950/80 border-devotional-gold-500/20 text-gray-300 hover:border-devotional-gold-500/40'
+                }`}
+              >
+                <Clock className="w-6 h-6 sm:w-7 sm:h-7 text-amber-400" />
+                <span className="text-sm sm:text-base font-black tracking-wide">PAY LATER</span>
+                <span className="text-[9px] sm:text-[10px] text-gray-400 font-medium">Pledge Amount</span>
               </button>
             </div>
           </div>
 
-          {/* DYNAMIC FIELDS: CASH vs ONLINE */}
+          {/* DYNAMIC FIELDS: CASH vs PAY LATER vs ONLINE */}
           {paymentMethod === 'CASH' ? (
             /* CASH NOTICE */
             <div className="bg-emerald-950/40 border border-emerald-500/40 rounded-2xl p-4 flex items-center justify-between text-xs animate-fadeIn">
@@ -701,6 +720,21 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
               </div>
               <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/50 shrink-0 ml-2">
                 CASH RECEIVED
+              </span>
+            </div>
+          ) : paymentMethod === 'PAY_LATER' ? (
+            /* PAY LATER NOTICE */
+            <div className="bg-amber-950/40 border border-amber-500/40 rounded-2xl p-4 flex items-center justify-between text-xs animate-fadeIn">
+              <div>
+                <span className="text-amber-400 font-bold block text-sm">
+                  PAY LATER (PLEDGED)
+                </span>
+                <span className="text-gray-300 text-[11px]">
+                  Devotee pledged contribution and will pay later. Admin can verify once money is collected.
+                </span>
+              </div>
+              <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-400/50 shrink-0 ml-2">
+                PAY LATER
               </span>
             </div>
           ) : (

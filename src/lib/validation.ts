@@ -94,8 +94,8 @@ export const createContributionSchema = z.object({
     .positive('Please enter a valid contribution amount.')
     .min(10, 'Minimum contribution amount is ₹10.')
     .max(1000000, 'Maximum contribution limit is ₹10,00,000.'),
-  paymentMethod: z.enum(['CASH', 'ONLINE'], {
-    errorMap: () => ({ message: 'Please select CASH or ONLINE.' }),
+  paymentMethod: z.enum(['CASH', 'ONLINE', 'PAY_LATER'], {
+    errorMap: () => ({ message: 'Please select CASH, ONLINE, or PAY LATER.' }),
   }),
   utr: z.string().trim().optional().or(z.literal('')),
   paymentScreenshot: z.string().optional().nullable(),
@@ -128,6 +128,8 @@ export const editContributionSchema = z.object({
     .number()
     .int()
     .positive('Please enter a valid contribution amount.'),
+  paymentMethod: z.enum(['CASH', 'ONLINE', 'PAY_LATER']).optional(),
+  paymentStatus: z.enum(['CASH_RECEIVED', 'PENDING', 'VERIFIED', 'REJECTED', 'PAY_LATER']).optional(),
   notes: z.string().trim().max(300).optional(),
 });
 

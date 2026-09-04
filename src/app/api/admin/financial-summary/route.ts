@@ -23,6 +23,8 @@ export async function GET(req: NextRequest) {
     let cashChanda = 0;
     let onlineChanda = 0;
     let pendingOnlineChanda = 0;
+    let payLaterChanda = 0;
+    let payLaterCount = 0;
     let verifiedContributors = 0;
 
     for (const c of contributions) {
@@ -36,6 +38,9 @@ export async function GET(req: NextRequest) {
         verifiedContributors += 1;
       } else if (c.paymentMethod === 'ONLINE' && c.paymentStatus === 'PENDING') {
         pendingOnlineChanda += c.amount;
+      } else if (c.paymentMethod === 'PAY_LATER' || c.paymentStatus === 'PAY_LATER') {
+        payLaterChanda += c.amount;
+        payLaterCount += 1;
       }
     }
 
@@ -91,6 +96,8 @@ export async function GET(req: NextRequest) {
           cashChanda,
           onlineChanda,
           pendingOnlineChanda,
+          payLaterChanda,
+          payLaterCount,
           totalContributors: verifiedContributors,
         },
         expenses: {

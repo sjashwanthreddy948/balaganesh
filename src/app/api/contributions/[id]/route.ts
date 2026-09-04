@@ -68,7 +68,7 @@ export async function PATCH(
     const body = await req.json();
     const { status, notes } = body;
 
-    if (!['VERIFIED', 'REJECTED', 'PENDING'].includes(status)) {
+    if (!['VERIFIED', 'REJECTED', 'PENDING', 'CASH_RECEIVED', 'PAY_LATER'].includes(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     }
 
@@ -76,9 +76,10 @@ export async function PATCH(
       where: { id: params.id },
       data: {
         paymentStatus: status,
+        paymentMethod: status === 'CASH_RECEIVED' ? 'CASH' : body.paymentMethod || undefined,
         notes: notes !== undefined ? notes : undefined,
         verifiedById: session.id,
-        verifiedAt: status === 'VERIFIED' ? new Date() : null,
+        verifiedAt: status === 'VERIFIED' || status === 'CASH_RECEIVED' ? new Date() : null,
       },
     });
 
@@ -122,6 +123,8 @@ export async function PUT(
         mobileNumber: cleanMobile,
         address: data.address?.trim() || null,
         amount: data.amount,
+        paymentMethod: data.paymentMethod || undefined,
+        paymentStatus: data.paymentStatus || undefined,
         notes: data.notes?.trim() || undefined,
       },
     });

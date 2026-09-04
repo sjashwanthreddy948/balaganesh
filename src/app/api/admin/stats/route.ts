@@ -26,6 +26,8 @@ export async function GET() {
       pendingOnlineSumResult,
       verifiedOnlineCount,
       verifiedOnlineSumResult,
+      payLaterCount,
+      payLaterSumResult,
     ] = await Promise.all([
       // 1. Total All
       prisma.contribution.count(),
@@ -64,6 +66,14 @@ export async function GET() {
         where: { paymentMethod: 'ONLINE', paymentStatus: 'VERIFIED' },
         _sum: { amount: true },
       }),
+      // 7. Pay Later
+      prisma.contribution.count({
+        where: { paymentMethod: 'PAY_LATER' },
+      }),
+      prisma.contribution.aggregate({
+        where: { paymentMethod: 'PAY_LATER' },
+        _sum: { amount: true },
+      }),
     ]);
 
     return NextResponse.json({
@@ -82,6 +92,8 @@ export async function GET() {
         pendingOnlineAmount: pendingOnlineSumResult._sum.amount || 0,
         verifiedOnlinePayments: verifiedOnlineCount,
         verifiedOnlineAmount: verifiedOnlineSumResult._sum.amount || 0,
+        payLaterContributions: payLaterCount,
+        payLaterAmount: payLaterSumResult._sum.amount || 0,
       },
     });
   } catch (error) {
