@@ -669,6 +669,7 @@ export default function DashboardPage() {
                                 paymentStatus: c.paymentStatus,
                                 createdAt: c.createdAt,
                                 volunteerName: c.volunteerName,
+                                paymentScreenshot: c.paymentScreenshot,
                               })
                             }
                             className="flex-1 min-w-[85px] py-2 px-2.5 rounded-xl bg-devotional-blue-800 hover:bg-devotional-blue-700 border border-devotional-gold-400/50 text-devotional-gold-200 font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
@@ -848,6 +849,7 @@ export default function DashboardPage() {
                                     paymentStatus: c.paymentStatus,
                                     createdAt: c.createdAt,
                                     volunteerName: c.volunteerName,
+                                    paymentScreenshot: c.paymentScreenshot,
                                   })
                                 }
                                 className="p-1.5 rounded-lg bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white inline-flex items-center"

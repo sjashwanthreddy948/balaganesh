@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
         paymentMethod: contribution.paymentMethod,
         paymentStatus: contribution.paymentStatus,
         utr: contribution.utr,
+        paymentScreenshot: contribution.paymentScreenshot,
         createdAt: contribution.createdAt,
         volunteerName: contribution.createdBy.name,
       },

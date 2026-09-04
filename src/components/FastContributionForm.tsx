@@ -9,6 +9,7 @@ import {
 } from '@/config/festival.config';
 import { cleanIndianMobile } from '@/lib/validation';
 import LandscapeCertificate, { CertificateData, dataUrlToBlob } from './LandscapeCertificate';
+import ImageLightboxModal from './ImageLightboxModal';
 import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
 import {
@@ -67,6 +68,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
   const certBlobRef = useRef<Blob | null>(null);
   const certDataUrlRef = useRef<string | null>(null);
   const [isSharingWhatsApp, setIsSharingWhatsApp] = useState(false);
+  const [showPaymentPhotoModal, setShowPaymentPhotoModal] = useState(false);
   const [lastContributionPill, setLastContributionPill] = useState<{
     name: string;
     amount: number;
@@ -155,6 +157,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
     certBlobRef.current = null;
     certDataUrlRef.current = null;
     setIsSharingWhatsApp(false);
+    setShowPaymentPhotoModal(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -236,6 +239,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
         paymentStatus: json.data.paymentStatus,
         createdAt: json.data.createdAt,
         volunteerName: json.data.volunteerName,
+        paymentScreenshot: json.data.paymentScreenshot || uploadedScreenshotUrl || screenshotPreview,
       };
 
       setCreatedCertificate(certData);
@@ -365,6 +369,8 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
       setIsSharingWhatsApp(false);
     };
 
+    const paymentPhotoUrl = createdCertificate.paymentScreenshot || screenshotPreview;
+
     return (
       <div className="w-full max-w-2xl mx-auto space-y-5 animate-fadeIn py-2">
         {/* Success Banner */}
@@ -378,8 +384,8 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
           </p>
         </div>
 
-        {/* 3 Prominent Mobile Action Buttons (Exactly ONE WhatsApp button) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* Prominent Mobile Action Buttons */}
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${paymentPhotoUrl ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-3`}>
           {/* Button 1: + ADD ANOTHER CHANDA */}
           <button
             type="button"
@@ -411,6 +417,18 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
             <MessageCircle className="w-5 h-5" />
             <span>{isSharingWhatsApp ? 'ATTACHING PHOTO...' : 'SEND VIA WHATSAPP'}</span>
           </button>
+
+          {/* Button 4: VIEW PAYMENT PHOTO (when payment photo was captured) */}
+          {paymentPhotoUrl && (
+            <button
+              type="button"
+              onClick={() => setShowPaymentPhotoModal(true)}
+              className="w-full py-3.5 px-4 rounded-2xl bg-devotional-blue-900/90 hover:bg-devotional-blue-800 border-2 border-devotional-gold-400/70 text-devotional-gold-200 font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95"
+            >
+              <Camera className="w-5 h-5 text-devotional-gold-400" />
+              <span>VIEW PAYMENT PHOTO</span>
+            </button>
+          )}
         </div>
 
         {/* 16:9 Landscape Certificate Preview (hideActions={true} avoids duplicate buttons) */}
@@ -432,6 +450,16 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
             hideActions={true}
           />
         </div>
+
+        {/* Payment Photo Lightbox Modal */}
+        {paymentPhotoUrl && (
+          <ImageLightboxModal
+            isOpen={showPaymentPhotoModal}
+            onClose={() => setShowPaymentPhotoModal(false)}
+            imageUrl={paymentPhotoUrl}
+            title={`Payment Photo: ${createdCertificate.fullName} (₹${createdCertificate.amount})`}
+          />
+        )}
       </div>
     );
   }
