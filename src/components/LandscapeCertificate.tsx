@@ -42,6 +42,7 @@ export default function LandscapeCertificate({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(true);
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
 
   const drawCertificate = useCallback(() => {
     const canvas = canvasRef.current;
@@ -406,43 +407,38 @@ export default function LandscapeCertificate({
   const handleWhatsAppStatusShare = async () => {
     if (!imageUrl) return;
 
-    const blob = dataUrlToBlob(imageUrl);
-    const fileName = `BalaGanesh_Certificate_${data.certificateNumber}_${data.fullName.replace(/\s+/g, '_')}.jpg`;
-    const file = new File([blob], fileName, { type: 'image/jpeg' });
-
-    // On mobile devices supporting Web Share API:
-    // Share ONLY the image file with NO text so WhatsApp Status receives NO caption text
-    if (
-      typeof navigator !== 'undefined' &&
-      navigator.share &&
-      navigator.canShare &&
-      navigator.canShare({ files: [file] })
-    ) {
-      try {
-        await navigator.share({
-          files: [file],
-          // Strictly NO text, NO title, NO description — status story is shared with photo only
-        });
-        return;
-      } catch (err: any) {
-        if (err?.name === 'AbortError') return;
-        console.warn('Native share failed, using download fallback:', err);
-      }
-    }
-
-    // Fallback for desktop / browsers without file sharing:
-    // Auto-download the high-res certificate JPG so user can post to WhatsApp Status
+    // 1. Auto-download the high-res certificate JPG to device
     handleDownload();
 
+    // 2. Also copy image to clipboard if supported (for pasting into WhatsApp Web / Desktop)
     if (typeof navigator !== 'undefined' && navigator.clipboard && (window as any).ClipboardItem) {
       try {
+        const blob = dataUrlToBlob(imageUrl);
         await navigator.clipboard.write([
           new (window as any).ClipboardItem({ [blob.type]: blob }),
         ]);
       } catch {}
     }
 
-    alert('Certificate JPG downloaded to your device! You can now post it to your WhatsApp Status.');
+    setShareNotice('✓ Certificate downloaded! Redirecting directly to WhatsApp Status...');
+    setTimeout(() => setShareNotice(null), 4000);
+
+    // 3. Directly redirect to WhatsApp
+    const isMobile =
+      typeof navigator !== 'undefined' &&
+      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      // On mobile devices (Android & iOS), deep-link directly to WhatsApp native send screen (top option is "My status")
+      window.location.href = 'whatsapp://send';
+      // Safety fallback to web send if native deep-link is not handled
+      setTimeout(() => {
+        window.location.href = 'https://api.whatsapp.com/send';
+      }, 1000);
+    } else {
+      // On desktop / laptop browsers, directly open WhatsApp Web
+      window.open('https://web.whatsapp.com', '_blank');
+    }
   };
 
   return (
@@ -468,24 +464,32 @@ export default function LandscapeCertificate({
 
       {/* Action Buttons */}
       {!hideActions && (
-        <div className="w-full max-w-2xl mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <button
-            onClick={handleDownload}
-            disabled={!imageUrl}
-            className="w-full py-3.5 px-4 rounded-xl btn-gold text-devotional-blue-950 font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99] disabled:opacity-50"
-          >
-            <Download className="w-5 h-5 text-devotional-blue-950" />
-            <span>Download Certificate</span>
-          </button>
+        <div className="w-full max-w-2xl mt-5 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              onClick={handleDownload}
+              disabled={!imageUrl}
+              className="w-full py-3.5 px-4 rounded-xl btn-gold text-devotional-blue-950 font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99] disabled:opacity-50"
+            >
+              <Download className="w-5 h-5 text-devotional-blue-950" />
+              <span>Download Certificate</span>
+            </button>
 
-          <button
-            onClick={handleWhatsAppStatusShare}
-            disabled={!imageUrl}
-            className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99] disabled:opacity-50"
-          >
-            <MessageCircle className="w-5 h-5" />
-            <span>Share on WhatsApp Status</span>
-          </button>
+            <button
+              onClick={handleWhatsAppStatusShare}
+              disabled={!imageUrl}
+              className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99] disabled:opacity-50"
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span>Share on WhatsApp Status</span>
+            </button>
+          </div>
+
+          {shareNotice && (
+            <div className="p-3 rounded-xl bg-emerald-950/90 border border-emerald-500/40 text-emerald-300 text-xs font-bold text-center animate-fadeIn">
+              {shareNotice}
+            </div>
+          )}
         </div>
       )}
     </div>
