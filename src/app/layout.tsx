@@ -44,8 +44,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className="min-h-screen flex flex-col bg-black text-white selection:bg-devotional-gold-500 selection:text-devotional-blue-950 antialiased relative">
+    <html lang="en" className="dark overflow-x-hidden">
+      <body className="min-h-screen flex flex-col bg-black text-white selection:bg-devotional-gold-500 selection:text-devotional-blue-950 antialiased relative overflow-x-hidden">
         {/* Fullscreen Background Layer with 85% Black Tint */}
         <div className="fixed inset-0 pointer-events-none z-[-1] overflow-hidden">
           <Image

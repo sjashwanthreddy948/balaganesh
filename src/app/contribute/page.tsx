@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import FastContributionForm from '@/components/FastContributionForm';
+import MobileBottomNav from '@/components/MobileBottomNav';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Lock } from 'lucide-react';
 
@@ -11,6 +12,7 @@ export default function ContributePage() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -18,6 +20,7 @@ export default function ContributePage() {
       .then((data) => {
         if (data.authenticated) {
           setIsAuthenticated(true);
+          setUser(data.user);
         } else {
           router.replace('/login?redirect=/contribute');
         }
@@ -50,7 +53,7 @@ export default function ContributePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-between">
+    <div className="min-h-screen flex flex-col justify-between pb-24 md:pb-0">
       <Header />
 
       <main className="flex-1 max-w-xl w-full mx-auto px-4 py-6">
@@ -66,6 +69,7 @@ export default function ContributePage() {
       </main>
 
       <Footer />
+      <MobileBottomNav userRole={user?.role} userName={user?.name} />
     </div>
   );
 }

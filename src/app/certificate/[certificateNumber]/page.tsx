@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import LandscapeCertificate, { CertificateData } from '@/components/LandscapeCertificate';
+import MobileBottomNav from '@/components/MobileBottomNav';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, RefreshCw, AlertCircle, PlusCircle } from 'lucide-react';
 import { FESTIVAL_CONFIG } from '@/config/festival.config';
@@ -16,6 +17,16 @@ export default function CertificateViewPage() {
   const [certData, setCertData] = useState<CertificateData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<{ role: string; name: string } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.authenticated) setUser(data.user);
+      })
+      .catch(() => {});
+  }, []);
 
   const fetchCertificate = async () => {
     if (!certNumber) return;
@@ -41,7 +52,7 @@ export default function CertificateViewPage() {
   }, [certNumber]);
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-[#07112c]">
+    <div className="min-h-screen flex flex-col justify-between bg-[#07112c] pb-24 md:pb-0">
       <Header />
 
       <main className="flex-1 max-w-3xl w-full mx-auto px-4 py-8 space-y-6">
@@ -110,6 +121,7 @@ export default function CertificateViewPage() {
       </main>
 
       <Footer />
+      {user && <MobileBottomNav userRole={user.role} userName={user.name} />}
     </div>
   );
 }

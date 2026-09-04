@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import ImageLightboxModal from '@/components/ImageLightboxModal';
+import MobileBottomNav from '@/components/MobileBottomNav';
 import { EXPENSE_CATEGORIES } from '@/lib/validation';
 import { useRouter } from 'next/navigation';
 import {
@@ -291,7 +293,7 @@ export default function ExpensesPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between">
+    <div className="min-h-screen flex flex-col justify-between pb-24 md:pb-8">
       <Header />
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-6 space-y-6">
@@ -542,48 +544,51 @@ export default function ExpensesPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-devotional-gold-500/20 bg-devotional-blue-950/70 text-[10px] sm:text-[11px] font-extrabold tracking-wider text-devotional-gold-300 uppercase">
-                    <th className="py-3 px-3 sm:px-4">Expense No</th>
-                    <th className="py-3 px-3 sm:px-4">Shop / Vendor</th>
-                    <th className="py-3 px-3 sm:px-4">Category</th>
-                    <th className="py-3 px-3 sm:px-4">Amount</th>
-                    <th className="py-3 px-3 sm:px-4">Method</th>
-                    <th className="py-3 px-3 sm:px-4">Date</th>
-                    <th className="py-3 px-3 sm:px-4">Entered By</th>
-                    <th className="py-3 px-3 sm:px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-devotional-gold-500/10 text-xs">
-                  {expenses.map((e) => {
-                    const isCash = e.paymentMethod === 'CASH';
-                    return (
-                      <tr
-                        key={e.id}
-                        className="hover:bg-devotional-blue-900/60 transition-colors"
-                      >
-                        <td className="py-3 px-3 sm:px-4 font-mono font-bold text-devotional-gold-200 whitespace-nowrap">
-                          {e.expenseNumber}
-                        </td>
-                        <td className="py-3 px-3 sm:px-4">
-                          <p className="font-bold text-white">{e.shopName}</p>
+            <div>
+              {/* 1. MOBILE EXPENSE CARDS VIEW (md:hidden) */}
+              <div className="md:hidden space-y-3 p-3">
+                {expenses.map((e) => {
+                  const isCash = e.paymentMethod === 'CASH';
+
+                  return (
+                    <div
+                      key={e.id}
+                      className="rounded-2xl border border-devotional-gold-500/30 bg-[#06102f]/90 p-4 space-y-3 shadow-lg"
+                    >
+                      {/* Shop / Vendor & Amount */}
+                      <div className="flex items-start justify-between gap-2 border-b border-devotional-gold-500/15 pb-2.5">
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-extrabold text-base text-white truncate">
+                            {e.shopName}
+                          </h4>
+                          <p className="text-[11px] text-gray-400 mt-0.5">
+                            Entered by: <b className="text-gray-200">{e.enteredBy || e.addedByName}</b>
+                          </p>
                           {e.description && (
-                            <p className="text-[11px] text-gray-400 line-clamp-1">
+                            <p className="text-xs text-gray-300 line-clamp-2 mt-1">
                               {e.description}
                             </p>
                           )}
-                        </td>
-                        <td className="py-3 px-3 sm:px-4">
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-lg font-black text-rose-300 block">
+                            ₹{e.amount.toLocaleString('en-IN')}
+                          </span>
+                          <span className="text-[10px] text-gray-400 font-mono">
+                            {new Date(e.date).toLocaleDateString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                            })}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Badges: Category, Method & Expense Number */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-200">
                             {e.category}
                           </span>
-                        </td>
-                        <td className="py-3 px-3 sm:px-4 font-black text-rose-300 text-sm whitespace-nowrap">
-                          ₹{e.amount.toLocaleString('en-IN')}
-                        </td>
-                        <td className="py-3 px-3 sm:px-4">
                           <span
                             className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
                               isCash
@@ -593,56 +598,170 @@ export default function ExpensesPage() {
                           >
                             {e.paymentMethod}
                           </span>
-                        </td>
-                        <td className="py-3 px-3 sm:px-4 text-gray-300 whitespace-nowrap">
-                          {new Date(e.date).toLocaleDateString('en-IN')}
-                        </td>
-                        <td className="py-3 px-3 sm:px-4 text-white font-semibold whitespace-nowrap">
-                          {e.enteredBy || e.addedByName}
-                        </td>
-                        <td className="py-3 px-3 sm:px-4 text-right space-x-1.5 whitespace-nowrap">
-                          {/* View Bill Button */}
-                          {e.billImage ? (
-                            <button
-                              onClick={() => setViewingBillUrl(e.billImage || null)}
-                              className="p-1.5 rounded-lg bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white"
-                              title="View Bill / Receipt"
-                            >
-                              <Eye className="w-3.5 h-3.5 text-emerald-400" />
-                            </button>
-                          ) : (
-                            <span className="p-1.5 inline-block text-gray-600" title="No Bill Attached">
-                              <Eye className="w-3.5 h-3.5 opacity-30" />
+                        </div>
+
+                        <span className="font-mono text-[11px] text-devotional-gold-400 font-bold bg-devotional-blue-950 px-2 py-0.5 rounded-md border border-devotional-gold-500/20">
+                          {e.expenseNumber}
+                        </span>
+                      </div>
+
+                      {/* Notes if present */}
+                      {e.notes && (
+                        <p className="text-[11px] text-gray-400 italic bg-devotional-blue-950/40 px-2.5 py-1 rounded-lg border border-devotional-gold-500/10">
+                          Note: {e.notes}
+                        </p>
+                      )}
+
+                      {/* Action Buttons Row */}
+                      <div className="flex items-center gap-2 pt-1 border-t border-devotional-gold-500/15">
+                        {/* View Bill Button */}
+                        {e.billImage ? (
+                          <button
+                            type="button"
+                            onClick={() => setViewingBillUrl(e.billImage || null)}
+                            className="flex-1 py-2 px-3 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/40 text-devotional-gold-200 font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+                          >
+                            <Receipt className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>View Bill</span>
+                          </button>
+                        ) : (
+                          <span className="flex-1 py-2 px-3 rounded-xl bg-devotional-blue-950/40 border border-white/5 text-gray-500 font-semibold text-xs flex items-center justify-center gap-1.5 cursor-not-allowed">
+                            <span>No Bill</span>
+                          </span>
+                        )}
+
+                        {/* Admin Edit */}
+                        {userRole === 'ADMIN' && (
+                          <button
+                            type="button"
+                            onClick={() => setEditingExpense(e)}
+                            className="p-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white text-xs active:scale-95 transition-all"
+                            title="Edit Expense"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+
+                        {/* Admin Delete */}
+                        {userRole === 'ADMIN' && (
+                          <button
+                            type="button"
+                            onClick={() => setDeletingId(e.id)}
+                            className="p-2 rounded-xl bg-red-950/70 border border-red-500/40 text-red-300 hover:text-white text-xs active:scale-95 transition-all"
+                            title="Delete Expense"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 2. DESKTOP TABLE VIEW (hidden md:block) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-devotional-gold-500/20 bg-devotional-blue-950/70 text-[10px] sm:text-[11px] font-extrabold tracking-wider text-devotional-gold-300 uppercase">
+                      <th className="py-3 px-3 sm:px-4">Expense No</th>
+                      <th className="py-3 px-3 sm:px-4">Shop / Vendor</th>
+                      <th className="py-3 px-3 sm:px-4">Category</th>
+                      <th className="py-3 px-3 sm:px-4">Amount</th>
+                      <th className="py-3 px-3 sm:px-4">Method</th>
+                      <th className="py-3 px-3 sm:px-4">Date</th>
+                      <th className="py-3 px-3 sm:px-4">Entered By</th>
+                      <th className="py-3 px-3 sm:px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-devotional-gold-500/10 text-xs">
+                    {expenses.map((e) => {
+                      const isCash = e.paymentMethod === 'CASH';
+                      return (
+                        <tr
+                          key={e.id}
+                          className="hover:bg-devotional-blue-900/60 transition-colors"
+                        >
+                          <td className="py-3 px-3 sm:px-4 font-mono font-bold text-devotional-gold-200 whitespace-nowrap">
+                            {e.expenseNumber}
+                          </td>
+                          <td className="py-3 px-3 sm:px-4">
+                            <p className="font-bold text-white">{e.shopName}</p>
+                            {e.description && (
+                              <p className="text-[11px] text-gray-400 line-clamp-1">
+                                {e.description}
+                              </p>
+                            )}
+                          </td>
+                          <td className="py-3 px-3 sm:px-4">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-200">
+                              {e.category}
                             </span>
-                          )}
-
-                          {/* Admin Edit */}
-                          {userRole === 'ADMIN' && (
-                            <button
-                              onClick={() => setEditingExpense(e)}
-                              className="p-1.5 rounded-lg bg-devotional-blue-950 border border-devotional-gold-500/20 text-gray-300 hover:text-white"
-                              title="Edit Expense"
+                          </td>
+                          <td className="py-3 px-3 sm:px-4 font-black text-rose-300 text-sm whitespace-nowrap">
+                            ₹{e.amount.toLocaleString('en-IN')}
+                          </td>
+                          <td className="py-3 px-3 sm:px-4">
+                            <span
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                isCash
+                                  ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40'
+                                  : 'bg-devotional-blue-950 text-devotional-gold-300 border border-devotional-gold-500/30'
+                              }`}
                             >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
+                              {e.paymentMethod}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 sm:px-4 text-gray-300 whitespace-nowrap">
+                            {new Date(e.date).toLocaleDateString('en-IN')}
+                          </td>
+                          <td className="py-3 px-3 sm:px-4 text-white font-semibold whitespace-nowrap">
+                            {e.enteredBy || e.addedByName}
+                          </td>
+                          <td className="py-3 px-3 sm:px-4 text-right space-x-1.5 whitespace-nowrap">
+                            {/* View Bill Button */}
+                            {e.billImage ? (
+                              <button
+                                onClick={() => setViewingBillUrl(e.billImage || null)}
+                                className="p-1.5 rounded-lg bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white"
+                                title="View Bill / Receipt"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                              </button>
+                            ) : (
+                              <span className="p-1.5 inline-block text-gray-600" title="No Bill Attached">
+                                <Eye className="w-3.5 h-3.5 opacity-30" />
+                              </span>
+                            )}
 
-                          {/* Admin Delete */}
-                          {userRole === 'ADMIN' && (
-                            <button
-                              onClick={() => setDeletingId(e.id)}
-                              className="p-1.5 rounded-lg bg-red-950/60 border border-red-500/30 text-red-400 hover:text-red-200"
-                              title="Delete Expense"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                            {/* Admin Edit */}
+                            {userRole === 'ADMIN' && (
+                              <button
+                                onClick={() => setEditingExpense(e)}
+                                className="p-1.5 rounded-lg bg-devotional-blue-950 border border-devotional-gold-500/20 text-gray-300 hover:text-white"
+                                title="Edit Expense"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+
+                            {/* Admin Delete */}
+                            {userRole === 'ADMIN' && (
+                              <button
+                                onClick={() => setDeletingId(e.id)}
+                                className="p-1.5 rounded-lg bg-red-950/60 border border-red-500/30 text-red-400 hover:text-red-200"
+                                title="Delete Expense"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
@@ -686,7 +805,7 @@ export default function ExpensesPage() {
                     placeholder="e.g. Balaji Flower Stall, Sri Sound Systems"
                     value={shopName}
                     onChange={(e) => setShopName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white placeholder-gray-500 text-sm font-medium focus:outline-none focus:border-devotional-gold-400"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white placeholder-gray-500 text-base font-medium focus:outline-none focus:border-devotional-gold-400"
                     autoFocus
                   />
                 </div>
@@ -703,7 +822,7 @@ export default function ExpensesPage() {
                     placeholder="e.g. Ramesh Reddy, Suresh, Committee Member"
                     value={enteredBy}
                     onChange={(e) => setEnteredBy(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white placeholder-gray-500 text-sm font-medium focus:outline-none focus:border-devotional-gold-400"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white placeholder-gray-500 text-base font-medium focus:outline-none focus:border-devotional-gold-400"
                   />
                   <span className="text-[10px] text-gray-400 mt-0.5 block">
                     This person will be recorded as the author of this expense.
@@ -718,7 +837,7 @@ export default function ExpensesPage() {
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white font-medium focus:outline-none focus:border-devotional-gold-400"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white text-base font-medium focus:outline-none focus:border-devotional-gold-400"
                   >
                     {EXPENSE_CATEGORIES.map((cat) => (
                       <option key={cat} value={cat} className="bg-devotional-blue-950">
@@ -737,7 +856,7 @@ export default function ExpensesPage() {
                       placeholder="Enter custom category name"
                       value={customCategory}
                       onChange={(e) => setCustomCategory(e.target.value)}
-                      className="w-full mt-2 px-3.5 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/40 text-white placeholder-gray-500"
+                      className="w-full mt-2 px-3.5 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/40 text-white placeholder-gray-500 text-base"
                     />
                   )}
                 </div>
@@ -754,12 +873,13 @@ export default function ExpensesPage() {
                       </span>
                       <input
                         type="number"
+                        inputMode="numeric"
                         required
                         min={1}
                         placeholder="e.g. 2500"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
-                        className="w-full pl-8 pr-3 py-2.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white font-black text-sm focus:outline-none focus:border-devotional-gold-400"
+                        className="w-full pl-8 pr-3 py-2.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white font-black text-base focus:outline-none focus:border-devotional-gold-400"
                       />
                     </div>
                   </div>
@@ -1088,45 +1208,13 @@ export default function ExpensesPage() {
           </div>
         )}
 
-        {/* MODAL: VIEW BILL PHOTO */}
-        {viewingBillUrl && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fadeIn">
-            <div className="relative max-w-2xl w-full bg-devotional-blue-950 border border-devotional-gold-500/40 rounded-3xl p-4 shadow-2xl space-y-3">
-              <div className="flex items-center justify-between border-b border-devotional-gold-500/20 pb-2">
-                <span className="text-sm font-bold text-devotional-gold-300 flex items-center gap-2">
-                  <Receipt className="w-4 h-4 text-emerald-400" />
-                  <span>Original Bill / Receipt Preview</span>
-                </span>
-                <button
-                  onClick={() => setViewingBillUrl(null)}
-                  className="p-1 rounded-lg text-gray-400 hover:text-white"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="relative w-full max-h-[70vh] flex items-center justify-center overflow-auto rounded-2xl bg-black/40 p-2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={viewingBillUrl}
-                  alt="Bill full size"
-                  className="max-h-[65vh] w-auto object-contain rounded-xl shadow-lg"
-                />
-              </div>
-
-              <div className="flex justify-end">
-                <a
-                  href={viewingBillUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-4 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white text-xs font-bold"
-                >
-                  Open in New Tab ↗
-                </a>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* MODAL: FULLSCREEN IMAGE LIGHTBOX FOR BILLS */}
+        <ImageLightboxModal
+          isOpen={!!viewingBillUrl}
+          onClose={() => setViewingBillUrl(null)}
+          imageUrl={viewingBillUrl}
+          title="Expense Bill / Receipt"
+        />
 
         {/* MODAL: DELETE EXPENSE CONFIRMATION */}
         {deletingId && (
@@ -1163,6 +1251,7 @@ export default function ExpensesPage() {
       </main>
 
       <Footer />
+      <MobileBottomNav userRole={userRole || 'VOLUNTEER'} userName={currentUserName} />
     </div>
   );
 }

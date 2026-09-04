@@ -6,7 +6,9 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import FastContributionForm from '@/components/FastContributionForm';
 import LandscapeCertificate, { CertificateData } from '@/components/LandscapeCertificate';
-import { FESTIVAL_CONFIG } from '@/config/festival.config';
+import ImageLightboxModal from '@/components/ImageLightboxModal';
+import MobileBottomNav from '@/components/MobileBottomNav';
+import { FESTIVAL_CONFIG, buildWhatsAppCertificateShareUrl } from '@/config/festival.config';
 import {
   PlusCircle,
   Users,
@@ -23,6 +25,11 @@ import {
   FileSpreadsheet,
   Calendar,
   Receipt,
+  Trash2,
+  Image as ImageIcon,
+  MessageCircle,
+  Scale,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface UserProfile {
@@ -52,6 +59,7 @@ export default function DashboardPage() {
 
   const [user, setUser] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState<any>(null);
+  const [financialSummary, setFinancialSummary] = useState<any>(null);
   const [contributions, setContributions] = useState<ContributionItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -66,6 +74,10 @@ export default function DashboardPage() {
 
   // Certificate Modal
   const [viewingCertificate, setViewingCertificate] = useState<CertificateData | null>(null);
+
+  // Screenshot Lightbox Modal
+  const [viewingScreenshotUrl, setViewingScreenshotUrl] = useState<string | null>(null);
+  const [viewingScreenshotTitle, setViewingScreenshotTitle] = useState<string>('');
 
   // Edit Modal (Admin only)
   const [editingContribution, setEditingContribution] = useState<ContributionItem | null>(null);
@@ -87,14 +99,25 @@ export default function DashboardPage() {
       const meJson = await meRes.json();
       setUser(meJson.user);
 
-      // 2. Fetch Chanda stats only
+      // 2. Fetch Chanda stats
       const statsRes = await fetch('/api/admin/stats');
       if (statsRes.ok) {
         const statsJson = await statsRes.json();
         setStats(statsJson.stats);
       }
 
-      // 3. Fetch contributions with filters
+      // 3. Fetch Full Financial Summary (Total Chanda, Total Expenses, Remaining Balance)
+      try {
+        const finRes = await fetch('/api/admin/financial-summary');
+        if (finRes.ok) {
+          const finJson = await finRes.json();
+          setFinancialSummary(finJson.summary);
+        }
+      } catch (finErr) {
+        console.error('Financial summary load error:', finErr);
+      }
+
+      // 4. Fetch contributions with filters
       const params = new URLSearchParams();
       if (searchQuery) params.append('search', searchQuery);
       if (methodFilter !== 'ALL') params.append('method', methodFilter);
@@ -116,6 +139,26 @@ export default function DashboardPage() {
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
+
+  // Admin Delete Contribution
+  const handleDeleteContribution = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to permanently delete the contribution for "${name}"?`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/contributions/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setContributions((prev) => prev.filter((c) => c.id !== id));
+        loadDashboardData();
+      } else {
+        const json = await res.json();
+        alert(json.error || 'Failed to delete contribution');
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+      alert('Failed to delete contribution');
+    }
+  };
 
   // Status Update (Verify/Reject)
   const handleStatusUpdate = async (id: string, newStatus: 'VERIFIED' | 'REJECTED' | 'PENDING') => {
@@ -180,7 +223,7 @@ export default function DashboardPage() {
   const isAdmin = user.role === 'ADMIN';
 
   return (
-    <div className="min-h-screen flex flex-col justify-between">
+    <div className="min-h-screen flex flex-col justify-between pb-24 md:pb-8">
       <Header />
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-6 space-y-6">
@@ -245,64 +288,152 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* CHANDA ONLY SUMMARY METRICS */}
-        {stats && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <div className="rounded-2xl border border-devotional-gold-500/30 bg-devotional-blue-900/50 p-4 space-y-1 shadow-md">
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-devotional-gold-400">
-                Today&apos;s Count
-              </span>
-              <p className="text-2xl sm:text-3xl font-black text-white">
-                {stats.todayContributions || 0}
-              </p>
-              <p className="text-[10px] text-gray-400">
-                Total: {stats.totalContributions || 0} entries
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-devotional-gold-500/30 bg-devotional-blue-900/50 p-4 space-y-1 shadow-md">
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-devotional-gold-400">
-                Today&apos;s Amount
-              </span>
-              <p className="text-2xl sm:text-3xl font-black text-devotional-gold-300">
-                ₹{(stats.todayAmount || 0).toLocaleString('en-IN')}
-              </p>
-              <p className="text-[10px] text-gray-400">
-                Total: ₹{(stats.totalAmount || 0).toLocaleString('en-IN')}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-4 space-y-1 shadow-md">
-              <div className="flex items-center justify-between text-emerald-400">
-                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">
-                  Cash Collected
+        {/* ============================================================ */}
+        {/* MOBILE DASHBOARD STATS (TIERED HIERARCHY AS PER SECTION 6)   */}
+        {/* ============================================================ */}
+        <div className="space-y-3">
+          {/* TIER 1: PRIMARY OVERVIEW (Total Chanda, Total Expenses, Remaining Balance) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Total Chanda */}
+            <div className="rounded-2xl border border-devotional-gold-500/40 bg-gradient-to-br from-devotional-blue-900/90 to-[#0c1e54]/90 p-4 space-y-1 shadow-lg relative overflow-hidden">
+              <div className="flex items-center justify-between text-devotional-gold-400">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider">
+                  Total Chanda
                 </span>
-                <Banknote className="w-4 h-4" />
+                <span className="text-base">🕉️</span>
+              </div>
+              <p className="text-2xl sm:text-3xl font-black text-devotional-gold-300">
+                ₹{((financialSummary?.income?.totalChanda ?? stats?.totalAmount) || 0).toLocaleString('en-IN')}
+              </p>
+              <p className="text-[10px] text-gray-300">
+                {stats?.totalContributions || 0} total contributions
+              </p>
+            </div>
+
+            {/* Total Expenses */}
+            <div className="rounded-2xl border border-rose-500/30 bg-gradient-to-br from-rose-950/40 to-devotional-blue-950/80 p-4 space-y-1 shadow-lg relative overflow-hidden">
+              <div className="flex items-center justify-between text-rose-400">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider">
+                  Total Expenses
+                </span>
+                <Receipt className="w-4 h-4" />
+              </div>
+              <p className="text-2xl sm:text-3xl font-black text-rose-300">
+                ₹{(financialSummary?.expenses?.totalExpenses || 0).toLocaleString('en-IN')}
+              </p>
+              <p className="text-[10px] text-gray-300">
+                {financialSummary?.expenses?.totalExpenseCount || 0} expenses recorded
+              </p>
+            </div>
+
+            {/* Remaining Balance */}
+            <div className="rounded-2xl border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-950/50 to-[#041a1a]/90 p-4 space-y-1 shadow-xl relative overflow-hidden">
+              <div className="flex items-center justify-between text-emerald-400">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider">
+                  Remaining Balance
+                </span>
+                <Scale className="w-4 h-4" />
               </div>
               <p className="text-2xl sm:text-3xl font-black text-emerald-300">
-                ₹{(stats.cashAmount || stats.todayCash || 0).toLocaleString('en-IN')}
+                ₹{(financialSummary?.balance?.remainingBalance ?? (((financialSummary?.income?.totalChanda ?? stats?.totalAmount) || 0) - (financialSummary?.expenses?.totalExpenses || 0))).toLocaleString('en-IN')}
               </p>
-              <p className="text-[10px] text-gray-400">
-                {stats.cashContributions || 0} cash contributions
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-devotional-gold-500/30 bg-devotional-blue-900/50 p-4 space-y-1 shadow-md">
-              <div className="flex items-center justify-between text-devotional-gold-400">
-                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">
-                  Online / UPI
-                </span>
-                <Smartphone className="w-4 h-4" />
-              </div>
-              <p className="text-2xl sm:text-3xl font-black text-devotional-gold-300">
-                ₹{(stats.onlineAmount || stats.todayOnline || 0).toLocaleString('en-IN')}
-              </p>
-              <p className="text-[10px] text-amber-400 font-medium">
-                {stats.pendingOnlinePayments || 0} pending verification
+              <p className="text-[10px] text-emerald-200/80 font-medium">
+                Net available festival funds
               </p>
             </div>
           </div>
-        )}
+
+          {/* TIER 2: PAYMENT METHOD BREAKDOWN (Cash Chanda, Online Chanda, Cash Expenses, Online Expenses) */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 text-xs">
+            {/* Cash Chanda */}
+            <div className="rounded-2xl border border-emerald-500/30 bg-devotional-blue-950/70 p-3 space-y-0.5 shadow-sm">
+              <div className="flex items-center justify-between text-emerald-400">
+                <span className="text-[10px] font-bold uppercase">Cash Chanda</span>
+                <Banknote className="w-3.5 h-3.5" />
+              </div>
+              <p className="text-lg sm:text-xl font-black text-emerald-300">
+                ₹{((financialSummary?.income?.cashChanda ?? stats?.cashAmount) || 0).toLocaleString('en-IN')}
+              </p>
+            </div>
+
+            {/* Online Chanda */}
+            <div className="rounded-2xl border border-devotional-gold-500/30 bg-devotional-blue-950/70 p-3 space-y-0.5 shadow-sm">
+              <div className="flex items-center justify-between text-devotional-gold-400">
+                <span className="text-[10px] font-bold uppercase">Online Chanda</span>
+                <Smartphone className="w-3.5 h-3.5" />
+              </div>
+              <p className="text-lg sm:text-xl font-black text-devotional-gold-300">
+                ₹{((financialSummary?.income?.onlineChanda ?? stats?.onlineAmount) || 0).toLocaleString('en-IN')}
+              </p>
+            </div>
+
+            {/* Cash Expenses */}
+            <div className="rounded-2xl border border-rose-500/30 bg-devotional-blue-950/70 p-3 space-y-0.5 shadow-sm">
+              <div className="flex items-center justify-between text-rose-400">
+                <span className="text-[10px] font-bold uppercase">Cash Expenses</span>
+                <Receipt className="w-3.5 h-3.5" />
+              </div>
+              <p className="text-lg sm:text-xl font-black text-rose-300">
+                ₹{(financialSummary?.expenses?.cashExpenses || 0).toLocaleString('en-IN')}
+              </p>
+            </div>
+
+            {/* Online Expenses */}
+            <div className="rounded-2xl border border-rose-500/30 bg-devotional-blue-950/70 p-3 space-y-0.5 shadow-sm">
+              <div className="flex items-center justify-between text-rose-400">
+                <span className="text-[10px] font-bold uppercase">Online Expenses</span>
+                <Smartphone className="w-3.5 h-3.5" />
+              </div>
+              <p className="text-lg sm:text-xl font-black text-rose-300">
+                ₹{(financialSummary?.expenses?.onlineExpenses || 0).toLocaleString('en-IN')}
+              </p>
+            </div>
+          </div>
+
+          {/* TIER 3: DAILY & PENDING INSIGHTS */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 text-xs">
+            {/* Pending Online Payments */}
+            <div className="rounded-2xl border border-amber-500/40 bg-amber-950/30 p-3 flex items-center justify-between shadow-sm">
+              <div>
+                <span className="text-[10px] font-bold uppercase text-amber-400 block">
+                  Pending Verification
+                </span>
+                <span className="text-lg font-black text-amber-300">
+                  {stats?.pendingOnlinePayments || 0} Online Chanda
+                </span>
+              </div>
+              <Clock className="w-5 h-5 text-amber-400 shrink-0" />
+            </div>
+
+            {/* Today's Chanda */}
+            <div className="rounded-2xl border border-devotional-gold-500/30 bg-devotional-blue-950/70 p-3 flex items-center justify-between shadow-sm">
+              <div>
+                <span className="text-[10px] font-bold uppercase text-devotional-gold-400 block">
+                  Today&apos;s Chanda
+                </span>
+                <span className="text-lg font-black text-devotional-gold-300">
+                  ₹{(stats?.todayAmount || 0).toLocaleString('en-IN')}
+                </span>
+              </div>
+              <span className="text-xs text-gray-400 font-bold">
+                {stats?.todayContributions || 0} entries
+              </span>
+            </div>
+
+            {/* Today's Expenses */}
+            <div className="rounded-2xl border border-rose-500/30 bg-devotional-blue-950/70 p-3 flex items-center justify-between shadow-sm">
+              <div>
+                <span className="text-[10px] font-bold uppercase text-rose-400 block">
+                  Today&apos;s Expenses
+                </span>
+                <span className="text-lg font-black text-rose-300">
+                  ₹{(stats?.todayExpenses || 0).toLocaleString('en-IN')}
+                </span>
+              </div>
+              <Receipt className="w-5 h-5 text-rose-400 shrink-0" />
+            </div>
+          </div>
+        </div>
 
         {/* CONTRIBUTIONS LIST */}
         <div className="space-y-4">
@@ -393,131 +524,385 @@ export default function DashboardPage() {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-devotional-gold-500/20 bg-devotional-blue-950/70 text-[10px] sm:text-[11px] font-extrabold tracking-wider text-devotional-gold-300 uppercase">
-                      <th className="py-3 px-3 sm:px-4">Cert No</th>
-                      <th className="py-3 px-3 sm:px-4">Donor</th>
-                      <th className="py-3 px-3 sm:px-4">Amount</th>
-                      <th className="py-3 px-3 sm:px-4">Method</th>
-                      <th className="py-3 px-3 sm:px-4">Status</th>
-                      <th className="py-3 px-3 sm:px-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-devotional-gold-500/10 text-xs">
-                    {contributions.map((c) => {
-                      const isCash = c.paymentMethod === 'CASH';
-                      const isPending = c.paymentStatus === 'PENDING';
+              <div>
+                {/* 1. MOBILE CARDS VIEW (md:hidden) */}
+                <div className="md:hidden space-y-3 p-3">
+                  {contributions.map((c) => {
+                    const isCash = c.paymentMethod === 'CASH';
+                    const isPending = c.paymentStatus === 'PENDING';
+                    const whatsAppShareUrl = buildWhatsAppCertificateShareUrl({
+                      fullName: c.fullName,
+                      amount: c.amount,
+                      paymentMethod: c.paymentMethod,
+                      certificateNumber: c.certificateNumber,
+                      mobileNumber: c.mobileNumber,
+                    });
 
-                      return (
-                        <tr
-                          key={c.id}
-                          className="hover:bg-devotional-blue-900/60 transition-colors"
-                        >
-                          <td className="py-3 px-3 sm:px-4 font-mono font-bold text-devotional-gold-200 whitespace-nowrap">
-                            {c.certificateNumber}
-                          </td>
-                          <td className="py-3 px-3 sm:px-4">
-                            <p className="font-bold text-white">{c.fullName}</p>
+                    return (
+                      <div
+                        key={c.id}
+                        className="rounded-2xl border border-devotional-gold-500/30 bg-[#06102f]/90 p-4 space-y-3 shadow-lg"
+                      >
+                        {/* Donor Name & Amount */}
+                        <div className="flex items-start justify-between gap-2 border-b border-devotional-gold-500/15 pb-2.5">
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-extrabold text-base text-white truncate">
+                              {c.fullName}
+                            </h4>
                             {c.mobileNumber && (
-                              <p className="text-[11px] text-gray-400">{c.mobileNumber}</p>
+                              <p className="text-xs text-gray-300 font-mono mt-0.5">
+                                📱 +91 {c.mobileNumber}
+                              </p>
                             )}
-                          </td>
-                          <td className="py-3 px-3 sm:px-4 font-black text-devotional-gold-300 text-sm whitespace-nowrap">
-                            ₹{c.amount.toLocaleString('en-IN')}
-                          </td>
-                          <td className="py-3 px-3 sm:px-4">
+                            {c.address && (
+                              <p className="text-[11px] text-gray-400 truncate mt-0.5">
+                                {c.address}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="text-lg font-black text-devotional-gold-300 block">
+                              ₹{c.amount.toLocaleString('en-IN')}
+                            </span>
+                            <span className="text-[10px] text-gray-400 font-mono">
+                              {new Date(c.createdAt).toLocaleDateString('en-IN', {
+                                day: '2-digit',
+                                month: 'short',
+                              })}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Badges: Payment Method, Status & Cert Number */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {/* Method */}
                             <span
-                              className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase ${
                                 isCash
-                                  ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40'
+                                  ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40'
                                   : 'bg-devotional-blue-950 text-devotional-gold-300 border border-devotional-gold-500/30'
                               }`}
                             >
                               {c.paymentMethod}
                             </span>
-                          </td>
-                          <td className="py-3 px-3 sm:px-4 whitespace-nowrap">
-                            {isCash && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400">
-                                <Check className="w-3 h-3" /> RECEIVED
-                              </span>
-                            )}
-                            {!isCash && isPending && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-950/60 px-2 py-0.5 rounded-full border border-amber-500/30">
-                                <Clock className="w-3 h-3" /> PENDING
-                              </span>
-                            )}
-                            {!isCash && c.paymentStatus === 'VERIFIED' && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                                <Check className="w-3 h-3" /> VERIFIED
-                              </span>
-                            )}
-                            {!isCash && c.paymentStatus === 'REJECTED' && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-400 bg-red-950/60 px-2 py-0.5 rounded-full border border-red-500/30">
-                                <X className="w-3 h-3" /> REJECTED
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3 px-3 sm:px-4 text-right space-x-1.5 whitespace-nowrap">
-                            <button
-                              onClick={() =>
-                                setViewingCertificate({
-                                  certificateNumber: c.certificateNumber,
-                                  fullName: c.fullName,
-                                  mobileNumber: c.mobileNumber,
-                                  amount: c.amount,
-                                  paymentMethod: c.paymentMethod,
-                                  paymentStatus: c.paymentStatus,
-                                  createdAt: c.createdAt,
-                                  volunteerName: c.volunteerName,
-                                })
-                              }
-                              className="p-1.5 rounded-lg bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white"
-                              title="View White & Gold Certificate"
+
+                            {/* Status */}
+                            <span
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase ${
+                                c.paymentStatus === 'VERIFIED' || c.paymentStatus === 'CASH_RECEIVED'
+                                  ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40'
+                                  : c.paymentStatus === 'REJECTED'
+                                  ? 'bg-red-950/80 text-red-300 border border-red-500/40'
+                                  : 'bg-amber-950/80 text-amber-300 border border-amber-500/40 animate-pulse'
+                              }`}
                             >
-                              <Eye className="w-3.5 h-3.5" />
+                              {c.paymentStatus === 'CASH_RECEIVED'
+                                ? '✓ CASH RECEIVED'
+                                : c.paymentStatus === 'VERIFIED'
+                                ? '✓ VERIFIED'
+                                : c.paymentStatus === 'REJECTED'
+                                ? '✕ REJECTED'
+                                : '⏳ PENDING'}
+                            </span>
+                          </div>
+
+                          {/* Cert Number */}
+                          <span className="font-mono text-[11px] text-devotional-gold-400 font-bold bg-devotional-blue-950 px-2 py-0.5 rounded-md border border-devotional-gold-500/20">
+                            {c.certificateNumber}
+                          </span>
+                        </div>
+
+                        {/* UTR Info (if online) */}
+                        {!isCash && c.utr && (
+                          <div className="text-[11px] text-gray-300 bg-devotional-blue-950/60 px-2.5 py-1 rounded-lg border border-devotional-gold-500/15 flex items-center justify-between">
+                            <span className="text-gray-400">UTR:</span>
+                            <span className="font-mono text-devotional-gold-200 font-bold">{c.utr}</span>
+                          </div>
+                        )}
+
+                        {/* Action Buttons Row */}
+                        <div className="flex items-center gap-1.5 pt-1 border-t border-devotional-gold-500/15 flex-wrap">
+                          {/* WhatsApp */}
+                          {c.mobileNumber && (
+                            <a
+                              href={whatsAppShareUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 min-w-[90px] py-2 px-2.5 rounded-xl bg-emerald-600/90 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+                            >
+                              <Smartphone className="w-3.5 h-3.5" />
+                              <span>WhatsApp</span>
+                            </a>
+                          )}
+
+                          {/* Certificate */}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setViewingCertificate({
+                                certificateNumber: c.certificateNumber,
+                                fullName: c.fullName,
+                                mobileNumber: c.mobileNumber,
+                                amount: c.amount,
+                                paymentMethod: c.paymentMethod,
+                                paymentStatus: c.paymentStatus,
+                                createdAt: c.createdAt,
+                                volunteerName: c.volunteerName,
+                              })
+                            }
+                            className="flex-1 min-w-[85px] py-2 px-2.5 rounded-xl bg-devotional-blue-800 hover:bg-devotional-blue-700 border border-devotional-gold-400/50 text-devotional-gold-200 font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-devotional-gold-400" />
+                            <span>Certificate</span>
+                          </button>
+
+                          {/* Screenshot Lightbox */}
+                          {c.paymentScreenshot && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setViewingScreenshotUrl(c.paymentScreenshot!);
+                                setViewingScreenshotTitle(`Payment Proof: ${c.fullName} (₹${c.amount})`);
+                              }}
+                              className="py-2 px-2.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white text-xs font-bold flex items-center gap-1 active:scale-95 transition-all"
+                            >
+                              <ImageIcon className="w-3.5 h-3.5" />
+                              <span>Proof</span>
                             </button>
+                          )}
 
-                            {isAdmin && !isCash && isPending && (
-                              <>
-                                <button
-                                  onClick={() => handleStatusUpdate(c.id, 'VERIFIED')}
-                                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px]"
-                                >
-                                  Verify
-                                </button>
-                                <button
-                                  onClick={() => handleStatusUpdate(c.id, 'REJECTED')}
-                                  className="px-2.5 py-1 rounded-lg bg-red-950 border border-red-500/40 text-red-400 hover:bg-red-900 font-bold text-[10px]"
-                                >
-                                  Reject
-                                </button>
-                              </>
-                            )}
-
-                            {isAdmin && (
+                          {/* Admin Verify/Reject inline */}
+                          {isAdmin && !isCash && isPending && (
+                            <div className="flex items-center gap-1 ml-auto">
                               <button
-                                onClick={() => {
-                                  setEditingContribution(c);
-                                  setEditName(c.fullName);
-                                  setEditMobile(c.mobileNumber || '');
-                                  setEditAddress(c.address || '');
-                                  setEditAmount(c.amount);
-                                }}
-                                className="p-1.5 rounded-lg bg-devotional-blue-950 border border-devotional-gold-500/20 text-gray-300 hover:text-white"
-                                title="Edit Contribution"
+                                type="button"
+                                onClick={() => handleStatusUpdate(c.id, 'VERIFIED')}
+                                className="px-2 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px]"
                               >
-                                <Edit2 className="w-3.5 h-3.5" />
+                                Verify
                               </button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                              <button
+                                type="button"
+                                onClick={() => handleStatusUpdate(c.id, 'REJECTED')}
+                                className="px-2 py-1.5 rounded-lg bg-red-950 border border-red-500/40 text-red-400 hover:bg-red-900 font-bold text-[10px]"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Admin Edit */}
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingContribution(c);
+                                setEditName(c.fullName);
+                                setEditMobile(c.mobileNumber || '');
+                                setEditAddress(c.address || '');
+                                setEditAmount(c.amount);
+                              }}
+                              className="p-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white text-xs active:scale-95 transition-all"
+                              title="Edit Contribution"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+
+                          {/* Admin Delete */}
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteContribution(c.id, c.fullName)}
+                              className="p-2 rounded-xl bg-red-950/70 border border-red-500/40 text-red-300 hover:text-white text-xs active:scale-95 transition-all"
+                              title="Delete Contribution"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* 2. DESKTOP TABLE VIEW (hidden md:block) */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-devotional-gold-500/20 bg-devotional-blue-950/70 text-[11px] font-extrabold tracking-wider text-devotional-gold-300 uppercase">
+                        <th className="py-3 px-4">Cert No</th>
+                        <th className="py-3 px-4">Donor</th>
+                        <th className="py-3 px-4">Amount</th>
+                        <th className="py-3 px-4">Method</th>
+                        <th className="py-3 px-4">Status</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-devotional-gold-500/10 text-xs">
+                      {contributions.map((c) => {
+                        const isCash = c.paymentMethod === 'CASH';
+                        const isPending = c.paymentStatus === 'PENDING';
+                        const whatsAppShareUrl = buildWhatsAppCertificateShareUrl({
+                          fullName: c.fullName,
+                          amount: c.amount,
+                          paymentMethod: c.paymentMethod,
+                          certificateNumber: c.certificateNumber,
+                          mobileNumber: c.mobileNumber,
+                        });
+
+                        return (
+                          <tr
+                            key={c.id}
+                            className="hover:bg-devotional-blue-900/60 transition-colors"
+                          >
+                            <td className="py-3 px-4 font-mono font-bold text-devotional-gold-200 whitespace-nowrap">
+                              {c.certificateNumber}
+                            </td>
+                            <td className="py-3 px-4">
+                              <p className="font-bold text-white">{c.fullName}</p>
+                              {c.mobileNumber && (
+                                <p className="text-[11px] text-gray-400">{c.mobileNumber}</p>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 font-black text-devotional-gold-300 text-sm whitespace-nowrap">
+                              ₹{c.amount.toLocaleString('en-IN')}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span
+                                className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                  isCash
+                                    ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40'
+                                    : 'bg-devotional-blue-950 text-devotional-gold-300 border border-devotional-gold-500/30'
+                                }`}
+                              >
+                                {c.paymentMethod}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              {isCash && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400">
+                                  <Check className="w-3 h-3" /> RECEIVED
+                                </span>
+                              )}
+                              {!isCash && isPending && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-950/60 px-2 py-0.5 rounded-full border border-amber-500/30">
+                                  <Clock className="w-3 h-3" /> PENDING
+                                </span>
+                              )}
+                              {!isCash && c.paymentStatus === 'VERIFIED' && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                                  <Check className="w-3 h-3" /> VERIFIED
+                                </span>
+                              )}
+                              {!isCash && c.paymentStatus === 'REJECTED' && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-400 bg-red-950/60 px-2 py-0.5 rounded-full border border-red-500/30">
+                                  <X className="w-3 h-3" /> REJECTED
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
+                              {/* WhatsApp */}
+                              {c.mobileNumber && (
+                                <a
+                                  href={whatsAppShareUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1.5 rounded-lg bg-emerald-950 border border-emerald-500/30 text-emerald-300 hover:text-white inline-flex items-center"
+                                  title="Share on WhatsApp"
+                                >
+                                  <Smartphone className="w-3.5 h-3.5" />
+                                </a>
+                              )}
+
+                              {/* View Certificate */}
+                              <button
+                                onClick={() =>
+                                  setViewingCertificate({
+                                    certificateNumber: c.certificateNumber,
+                                    fullName: c.fullName,
+                                    mobileNumber: c.mobileNumber,
+                                    amount: c.amount,
+                                    paymentMethod: c.paymentMethod,
+                                    paymentStatus: c.paymentStatus,
+                                    createdAt: c.createdAt,
+                                    volunteerName: c.volunteerName,
+                                  })
+                                }
+                                className="p-1.5 rounded-lg bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white inline-flex items-center"
+                                title="View White & Gold Certificate"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Screenshot Lightbox */}
+                              {c.paymentScreenshot && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setViewingScreenshotUrl(c.paymentScreenshot!);
+                                    setViewingScreenshotTitle(`Payment Proof: ${c.fullName} (₹${c.amount})`);
+                                  }}
+                                  className="p-1.5 rounded-lg bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white inline-flex items-center"
+                                  title="View Payment Screenshot"
+                                >
+                                  <ImageIcon className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+
+                              {/* Admin Verify / Reject */}
+                              {isAdmin && !isCash && isPending && (
+                                <>
+                                  <button
+                                    onClick={() => handleStatusUpdate(c.id, 'VERIFIED')}
+                                    className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px]"
+                                  >
+                                    Verify
+                                  </button>
+                                  <button
+                                    onClick={() => handleStatusUpdate(c.id, 'REJECTED')}
+                                    className="px-2.5 py-1 rounded-lg bg-red-950 border border-red-500/40 text-red-400 hover:bg-red-900 font-bold text-[10px]"
+                                  >
+                                    Reject
+                                  </button>
+                                </>
+                              )}
+
+                              {/* Admin Edit */}
+                              {isAdmin && (
+                                <button
+                                  onClick={() => {
+                                    setEditingContribution(c);
+                                    setEditName(c.fullName);
+                                    setEditMobile(c.mobileNumber || '');
+                                    setEditAddress(c.address || '');
+                                    setEditAmount(c.amount);
+                                  }}
+                                  className="p-1.5 rounded-lg bg-devotional-blue-950 border border-devotional-gold-500/20 text-gray-300 hover:text-white inline-flex items-center"
+                                  title="Edit Contribution"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+
+                              {/* Admin Delete */}
+                              {isAdmin && (
+                                <button
+                                  onClick={() => handleDeleteContribution(c.id, c.fullName)}
+                                  className="p-1.5 rounded-lg bg-red-950/70 border border-red-500/40 text-red-300 hover:text-white inline-flex items-center"
+                                  title="Delete Contribution"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>
@@ -636,9 +1021,18 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+
+        {/* MODAL: IMAGE LIGHTBOX FOR SCREENSHOTS */}
+        <ImageLightboxModal
+          isOpen={!!viewingScreenshotUrl}
+          onClose={() => setViewingScreenshotUrl(null)}
+          imageUrl={viewingScreenshotUrl}
+          title={viewingScreenshotTitle}
+        />
       </main>
 
       <Footer />
+      <MobileBottomNav userRole={user?.role} userName={user?.name} />
     </div>
   );
 }

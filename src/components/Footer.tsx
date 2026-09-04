@@ -3,7 +3,7 @@ import { FESTIVAL_CONFIG } from '@/config/festival.config';
 
 export default function Footer() {
   return (
-    <footer className="w-full mt-auto border-t border-devotional-gold-500/20 bg-devotional-blue-950/90 py-6 px-4 text-center">
+    <footer className="w-full mt-auto border-t border-devotional-gold-500/20 bg-devotional-blue-950/90 py-6 pb-24 md:pb-6 px-4 text-center">
       <div className="max-w-md mx-auto space-y-3">
         <div className="space-y-1">
           <h2 className="text-base font-bold tracking-wider uppercase text-devotional-gold-400">

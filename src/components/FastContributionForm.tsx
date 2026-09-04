@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { FESTIVAL_CONFIG, buildUpiUri } from '@/config/festival.config';
+import { FESTIVAL_CONFIG, buildUpiUri, buildWhatsAppCertificateShareUrl } from '@/config/festival.config';
 import { cleanIndianMobile } from '@/lib/validation';
 import LandscapeCertificate, { CertificateData } from './LandscapeCertificate';
 import QRCode from 'qrcode';
@@ -20,6 +20,8 @@ import {
   User,
   X,
   Trash2,
+  Eye,
+  MessageCircle,
 } from 'lucide-react';
 
 interface FastContributionFormProps {
@@ -246,33 +248,65 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
   // SUCCESS SCREEN (CERTIFICATE + ADD ANOTHER)
   // ==========================================
   if (createdCertificate) {
+    const whatsAppUrl = buildWhatsAppCertificateShareUrl({
+      fullName: createdCertificate.fullName,
+      amount: createdCertificate.amount,
+      paymentMethod: createdCertificate.paymentMethod,
+      certificateNumber: createdCertificate.certificateNumber,
+      mobileNumber: createdCertificate.mobileNumber,
+    });
+
     return (
-      <div className="w-full max-w-2xl mx-auto space-y-6 animate-fadeIn py-2">
-        <div className="bg-devotional-blue-900/60 border border-emerald-500/40 rounded-2xl p-4 text-center space-y-1.5 shadow-xl">
+      <div className="w-full max-w-2xl mx-auto space-y-5 animate-fadeIn py-2">
+        {/* Success Banner */}
+        <div className="bg-devotional-blue-900/80 border-2 border-emerald-500/50 rounded-2xl p-4 text-center space-y-1.5 shadow-xl">
           <div className="flex items-center justify-center gap-2 text-emerald-400 font-extrabold text-base sm:text-lg">
-            <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" />
-            <span>Contribution Saved Successfully ✓</span>
+            <CheckCircle className="w-6 h-6 shrink-0" />
+            <span>✓ Contribution Saved</span>
           </div>
-          <p className="text-xs text-devotional-gold-200">
-            Certificate No: <b className="font-mono text-white text-sm">{createdCertificate.certificateNumber}</b>
+          <p className="text-xs text-devotional-gold-200 font-semibold">
+            Certificate generated successfully: <b className="font-mono text-white text-sm">{createdCertificate.certificateNumber}</b>
           </p>
         </div>
 
-        {/* 16:9 Landscape Certificate */}
-        <LandscapeCertificate data={createdCertificate} />
-
-        {/* Rapid Add Next Contribution Button */}
-        <div className="pt-2">
+        {/* 3 Prominent Mobile Action Buttons */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Button 1: + ADD ANOTHER CHANDA */}
           <button
+            type="button"
             onClick={handleAddAnother}
-            className="w-full py-4 px-6 rounded-2xl bg-devotional-blue-800 hover:bg-devotional-blue-700 border-2 border-devotional-gold-400 text-devotional-gold-200 hover:text-white font-extrabold text-base sm:text-lg flex items-center justify-center gap-3 shadow-gold-md transition-all active:scale-[0.99]"
+            className="w-full py-3.5 px-4 rounded-2xl btn-gold text-devotional-blue-950 font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-gold-sm transition-all active:scale-95"
           >
-            <PlusCircle className="w-6 h-6 text-devotional-gold-400" />
-            <span>+ ADD ANOTHER CONTRIBUTION</span>
+            <PlusCircle className="w-5 h-5 text-devotional-blue-950" />
+            <span>+ ADD ANOTHER CHANDA</span>
           </button>
-          <p className="text-[11px] text-gray-400 text-center mt-2">
-            Instantly clears the form for the next donor in line.
-          </p>
+
+          {/* Button 2: VIEW CERTIFICATE */}
+          <a
+            href={`/certificate/${createdCertificate.certificateNumber}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-3.5 px-4 rounded-2xl bg-devotional-blue-900 hover:bg-devotional-blue-800 border-2 border-devotional-gold-400/70 text-devotional-gold-200 font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95"
+          >
+            <Eye className="w-5 h-5 text-devotional-gold-400" />
+            <span>VIEW CERTIFICATE</span>
+          </a>
+
+          {/* Button 3: SEND VIA WHATSAPP */}
+          <a
+            href={whatsAppUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95"
+          >
+            <MessageCircle className="w-5 h-5" />
+            <span>SEND VIA WHATSAPP</span>
+          </a>
+        </div>
+
+        {/* 16:9 Landscape Certificate Preview */}
+        <div className="pt-1">
+          <LandscapeCertificate data={createdCertificate} />
         </div>
       </div>
     );
@@ -344,7 +378,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
                 placeholder="e.g. Ravi Kumar"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-devotional-blue-950 border border-devotional-gold-500/30 text-white placeholder-gray-500 focus:outline-none focus:border-devotional-gold-400 text-sm font-semibold capitalize"
+                className="w-full px-4 py-3 rounded-xl bg-devotional-blue-950 border border-devotional-gold-500/30 text-white placeholder-gray-500 focus:outline-none focus:border-devotional-gold-400 text-base font-semibold capitalize"
                 autoFocus
               />
             </div>
@@ -360,11 +394,12 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
                 </span>
                 <input
                   type="tel"
+                  inputMode="tel"
                   maxLength={10}
                   placeholder="9876543210"
                   value={mobileNumber}
                   onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
-                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-devotional-blue-950 border border-devotional-gold-500/30 text-white placeholder-gray-500 focus:outline-none focus:border-devotional-gold-400 text-sm"
+                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-devotional-blue-950 border border-devotional-gold-500/30 text-white placeholder-gray-500 focus:outline-none focus:border-devotional-gold-400 text-base font-medium"
                 />
               </div>
             </div>
@@ -379,7 +414,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
                 placeholder="e.g. Plot 24, Balaji Enclave"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-devotional-blue-950 border border-devotional-gold-500/20 text-white placeholder-gray-500 focus:outline-none focus:border-devotional-gold-400 text-xs"
+                className="w-full px-4 py-3 rounded-xl bg-devotional-blue-950 border border-devotional-gold-500/20 text-white placeholder-gray-500 focus:outline-none focus:border-devotional-gold-400 text-base"
               />
             </div>
           </div>
@@ -430,6 +465,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
                   </span>
                   <input
                     type="number"
+                    inputMode="numeric"
                     min={FESTIVAL_CONFIG.minAmount}
                     max={FESTIVAL_CONFIG.maxAmount}
                     placeholder="Enter custom amount"
@@ -535,10 +571,14 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
                 </label>
                 <input
                   type="text"
+                  inputMode="text"
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck={false}
                   placeholder="Enter 12-digit UTR if available"
                   value={utr}
                   onChange={(e) => setUtr(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white placeholder-gray-500 font-mono tracking-wider focus:outline-none focus:border-devotional-gold-400 text-sm uppercase"
+                  className="w-full px-4 py-3 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white placeholder-gray-500 font-mono tracking-wider focus:outline-none focus:border-devotional-gold-400 text-base uppercase"
                 />
               </div>
 
