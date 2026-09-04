@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   FESTIVAL_CONFIG,
   buildUpiUri,
-  buildWhatsAppCertificateShareUrl,
   buildWhatsAppCertificateMessage,
 } from '@/config/festival.config';
 import { cleanIndianMobile, normalizeIndianMobileForWhatsApp } from '@/lib/validation';
@@ -287,7 +286,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
       if (!phoneResult) {
         setWhatsAppNotice({
           type: 'error',
-          message: 'Valid mobile number is required to send the certificate via WhatsApp.',
+          message: 'Please enter a valid mobile number for this contributor.',
         });
         return;
       }
@@ -377,42 +376,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
         console.warn('WhatsApp API check, using direct WhatsApp share flow:', err);
       }
 
-      // 4. Primary Mobile Flow: Attach and share actual Certificate JPG via Web Share API
-      if (blob) {
-        const file = new File(
-          [blob],
-          `BalaGanesh_Certificate_${createdCertificate.certificateNumber}_${createdCertificate.fullName.replace(/\s+/g, '_')}.jpg`,
-          { type: 'image/jpeg' }
-        );
-
-        if (
-          typeof navigator !== 'undefined' &&
-          navigator.share &&
-          navigator.canShare &&
-          navigator.canShare({ files: [file] })
-        ) {
-          try {
-            await navigator.share({
-              files: [file],
-              title: `${FESTIVAL_CONFIG.associationName} Certificate - ${createdCertificate.fullName}`,
-            });
-            setWhatsAppNotice({
-              type: 'success',
-              message: `✓ Certificate JPG shared! (Greeting message copied to clipboard).`,
-            });
-            setIsSharingWhatsApp(false);
-            return;
-          } catch (err: any) {
-            if (err?.name === 'AbortError') {
-              setIsSharingWhatsApp(false);
-              return;
-            }
-            console.warn('Native share failed, using download + WhatsApp link fallback:', err);
-          }
-        }
-      }
-
-      // 5. Desktop / Fallback Flow:
+      // 5. Direct WhatsApp Flow to contributor's saved phone:
       // Download contributor's exact Certificate JPG so it's ready on their device
       if (blob) {
         const url = URL.createObjectURL(blob);
@@ -432,6 +396,13 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
         document.body.removeChild(a);
       }
 
+      // Pre-copy greeting text to clipboard
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(message);
+        } catch {}
+      }
+
       // Also copy image to clipboard if supported (for Ctrl+V directly into WhatsApp Web)
       if (blob && typeof navigator !== 'undefined' && navigator.clipboard && (window as any).ClipboardItem) {
         try {
@@ -441,13 +412,13 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
         } catch {}
       }
 
-      // Open WhatsApp directly targeting the contributor's validated phone number
+      // Directly open WhatsApp targeting the contributor's saved phone number (+91XXXXXXXXXX)
       const whatsAppChatUrl = `https://api.whatsapp.com/send?phone=${phoneResult.whatsappPhone}&text=${encodeURIComponent(message)}`;
       window.open(whatsAppChatUrl, '_blank');
 
       setWhatsAppNotice({
         type: 'info',
-        message: `WhatsApp opened for ${phoneResult.displayPhone}. Certificate JPG downloaded & copied to clipboard — attach it directly in chat.`,
+        message: `WhatsApp chat opened for ${phoneResult.displayPhone}. Certificate JPG downloaded to device.`,
       });
       setIsSharingWhatsApp(false);
     };

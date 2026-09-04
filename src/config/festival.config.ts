@@ -61,19 +61,26 @@ export function buildWhatsAppCertificateMessage(contribution: {
   amount: number;
   paymentMethod?: string;
   certificateNumber: string;
+  certificateUrl?: string;
 }): string {
+  const certUrl =
+    contribution.certificateUrl ||
+    (typeof window !== 'undefined'
+      ? `${window.location.origin}/certificate/${contribution.certificateNumber}`
+      : `https://balaganesh.vercel.app/certificate/${contribution.certificateNumber}`);
+
   return `Namaste ${contribution.fullName} 🙏
 
-Thank you for your valuable contribution of ₹${contribution.amount.toLocaleString('en-IN')}
-to Bala Ganesh Association – Ganesh Festival ${FESTIVAL_CONFIG.festivalYear}.
+Thank you for your valuable contribution of ₹${contribution.amount.toLocaleString('en-IN')} to Bala Ganesh Association for Ganesh Festival ${FESTIVAL_CONFIG.festivalYear}.
 
 Certificate No: ${contribution.certificateNumber}
 
 We sincerely appreciate your support.
 
-Join our Ganesh Festival WhatsApp Group for updates.
+Your Certificate of Appreciation:
+${certUrl}
 
-[ VIEW GROUP ]
+Join our Ganesh Festival WhatsApp Group for updates.
 
 Ganpati Bappa Morya! 🙏
 
@@ -91,6 +98,7 @@ export function buildWhatsAppCertificateShareUrl(contribution: {
   paymentMethod: string;
   certificateNumber: string;
   mobileNumber?: string | null;
+  certificateUrl?: string;
 }): string {
   const message = buildWhatsAppCertificateMessage(contribution);
   const normalized = normalizeIndianMobileForWhatsApp(contribution.mobileNumber);

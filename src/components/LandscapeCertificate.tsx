@@ -3,7 +3,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import {
   FESTIVAL_CONFIG,
-  buildWhatsAppCertificateShareUrl,
   buildWhatsAppCertificateMessage,
 } from '@/config/festival.config';
 import { Download, MessageCircle } from 'lucide-react';
@@ -409,11 +408,14 @@ export default function LandscapeCertificate({
   };
 
   const handleNativeShare = async () => {
-    const normalizedPhone = normalizeIndianMobileForWhatsApp(data.mobileNumber);
-    const phoneParam = normalizedPhone ? `phone=${normalizedPhone.whatsappPhone}&` : '';
+    const phoneResult = normalizeIndianMobileForWhatsApp(data.mobileNumber);
+    if (!phoneResult) {
+      alert('Please enter a valid mobile number for this contributor.');
+      return;
+    }
 
     const message = buildWhatsAppCertificateMessage(data);
-    const whatsAppChatUrl = `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(message)}`;
+    const whatsAppChatUrl = `https://api.whatsapp.com/send?phone=${phoneResult.whatsappPhone}&text=${encodeURIComponent(message)}`;
 
     // Pre-copy greeting text to clipboard
     if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
@@ -422,32 +424,20 @@ export default function LandscapeCertificate({
       } catch {}
     }
 
-    if (imageUrl) {
+    // Auto-download JPG certificate to device
+    handleDownload();
+
+    // Also copy image to clipboard if supported (for Ctrl+V on WhatsApp Web)
+    if (imageUrl && typeof navigator !== 'undefined' && navigator.clipboard && (window as any).ClipboardItem) {
       try {
         const blob = dataUrlToBlob(imageUrl);
-        const file = new File(
-          [blob],
-          `BalaGanesh_Certificate_${data.certificateNumber}_${data.fullName.replace(/\s+/g, '_')}.jpg`,
-          { type: 'image/jpeg' }
-        );
-
-        if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: `${FESTIVAL_CONFIG.associationName} Certificate - ${data.fullName}`,
-          });
-          return;
-        }
-      } catch (err: any) {
-        if (err?.name === 'AbortError') {
-          return;
-        }
-        console.warn('Native file share failed:', err);
-      }
+        await navigator.clipboard.write([
+          new (window as any).ClipboardItem({ [blob.type]: blob }),
+        ]);
+      } catch {}
     }
 
-    // Fallback: auto-download JPG photo & open WhatsApp chat
-    handleDownload();
+    // Open WhatsApp chat directly targeting the contributor's phone
     window.open(whatsAppChatUrl, '_blank');
   };
 

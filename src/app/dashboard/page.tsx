@@ -10,7 +10,6 @@ import ImageLightboxModal from '@/components/ImageLightboxModal';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import {
   FESTIVAL_CONFIG,
-  buildWhatsAppCertificateShareUrl,
   buildWhatsAppCertificateMessage,
 } from '@/config/festival.config';
 import { normalizeIndianMobileForWhatsApp } from '@/lib/validation';
@@ -234,7 +233,7 @@ export default function DashboardPage() {
   const handleDashboardWhatsAppShare = (c: ContributionItem) => {
     const phoneResult = normalizeIndianMobileForWhatsApp(c.mobileNumber);
     if (!phoneResult) {
-      alert('Valid mobile number is required to send the certificate via WhatsApp.');
+      alert('Please enter a valid mobile number for this contributor.');
       return;
     }
 
@@ -577,13 +576,6 @@ export default function DashboardPage() {
                   {contributions.map((c) => {
                     const isCash = c.paymentMethod === 'CASH';
                     const isPending = c.paymentStatus === 'PENDING';
-                    const whatsAppShareUrl = buildWhatsAppCertificateShareUrl({
-                      fullName: c.fullName,
-                      amount: c.amount,
-                      paymentMethod: c.paymentMethod,
-                      certificateNumber: c.certificateNumber,
-                      mobileNumber: c.mobileNumber,
-                    });
 
                     return (
                       <div
@@ -686,16 +678,14 @@ export default function DashboardPage() {
                           )}
 
                           {/* 📱 SEND VIA WHATSAPP */}
-                          {c.mobileNumber && (
-                            <button
-                              type="button"
-                              onClick={() => handleDashboardWhatsAppShare(c)}
-                              className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all"
-                            >
-                              <Smartphone className="w-4 h-4" />
-                              <span>📱 SEND VIA WHATSAPP</span>
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleDashboardWhatsAppShare(c)}
+                            className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all"
+                          >
+                            <Smartphone className="w-4 h-4" />
+                            <span>📱 SEND VIA WHATSAPP</span>
+                          </button>
 
                           {/* Secondary Row: Certificate & Admin Controls */}
                           <div className="flex items-center gap-2 flex-wrap pt-0.5">
@@ -794,13 +784,6 @@ export default function DashboardPage() {
                       {contributions.map((c) => {
                         const isCash = c.paymentMethod === 'CASH';
                         const isPending = c.paymentStatus === 'PENDING';
-                        const whatsAppShareUrl = buildWhatsAppCertificateShareUrl({
-                          fullName: c.fullName,
-                          amount: c.amount,
-                          paymentMethod: c.paymentMethod,
-                          certificateNumber: c.certificateNumber,
-                          mobileNumber: c.mobileNumber,
-                        });
 
                         return (
                           <tr
@@ -854,16 +837,14 @@ export default function DashboardPage() {
                             </td>
                             <td className="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
                               {/* WhatsApp */}
-                              {c.mobileNumber && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleDashboardWhatsAppShare(c)}
-                                  className="p-1.5 rounded-lg bg-emerald-950 border border-emerald-500/30 text-emerald-300 hover:text-white inline-flex items-center"
-                                  title="Share on WhatsApp"
-                                >
-                                  <Smartphone className="w-3.5 h-3.5" />
-                                </button>
-                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleDashboardWhatsAppShare(c)}
+                                className="p-1.5 rounded-lg bg-emerald-950 border border-emerald-500/30 text-emerald-300 hover:text-white inline-flex items-center"
+                                title="Share on WhatsApp"
+                              >
+                                <Smartphone className="w-3.5 h-3.5" />
+                              </button>
 
                               {/* View Certificate */}
                               <button
