@@ -40,6 +40,7 @@ export default function LandscapeCertificate({
   hideActions = false,
 }: LandscapeCertificateProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const blobRef = useRef<Blob | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(true);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
@@ -349,13 +350,18 @@ export default function LandscapeCertificate({
 
       try {
         canvas.toBlob((blob) => {
+          if (blob) {
+            blobRef.current = blob;
+          }
           if (onImageReady) {
             onImageReady(url, blob || dataUrlToBlob(url));
           }
         }, 'image/jpeg', 0.96);
       } catch {
+        const fallback = dataUrlToBlob(url);
+        blobRef.current = fallback;
         if (onImageReady) {
-          onImageReady(url, dataUrlToBlob(url));
+          onImageReady(url, fallback);
         }
       }
     };
@@ -398,47 +404,77 @@ export default function LandscapeCertificate({
     if (!imageUrl) return;
     const a = document.createElement('a');
     a.href = imageUrl;
-    a.download = `BalaGanesh_Certificate_${data.certificateNumber}_${data.fullName.replace(/\s+/g, '_')}.jpg`;
+    const safeCertNo = data.certificateNumber.replace(/[^a-zA-Z0-9_-]/g, '') || 'BG2026';
+    a.download = `BalaGanesh_Certificate_${safeCertNo}.jpg`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
   };
 
   const handleWhatsAppStatusShare = async () => {
-    if (!imageUrl) return;
+    // 1. Get pre-rendered blob or fallback
+    const blob = blobRef.current || (imageUrl ? dataUrlToBlob(imageUrl) : null);
+    if (!blob) {
+      if (imageUrl) handleDownload();
+      return;
+    }
 
-    // 1. Auto-download the high-res certificate JPG to device
+    const safeCertNo = data.certificateNumber.replace(/[^a-zA-Z0-9_-]/g, '') || 'BG2026';
+    const fileName = `BalaGanesh_Certificate_${safeCertNo}.jpg`;
+    const file = new File([blob], fileName, { type: 'image/jpeg' });
+
+    // 2. On mobile devices supporting Web Share API (Android & iOS):
+    // Share ONLY the image file with NO text so WhatsApp Status receives no text caption
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      let canShare = false;
+      try {
+        canShare = navigator.canShare ? navigator.canShare({ files: [file] }) : true;
+      } catch {
+        canShare = false;
+      }
+
+      if (canShare) {
+        try {
+          await navigator.share({
+            files: [file],
+            // Strictly NO text, NO title, NO description so WhatsApp Status has only the image
+          });
+          return;
+        } catch (err: any) {
+          if (err?.name === 'AbortError') {
+            return;
+          }
+          console.warn('Native share failed, using fallback:', err);
+        }
+      }
+    }
+
+    // 3. Fallback: Auto-download certificate JPG to device
     handleDownload();
 
-    // 2. Also copy image to clipboard if supported (for pasting into WhatsApp Web / Desktop)
     if (typeof navigator !== 'undefined' && navigator.clipboard && (window as any).ClipboardItem) {
       try {
-        const blob = dataUrlToBlob(imageUrl);
         await navigator.clipboard.write([
           new (window as any).ClipboardItem({ [blob.type]: blob }),
         ]);
       } catch {}
     }
 
-    setShareNotice('✓ Certificate downloaded! Redirecting directly to WhatsApp Status...');
-    setTimeout(() => setShareNotice(null), 4000);
-
-    // 3. Directly redirect to WhatsApp
     const isMobile =
       typeof navigator !== 'undefined' &&
       /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     if (isMobile) {
-      // On mobile devices (Android & iOS), deep-link directly to WhatsApp native send screen (top option is "My status")
-      window.location.href = 'whatsapp://send';
-      // Safety fallback to web send if native deep-link is not handled
+      setShareNotice('✓ Certificate downloaded! Opening WhatsApp...');
       setTimeout(() => {
-        window.location.href = 'https://api.whatsapp.com/send';
-      }, 1000);
+        window.location.href = 'whatsapp://';
+      }, 300);
     } else {
-      // On desktop / laptop browsers, directly open WhatsApp Web
+      setShareNotice('✓ Certificate downloaded! Open WhatsApp on mobile or upload image to share to your status.');
       window.open('https://web.whatsapp.com', '_blank');
     }
+
+    setTimeout(() => setShareNotice(null), 5000);
   };
 
   return (
