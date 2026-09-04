@@ -8,7 +8,7 @@ import {
   buildWhatsAppCertificateMessage,
 } from '@/config/festival.config';
 import { cleanIndianMobile } from '@/lib/validation';
-import LandscapeCertificate, { CertificateData } from './LandscapeCertificate';
+import LandscapeCertificate, { CertificateData, dataUrlToBlob } from './LandscapeCertificate';
 import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
 import {
@@ -63,6 +63,9 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
   // Success / Generated Certificate State
   const [createdCertificate, setCreatedCertificate] = useState<CertificateData | null>(null);
   const [certImageDataUrl, setCertImageDataUrl] = useState<string | null>(null);
+  const [certBlob, setCertBlob] = useState<Blob | null>(null);
+  const certBlobRef = useRef<Blob | null>(null);
+  const certDataUrlRef = useRef<string | null>(null);
   const [isSharingWhatsApp, setIsSharingWhatsApp] = useState(false);
   const [lastContributionPill, setLastContributionPill] = useState<{
     name: string;
@@ -147,6 +150,11 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
     setScreenshotPreview(null);
     setErrorMessage(null);
     setCreatedCertificate(null);
+    setCertImageDataUrl(null);
+    setCertBlob(null);
+    certBlobRef.current = null;
+    certDataUrlRef.current = null;
+    setIsSharingWhatsApp(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -259,39 +267,91 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
     const handleWhatsAppShare = async () => {
       setIsSharingWhatsApp(true);
 
-      const message = buildWhatsAppCertificateMessage(createdCertificate);
+      // 1. Ensure the certificate image blob is ready
+      let blob = certBlobRef.current || certBlob;
+      if (!blob && certDataUrlRef.current) {
+        blob = dataUrlToBlob(certDataUrlRef.current);
+      }
 
+      // If still rendering canvas, wait up to 3 seconds for it to finish
+      if (!blob) {
+        blob = await new Promise<Blob | null>((resolve) => {
+          let attempts = 0;
+          const interval = setInterval(() => {
+            attempts++;
+            if (certBlobRef.current) {
+              clearInterval(interval);
+              resolve(certBlobRef.current);
+            } else if (certDataUrlRef.current) {
+              clearInterval(interval);
+              resolve(dataUrlToBlob(certDataUrlRef.current));
+            } else if (attempts > 30) {
+              clearInterval(interval);
+              resolve(null);
+            }
+          }, 100);
+        });
+      }
+
+      const message = buildWhatsAppCertificateMessage(createdCertificate);
       const rawNumber = createdCertificate.mobileNumber ? createdCertificate.mobileNumber.replace(/[^0-9]/g, '') : '';
       const formattedPhone = rawNumber ? (rawNumber.startsWith('91') ? rawNumber : `91${rawNumber}`) : '';
       const phoneParam = formattedPhone ? `phone=${formattedPhone}&` : '';
       const whatsAppChatUrl = `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(message)}`;
 
-      try {
-        if (certImageDataUrl && navigator.share && navigator.canShare) {
-          const res = await fetch(certImageDataUrl);
-          const blob = await res.blob();
-          const file = new File(
-            [blob],
-            `BalaGanesh_Certificate_${createdCertificate.certificateNumber}.jpg`,
-            { type: 'image/jpeg' }
-          );
-
-          if (navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              title: `${FESTIVAL_CONFIG.associationName} - Certificate of Appreciation`,
-              text: message,
-              files: [file],
-            });
-            setIsSharingWhatsApp(false);
-            return;
-          }
-        }
-      } catch (err) {
-        console.warn('Native photo share failed or was dismissed:', err);
+      // 2. Pre-copy greeting text + WhatsApp group link to clipboard
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(message);
+        } catch {}
       }
 
-      // Fallback: auto-download JPG certificate and open WhatsApp chat
-      if (certImageDataUrl) {
+      // 3. Share Photo directly via Web Share API
+      if (blob) {
+        const file = new File(
+          [blob],
+          `BalaGanesh_Certificate_${createdCertificate.certificateNumber}.jpg`,
+          { type: 'image/jpeg' }
+        );
+
+        if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            if (navigator.canShare({ files: [file], text: message })) {
+              await navigator.share({
+                files: [file],
+                text: message,
+                title: `${FESTIVAL_CONFIG.associationName} Certificate`,
+              });
+            } else {
+              await navigator.share({
+                files: [file],
+                title: `${FESTIVAL_CONFIG.associationName} Certificate`,
+              });
+            }
+            setIsSharingWhatsApp(false);
+            return; // Successfully shared photo! DO NOT trigger fallback!
+          } catch (err: any) {
+            if (err?.name === 'AbortError') {
+              setIsSharingWhatsApp(false);
+              return; // User completed or dismissed the share sheet
+            }
+            console.warn('Native photo share failed:', err);
+          }
+        }
+      }
+
+      // 4. Fallback for Desktop or devices without Web Share API file support:
+      // Download the photo automatically so the user has the image on their device
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `BalaGanesh_Certificate_${createdCertificate.certificateNumber}_${createdCertificate.fullName.replace(/\s+/g, '_')}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      } else if (certImageDataUrl) {
         const a = document.createElement('a');
         a.href = certImageDataUrl;
         a.download = `BalaGanesh_Certificate_${createdCertificate.certificateNumber}_${createdCertificate.fullName.replace(/\s+/g, '_')}.jpg`;
@@ -300,6 +360,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
         document.body.removeChild(a);
       }
 
+      // Open WhatsApp chat
       window.open(whatsAppChatUrl, '_blank');
       setIsSharingWhatsApp(false);
     };
@@ -348,7 +409,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
             className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 disabled:opacity-50"
           >
             <MessageCircle className="w-5 h-5" />
-            <span>{isSharingWhatsApp ? 'SHARING PHOTO...' : 'SEND VIA WHATSAPP'}</span>
+            <span>{isSharingWhatsApp ? 'ATTACHING PHOTO...' : 'SEND VIA WHATSAPP'}</span>
           </button>
         </div>
 
@@ -356,7 +417,18 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
         <div className="pt-1">
           <LandscapeCertificate
             data={createdCertificate}
-            onImageReady={(url) => setCertImageDataUrl(url)}
+            onImageReady={(url, blob) => {
+              setCertImageDataUrl(url);
+              certDataUrlRef.current = url;
+              if (blob) {
+                setCertBlob(blob);
+                certBlobRef.current = blob;
+              } else {
+                const b = dataUrlToBlob(url);
+                setCertBlob(b);
+                certBlobRef.current = b;
+              }
+            }}
             hideActions={true}
           />
         </div>

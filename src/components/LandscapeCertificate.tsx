@@ -19,9 +19,21 @@ export interface CertificateData {
   volunteerName?: string | null;
 }
 
+export function dataUrlToBlob(dataUrl: string): Blob {
+  const parts = dataUrl.split(';base64,');
+  const contentType = parts[0].split(':')[1] || 'image/jpeg';
+  const raw = atob(parts[1]);
+  const rawLength = raw.length;
+  const uInt8Array = new Uint8Array(rawLength);
+  for (let i = 0; i < rawLength; ++i) {
+    uInt8Array[i] = raw.charCodeAt(i);
+  }
+  return new Blob([uInt8Array], { type: contentType });
+}
+
 interface LandscapeCertificateProps {
   data: CertificateData;
-  onImageReady?: (dataUrl: string) => void;
+  onImageReady?: (dataUrl: string, blob?: Blob) => void;
   hideActions?: boolean;
 }
 
@@ -336,8 +348,17 @@ export default function LandscapeCertificate({
       const url = canvas.toDataURL('image/jpeg', 0.96);
       setImageUrl(url);
       setIsGenerating(false);
-      if (onImageReady) {
-        onImageReady(url);
+
+      try {
+        canvas.toBlob((blob) => {
+          if (onImageReady) {
+            onImageReady(url, blob || dataUrlToBlob(url));
+          }
+        }, 'image/jpeg', 0.96);
+      } catch {
+        if (onImageReady) {
+          onImageReady(url, dataUrlToBlob(url));
+        }
       }
     };
 
@@ -391,29 +412,44 @@ export default function LandscapeCertificate({
     const phoneParam = formattedPhone ? `phone=${formattedPhone}&` : '';
 
     const message = buildWhatsAppCertificateMessage(data);
-
     const whatsAppChatUrl = `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(message)}`;
+
+    // Try clipboard copy so message + group link is ready
+    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(message);
+      } catch {}
+    }
 
     if (imageUrl) {
       try {
-        const res = await fetch(imageUrl);
-        const blob = await res.blob();
+        const blob = dataUrlToBlob(imageUrl);
         const file = new File(
           [blob],
           `BalaGanesh_Certificate_${data.certificateNumber}.jpg`,
           { type: 'image/jpeg' }
         );
 
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: `${FESTIVAL_CONFIG.associationName} - Certificate of Appreciation`,
-            text: message,
-            files: [file],
-          });
+        if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          if (navigator.canShare({ files: [file], text: message })) {
+            await navigator.share({
+              files: [file],
+              text: message,
+              title: `${FESTIVAL_CONFIG.associationName} Certificate`,
+            });
+          } else {
+            await navigator.share({
+              files: [file],
+              title: `${FESTIVAL_CONFIG.associationName} Certificate`,
+            });
+          }
           return;
         }
-      } catch (err) {
-        console.warn('Native file share failed or dismissed:', err);
+      } catch (err: any) {
+        if (err?.name === 'AbortError') {
+          return;
+        }
+        console.warn('Native file share failed:', err);
       }
     }
 
