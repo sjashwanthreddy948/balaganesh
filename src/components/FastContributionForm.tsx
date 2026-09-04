@@ -8,6 +8,7 @@ import {
   buildWhatsAppCertificateMessage,
 } from '@/config/festival.config';
 import { cleanIndianMobile, normalizeIndianMobileForWhatsApp } from '@/lib/validation';
+import { compressImageToTarget } from '@/lib/image-compress';
 import LandscapeCertificate, { CertificateData, dataUrlToBlob } from './LandscapeCertificate';
 import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
@@ -107,16 +108,26 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
     setErrorMessage(null);
   };
 
-  // Process File Select (Camera or Gallery)
-  const processSelectedFile = (file: File | undefined) => {
-    if (file) {
-      if (file.size > 8 * 1024 * 1024) {
-        setErrorMessage('Photo size must be less than 8MB.');
-        return;
-      }
+  // Photo Compression State
+  const [isCompressing, setIsCompressing] = useState(false);
+
+  // Process File Select (Camera or Gallery) with Automatic 200KB Compression
+  const processSelectedFile = async (file: File | undefined) => {
+    if (!file) return;
+
+    setIsCompressing(true);
+    setErrorMessage(null);
+    try {
+      // Automatically compress & minimize camera photo or gallery image strictly under 200KB
+      const compressed = await compressImageToTarget(file, 200 * 1024);
+      setScreenshotFile(compressed);
+      setScreenshotPreview(URL.createObjectURL(compressed));
+    } catch (err) {
+      console.warn('Compression fallback to original file:', err);
       setScreenshotFile(file);
       setScreenshotPreview(URL.createObjectURL(file));
-      setErrorMessage(null);
+    } finally {
+      setIsCompressing(false);
     }
   };
 
@@ -818,6 +829,13 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
                   className="hidden"
                 />
 
+                {isCompressing && (
+                  <div className="bg-devotional-blue-950 border border-devotional-gold-500/50 rounded-2xl p-3.5 flex items-center justify-center gap-2.5 text-xs font-bold text-devotional-gold-200 animate-pulse">
+                    <div className="w-4 h-4 border-2 border-devotional-gold-400 border-t-transparent rounded-full animate-spin" />
+                    <span>Minimizing photo under 200KB automatically...</span>
+                  </div>
+                )}
+
                 {screenshotPreview ? (
                   /* Attached Photo Preview with Remove button */
                   <div className="bg-devotional-blue-900/90 border border-emerald-500/40 rounded-2xl p-3 flex items-center justify-between gap-3 animate-fadeIn">
@@ -829,7 +847,9 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
                         className="w-14 h-14 object-cover rounded-xl border border-devotional-gold-400 shadow-sm shrink-0"
                       />
                       <div className="truncate">
-                        <p className="text-xs font-bold text-emerald-300">Photo Attached ✓</p>
+                        <p className="text-xs font-bold text-emerald-300">
+                          Photo Attached ✓ {screenshotFile && <span className="text-[10px] text-emerald-400 font-mono font-normal">({(screenshotFile.size / 1024).toFixed(0)} KB)</span>}
+                        </p>
                         <p className="text-[11px] text-gray-300 truncate font-mono">
                           {screenshotFile?.name || 'payment_proof.jpg'}
                         </p>
