@@ -6,7 +6,7 @@ import Footer from '@/components/Footer';
 import LandscapeCertificate, { CertificateData } from '@/components/LandscapeCertificate';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, RefreshCw, AlertCircle, PlusCircle, MessageCircle } from 'lucide-react';
+import { ArrowLeft, RefreshCw, AlertCircle, PlusCircle, MessageCircle, Clock } from 'lucide-react';
 import { FESTIVAL_CONFIG } from '@/config/festival.config';
 
 export default function CertificateViewPage() {
@@ -92,6 +92,32 @@ export default function CertificateViewPage() {
             >
               Return Home
             </button>
+          </div>
+        ) : certData.paymentStatus === 'PAY_LATER' ? (
+          <div className="rounded-3xl border-2 border-amber-500/50 bg-devotional-blue-950 p-6 sm:p-8 text-center space-y-4 shadow-2xl animate-fadeIn">
+            <div className="w-16 h-16 mx-auto rounded-full bg-amber-500/20 border border-amber-400 flex items-center justify-center">
+              <Clock className="w-8 h-8 text-amber-400" />
+            </div>
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                PLEDGE AWAITING PAYMENT
+              </span>
+              <h2 className="text-xl sm:text-2xl font-black text-white mt-1">
+                {certData.fullName}
+              </h2>
+              <p className="text-2xl font-black text-devotional-gold-300 mt-1">
+                ₹{certData.amount.toLocaleString('en-IN')}
+              </p>
+            </div>
+            <p className="text-xs sm:text-sm text-gray-300 max-w-md mx-auto leading-relaxed">
+              This Chanda contribution was pledged under <b>Pay Later</b> (Ref: <span className="font-mono text-devotional-gold-300 font-bold">{certData.certificateNumber}</span>).
+              Once payment is received and marked as Paid by the association organizers, your official Certificate of Appreciation will be issued here.
+            </p>
+            <div className="p-4 bg-devotional-blue-900/70 rounded-2xl border border-devotional-gold-500/30 max-w-sm mx-auto text-xs text-gray-200 space-y-1">
+              <p className="text-devotional-gold-400 font-bold">Online Payment via UPI:</p>
+              <p className="font-mono text-white text-sm font-bold">{FESTIVAL_CONFIG.upiId}</p>
+              <p className="text-[11px] text-gray-400">Bala Ganesh Association</p>
+            </div>
           </div>
         ) : (
           <div className="space-y-6">

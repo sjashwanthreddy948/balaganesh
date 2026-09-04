@@ -54,14 +54,14 @@ export async function GET(
   }
 }
 
-// PATCH: Verify or Reject online payment (Admin Only)
+// PATCH: Verify/Reject online payment (Admin) or Mark Paid for Pledges (Admin & Volunteer)
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   const session = await getUserSession();
-  if (!session || session.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Admin access required.' }, { status: 403 });
+  if (!session) {
+    return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   }
 
   try {
@@ -70,6 +70,12 @@ export async function PATCH(
 
     if (!['VERIFIED', 'REJECTED', 'PENDING', 'CASH_RECEIVED', 'PAY_LATER'].includes(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+    }
+
+    // Admins have full status permissions. Volunteers can mark a pledge as CASH_RECEIVED.
+    const isVolunteerMarkingPaid = session.role === 'VOLUNTEER' && status === 'CASH_RECEIVED';
+    if (session.role !== 'ADMIN' && !isVolunteerMarkingPaid) {
+      return NextResponse.json({ error: 'Admin access required.' }, { status: 403 });
     }
 
     const updated = await prisma.contribution.update({

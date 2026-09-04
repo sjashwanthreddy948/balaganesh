@@ -105,19 +105,46 @@ export function buildWhatsAppCertificateShareUrl(contribution: {
 }
 
 /**
- * Alias for legacy receipt share URL
+ * Builds standard WhatsApp Pay Later Reminder Message (NO certificate link until paid)
  */
-export function buildWhatsAppShareUrl(contribution: {
+export function buildWhatsAppPayLaterReminderMessage(contribution: {
   fullName: string;
   amount: number;
-  receiptNumber: string;
-  utr?: string;
+  certificateNumber?: string;
 }): string {
-  return buildWhatsAppCertificateShareUrl({
-    fullName: contribution.fullName,
-    amount: contribution.amount,
-    paymentMethod: 'ONLINE',
-    certificateNumber: contribution.receiptNumber,
-  });
+  return `Namaste ${contribution.fullName} 🙏
+
+Warm greetings from Bala Ganesh Association – Ganesh Festival ${FESTIVAL_CONFIG.festivalYear}!
+
+This is a friendly reminder regarding your pledged Chanda of ₹${contribution.amount.toLocaleString('en-IN')}.
+
+Pledge Reference: ${contribution.certificateNumber || 'PLEDGE'}
+
+Payment options:
+• Cash: Hand over to our association volunteer
+• Online (UPI): ${FESTIVAL_CONFIG.upiId}
+
+Once payment is marked as paid, your official Certificate of Appreciation will be issued.
+
+Thank you for your valuable support & devotion!
+Ganpati Bappa Morya! 🙏
+
+— ${FESTIVAL_CONFIG.associationName}`;
+}
+
+/**
+ * Builds WhatsApp Share URL for Pay Later Reminder
+ */
+export function buildWhatsAppPayLaterReminderShareUrl(contribution: {
+  fullName: string;
+  amount: number;
+  mobileNumber?: string | null;
+  certificateNumber?: string;
+}): string {
+  const message = buildWhatsAppPayLaterReminderMessage(contribution);
+  const normalized = normalizeIndianMobileForWhatsApp(contribution.mobileNumber);
+  const phoneParam = normalized ? `phone=${normalized.whatsappPhone}&` : '';
+
+  return `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(message)}`;
 }
 

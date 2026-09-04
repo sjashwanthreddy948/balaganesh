@@ -11,6 +11,7 @@ import MobileBottomNav from '@/components/MobileBottomNav';
 import {
   FESTIVAL_CONFIG,
   buildWhatsAppCertificateMessage,
+  buildWhatsAppPayLaterReminderMessage,
 } from '@/config/festival.config';
 import { normalizeIndianMobileForWhatsApp } from '@/lib/validation';
 import {
@@ -37,6 +38,7 @@ import {
   Settings,
   Shield,
   Copy,
+  Bell,
 } from 'lucide-react';
 
 interface UserProfile {
@@ -251,12 +253,20 @@ export default function DashboardPage() {
     const phoneResult = normalizeIndianMobileForWhatsApp(c.mobileNumber);
     const phoneParam = phoneResult ? `phone=${phoneResult.whatsappPhone}&` : '';
 
-    const message = buildWhatsAppCertificateMessage({
-      fullName: c.fullName,
-      amount: c.amount,
-      paymentMethod: c.paymentMethod,
-      certificateNumber: c.certificateNumber,
-    });
+    const isPayLater = c.paymentMethod === 'PAY_LATER' || c.paymentStatus === 'PAY_LATER';
+
+    const message = isPayLater
+      ? buildWhatsAppPayLaterReminderMessage({
+          fullName: c.fullName,
+          amount: c.amount,
+          certificateNumber: c.certificateNumber,
+        })
+      : buildWhatsAppCertificateMessage({
+          fullName: c.fullName,
+          amount: c.amount,
+          paymentMethod: c.paymentMethod,
+          certificateNumber: c.certificateNumber,
+        });
 
     if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
       try {
@@ -737,39 +747,83 @@ export default function DashboardPage() {
                             </button>
                           )}
 
-                          {/* 📱 SEND VIA WHATSAPP */}
-                          <button
-                            type="button"
-                            onClick={() => handleDashboardWhatsAppShare(c)}
-                            className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all"
-                          >
-                            <Smartphone className="w-4 h-4" />
-                            <span>📱 SEND VIA WHATSAPP</span>
-                          </button>
+                          {/* 📱 SEND VIA WHATSAPP (for CASH / ONLINE) vs 🔔 SEND REMINDER & MARK PAID (for PAY LATER) */}
+                          {isPayLater ? (
+                            <div className="space-y-2">
+                              <button
+                                type="button"
+                                onClick={() => handleDashboardWhatsAppShare(c)}
+                                className="w-full py-2.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all"
+                              >
+                                <Bell className="w-4 h-4" />
+                                <span>🔔 SEND REMINDER VIA WHATSAPP</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (confirm(`Mark ₹${c.amount} from "${c.fullName}" as Paid? This will generate their official Certificate.`)) {
+                                    await handleStatusUpdate(c.id, 'CASH_RECEIVED');
+                                    setViewingCertificate({
+                                      certificateNumber: c.certificateNumber,
+                                      fullName: c.fullName,
+                                      mobileNumber: c.mobileNumber,
+                                      amount: c.amount,
+                                      paymentMethod: 'CASH',
+                                      paymentStatus: 'CASH_RECEIVED',
+                                      createdAt: c.createdAt,
+                                      volunteerName: c.volunteerName,
+                                      paymentScreenshot: c.paymentScreenshot,
+                                    });
+                                  }
+                                }}
+                                className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all"
+                              >
+                                <Check className="w-4 h-4" />
+                                <span>✓ MARK AS PAID (GENERATE CERTIFICATE)</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleDashboardWhatsAppShare(c)}
+                              className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all"
+                            >
+                              <Smartphone className="w-4 h-4" />
+                              <span>📱 SEND VIA WHATSAPP</span>
+                            </button>
+                          )}
 
                           {/* Secondary Row: Certificate & Admin Controls */}
                           <div className="flex items-center gap-2 flex-wrap pt-0.5">
-                            {/* Certificate */}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setViewingCertificate({
-                                  certificateNumber: c.certificateNumber,
-                                  fullName: c.fullName,
-                                  mobileNumber: c.mobileNumber,
-                                  amount: c.amount,
-                                  paymentMethod: c.paymentMethod,
-                                  paymentStatus: c.paymentStatus,
-                                  createdAt: c.createdAt,
-                                  volunteerName: c.volunteerName,
-                                  paymentScreenshot: c.paymentScreenshot,
-                                })
-                              }
-                              className="flex-1 min-w-[90px] py-2 px-2.5 rounded-xl bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                            >
-                              <Eye className="w-3.5 h-3.5 text-devotional-gold-400" />
-                              <span>Certificate</span>
-                            </button>
+                            {/* Certificate (Available once paid) */}
+                            {!isPayLater ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setViewingCertificate({
+                                    certificateNumber: c.certificateNumber,
+                                    fullName: c.fullName,
+                                    mobileNumber: c.mobileNumber,
+                                    amount: c.amount,
+                                    paymentMethod: c.paymentMethod,
+                                    paymentStatus: c.paymentStatus,
+                                    createdAt: c.createdAt,
+                                    volunteerName: c.volunteerName,
+                                    paymentScreenshot: c.paymentScreenshot,
+                                  })
+                                }
+                                className="flex-1 min-w-[90px] py-2 px-2.5 rounded-xl bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-devotional-gold-400" />
+                                <span>Certificate</span>
+                              </button>
+                            ) : (
+                              <div className="flex-1 min-w-[90px] py-1.5 px-2 rounded-xl bg-amber-950/40 border border-amber-500/20 text-amber-400 text-[11px] font-semibold flex items-center justify-center gap-1.5">
+                                <Clock className="w-3 h-3 text-amber-400" />
+                                <span>Certificate unlocks after payment</span>
+                              </div>
+                            )}
 
                             {/* Admin Pay Later Collected Cash inline */}
                             {isAdmin && isPayLater && (
@@ -919,36 +973,50 @@ export default function DashboardPage() {
                               )}
                             </td>
                             <td className="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
-                              {/* WhatsApp */}
-                              <button
-                                type="button"
-                                onClick={() => handleDashboardWhatsAppShare(c)}
-                                className="p-1.5 rounded-lg bg-emerald-950 border border-emerald-500/30 text-emerald-300 hover:text-white inline-flex items-center"
-                                title="Share on WhatsApp"
-                              >
-                                <Smartphone className="w-3.5 h-3.5" />
-                              </button>
+                              {/* WhatsApp Reminder (Pay Later) vs WhatsApp Certificate (Cash/Online) */}
+                              {isPayLater ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDashboardWhatsAppShare(c)}
+                                  className="px-2 py-1 rounded-lg bg-amber-950 border border-amber-500/40 text-amber-300 hover:text-white inline-flex items-center gap-1 font-bold text-[10px]"
+                                  title="Send Payment Reminder via WhatsApp"
+                                >
+                                  <Bell className="w-3.5 h-3.5 text-amber-400" />
+                                  <span>Reminder</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDashboardWhatsAppShare(c)}
+                                  className="p-1.5 rounded-lg bg-emerald-950 border border-emerald-500/30 text-emerald-300 hover:text-white inline-flex items-center"
+                                  title="Share on WhatsApp"
+                                >
+                                  <Smartphone className="w-3.5 h-3.5" />
+                                </button>
+                              )}
 
-                              {/* View Certificate */}
-                              <button
-                                onClick={() =>
-                                  setViewingCertificate({
-                                    certificateNumber: c.certificateNumber,
-                                    fullName: c.fullName,
-                                    mobileNumber: c.mobileNumber,
-                                    amount: c.amount,
-                                    paymentMethod: c.paymentMethod,
-                                    paymentStatus: c.paymentStatus,
-                                    createdAt: c.createdAt,
-                                    volunteerName: c.volunteerName,
-                                    paymentScreenshot: c.paymentScreenshot,
-                                  })
-                                }
-                                className="p-1.5 rounded-lg bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white inline-flex items-center"
-                                title="View White & Gold Certificate"
-                              >
-                                <Eye className="w-3.5 h-3.5" />
-                              </button>
+                              {/* View Certificate (Only available when paid) */}
+                              {!isPayLater && (
+                                <button
+                                  onClick={() =>
+                                    setViewingCertificate({
+                                      certificateNumber: c.certificateNumber,
+                                      fullName: c.fullName,
+                                      mobileNumber: c.mobileNumber,
+                                      amount: c.amount,
+                                      paymentMethod: c.paymentMethod,
+                                      paymentStatus: c.paymentStatus,
+                                      createdAt: c.createdAt,
+                                      volunteerName: c.volunteerName,
+                                      paymentScreenshot: c.paymentScreenshot,
+                                    })
+                                  }
+                                  className="p-1.5 rounded-lg bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white inline-flex items-center"
+                                  title="View White & Gold Certificate"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
+                              )}
 
                               {/* Screenshot Lightbox (ONLINE ONLY with screenshot) */}
                               {!isCash && !isPayLater && c.paymentScreenshot && (
@@ -965,15 +1033,30 @@ export default function DashboardPage() {
                                 </button>
                               )}
 
-                              {/* Admin Pay Later Collected Cash inline */}
-                              {isAdmin && isPayLater && (
+                              {/* Pay Later: Click Paid -> Updates as paid & Generates Certificate */}
+                              {isPayLater && (
                                 <button
-                                  onClick={() => handleStatusUpdate(c.id, 'CASH_RECEIVED')}
+                                  onClick={async () => {
+                                    if (confirm(`Mark ₹${c.amount} from "${c.fullName}" as Paid? This will generate their official Certificate.`)) {
+                                      await handleStatusUpdate(c.id, 'CASH_RECEIVED');
+                                      setViewingCertificate({
+                                        certificateNumber: c.certificateNumber,
+                                        fullName: c.fullName,
+                                        mobileNumber: c.mobileNumber,
+                                        amount: c.amount,
+                                        paymentMethod: 'CASH',
+                                        paymentStatus: 'CASH_RECEIVED',
+                                        createdAt: c.createdAt,
+                                        volunteerName: c.volunteerName,
+                                        paymentScreenshot: c.paymentScreenshot,
+                                      });
+                                    }
+                                  }}
                                   className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] inline-flex items-center gap-1 shadow-sm"
-                                  title="Devotee paid cash - Mark Cash Received"
+                                  title="Mark Paid & Generate Certificate"
                                 >
                                   <Check className="w-3 h-3" />
-                                  <span>Paid Cash</span>
+                                  <span>Paid</span>
                                 </button>
                               )}
 

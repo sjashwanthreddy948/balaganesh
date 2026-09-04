@@ -5,6 +5,7 @@ import {
   FESTIVAL_CONFIG,
   buildUpiUri,
   buildWhatsAppCertificateMessage,
+  buildWhatsAppPayLaterReminderMessage,
 } from '@/config/festival.config';
 import { cleanIndianMobile, normalizeIndianMobileForWhatsApp } from '@/lib/validation';
 import { compressImageToTarget } from '@/lib/image-compress';
@@ -28,6 +29,7 @@ import {
   Eye,
   MessageCircle,
   Clock,
+  Bell,
 } from 'lucide-react';
 
 interface FastContributionFormProps {
@@ -278,9 +280,13 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
   };
 
   // ==========================================
-  // SUCCESS SCREEN (CLEAN: + ADD ANOTHER CHANDA & 📱 SEND VIA WHATSAPP)
+  // SUCCESS SCREEN (CLEAN: + ADD ANOTHER CHANDA & 📱 SEND VIA WHATSAPP / 🔔 SEND REMINDER)
   // ==========================================
   if (createdCertificate) {
+    const isPayLater =
+      createdCertificate.paymentMethod === 'PAY_LATER' ||
+      createdCertificate.paymentStatus === 'PAY_LATER';
+
     const handleWhatsAppShare = async () => {
       // 1. Validate the mobile number saved with this specific contribution
       const phoneResult = normalizeIndianMobileForWhatsApp(createdCertificate.mobileNumber);
@@ -295,7 +301,48 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
       setIsSharingWhatsApp(true);
       setWhatsAppNotice(null);
 
-      // 2. Ensure the certificate image blob is ready
+      // If PAY LATER: do NOT attach certificate! Send Pay Later Reminder message!
+      if (isPayLater) {
+        const reminderMsg = buildWhatsAppPayLaterReminderMessage({
+          fullName: createdCertificate.fullName,
+          amount: createdCertificate.amount,
+          certificateNumber: createdCertificate.certificateNumber,
+        });
+
+        if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+          try {
+            await navigator.clipboard.writeText(reminderMsg);
+          } catch {}
+        }
+
+        const phoneParam = phoneResult ? `phone=${phoneResult.whatsappPhone}&` : '';
+        const chatUrl = `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(reminderMsg)}`;
+
+        const isMobile =
+          typeof navigator !== 'undefined' &&
+          /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+        if (isMobile) {
+          window.location.href = chatUrl;
+        } else {
+          const a = document.createElement('a');
+          a.href = chatUrl;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+
+        setWhatsAppNotice({
+          type: 'info',
+          message: `WhatsApp opened with Pledge Reminder for ${phoneResult?.displayPhone || 'devotee'}.`,
+        });
+        setIsSharingWhatsApp(false);
+        return;
+      }
+
+      // 2. Ensure the certificate image blob is ready (for CASH & ONLINE)
       let blob = certBlobRef.current || certBlob;
       if (!blob && certDataUrlRef.current) {
         blob = dataUrlToBlob(certDataUrlRef.current);
@@ -388,16 +435,31 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
 
     return (
       <div className="w-full max-w-2xl mx-auto space-y-4 animate-fadeIn py-2">
-        {/* Success Banner */}
-        <div className="bg-devotional-blue-900/80 border-2 border-emerald-500/50 rounded-2xl p-4 text-center space-y-1.5 shadow-xl">
-          <div className="flex items-center justify-center gap-2 text-emerald-400 font-extrabold text-base sm:text-lg">
-            <CheckCircle className="w-6 h-6 shrink-0" />
-            <span>✓ Contribution Saved</span>
+        {/* Banner: Pay Later vs Paid/Saved */}
+        {isPayLater ? (
+          <div className="bg-amber-950/80 border-2 border-amber-500/60 rounded-2xl p-4 text-center space-y-1.5 shadow-xl">
+            <div className="flex items-center justify-center gap-2 text-amber-400 font-extrabold text-base sm:text-lg">
+              <Clock className="w-6 h-6 shrink-0 text-amber-400" />
+              <span>⏱ Chanda Pledge Recorded (Pay Later)</span>
+            </div>
+            <p className="text-xs text-devotional-gold-200 font-semibold">
+              Devotee: <b className="text-white">{createdCertificate.fullName}</b> • Pledged Amount: <b className="text-white text-sm">₹{createdCertificate.amount.toLocaleString('en-IN')}</b>
+            </p>
+            <p className="text-[11px] text-gray-300">
+              Devotee pledged to pay later. Once marked as Paid in Dashboard, their official Certificate will be generated.
+            </p>
           </div>
-          <p className="text-xs text-devotional-gold-200 font-semibold">
-            Certificate generated successfully: <b className="font-mono text-white text-sm">{createdCertificate.certificateNumber}</b>
-          </p>
-        </div>
+        ) : (
+          <div className="bg-devotional-blue-900/80 border-2 border-emerald-500/50 rounded-2xl p-4 text-center space-y-1.5 shadow-xl">
+            <div className="flex items-center justify-center gap-2 text-emerald-400 font-extrabold text-base sm:text-lg">
+              <CheckCircle className="w-6 h-6 shrink-0" />
+              <span>✓ Contribution Saved</span>
+            </div>
+            <p className="text-xs text-devotional-gold-200 font-semibold">
+              Certificate generated successfully: <b className="font-mono text-white text-sm">{createdCertificate.certificateNumber}</b>
+            </p>
+          </div>
+        )}
 
         {/* WhatsApp Notice / Feedback */}
         {whatsAppNotice && (
@@ -417,7 +479,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
           </div>
         )}
 
-        {/* ONLY TWO ACTION BUTTONS */}
+        {/* ACTION BUTTONS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Button 1: + ADD ANOTHER CHANDA */}
           <button
@@ -429,17 +491,26 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
             <span>+ ADD ANOTHER CHANDA</span>
           </button>
 
-          {/* Button 2: 📱 SEND VIA WHATSAPP */}
+          {/* Button 2: WhatsApp Reminder (Pay Later) or WhatsApp Certificate (Cash/Online) */}
           <button
             type="button"
             onClick={handleWhatsAppShare}
             disabled={isSharingWhatsApp}
-            className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 disabled:opacity-50"
+            className={`w-full py-3.5 px-4 rounded-2xl text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 disabled:opacity-50 ${
+              isPayLater
+                ? 'bg-amber-600 hover:bg-amber-500'
+                : 'bg-emerald-600 hover:bg-emerald-500'
+            }`}
           >
             {isSharingWhatsApp ? (
               <>
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>ATTACHING CERTIFICATE...</span>
+                <span>{isPayLater ? 'OPENING WHATSAPP...' : 'ATTACHING CERTIFICATE...'}</span>
+              </>
+            ) : isPayLater ? (
+              <>
+                <Bell className="w-5 h-5" />
+                <span>🔔 SEND REMINDER VIA WHATSAPP</span>
               </>
             ) : (
               <>
@@ -453,25 +524,53 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
         {/* Divider */}
         <div className="border-t border-devotional-gold-500/30 my-2" />
 
-        {/* 16:9 Landscape Certificate (Directly visible, hideActions={true} suppresses duplicate buttons) */}
-        <div>
-          <LandscapeCertificate
-            data={createdCertificate}
-            onImageReady={(url, blob) => {
-              setCertImageDataUrl(url);
-              certDataUrlRef.current = url;
-              if (blob) {
-                setCertBlob(blob);
-                certBlobRef.current = blob;
-              } else {
-                const b = dataUrlToBlob(url);
-                setCertBlob(b);
-                certBlobRef.current = b;
-              }
-            }}
-            hideActions={true}
-          />
-        </div>
+        {isPayLater ? (
+          /* PLEDGE CARD (NO CERTIFICATE GENERATED YET) */
+          <div className="p-5 rounded-2xl bg-devotional-blue-950/90 border border-amber-500/40 text-center space-y-3 shadow-lg animate-fadeIn">
+            <div className="w-12 h-12 mx-auto rounded-full bg-amber-500/20 border border-amber-400/50 flex items-center justify-center">
+              <Clock className="w-6 h-6 text-amber-400" />
+            </div>
+            <div>
+              <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider block">
+                PLEDGE STATUS: PENDING PAYMENT
+              </span>
+              <h4 className="text-lg font-black text-white mt-1">
+                {createdCertificate.fullName}
+              </h4>
+              <p className="text-xl font-black text-devotional-gold-300 mt-0.5">
+                ₹{createdCertificate.amount.toLocaleString('en-IN')}
+              </p>
+            </div>
+            <div className="p-3.5 bg-devotional-blue-900/60 rounded-xl border border-devotional-gold-500/20 text-xs text-gray-300 space-y-1 text-left">
+              <p className="font-semibold text-devotional-gold-200">Pledge Details:</p>
+              <p>• Reference No: <b className="font-mono text-white">{createdCertificate.certificateNumber}</b></p>
+              <p>• Payment Options: Cash to volunteer or UPI (<span className="font-mono text-devotional-gold-300">{FESTIVAL_CONFIG.upiId}</span>)</p>
+              <p className="text-emerald-300 font-semibold pt-1">
+                ✓ Once devotee pays, open Dashboard and click <b>&quot;Paid&quot;</b> to update as paid and generate the official Certificate.
+              </p>
+            </div>
+          </div>
+        ) : (
+          /* 16:9 Landscape Certificate for CASH / ONLINE */
+          <div>
+            <LandscapeCertificate
+              data={createdCertificate}
+              onImageReady={(url, blob) => {
+                setCertImageDataUrl(url);
+                certDataUrlRef.current = url;
+                if (blob) {
+                  setCertBlob(blob);
+                  certBlobRef.current = blob;
+                } else {
+                  const b = dataUrlToBlob(url);
+                  setCertBlob(b);
+                  certBlobRef.current = b;
+                }
+              }}
+              hideActions={true}
+            />
+          </div>
+        )}
       </div>
     );
   }
