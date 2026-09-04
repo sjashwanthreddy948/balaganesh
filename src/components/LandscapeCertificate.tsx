@@ -1,12 +1,8 @@
 'use client';
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import {
-  FESTIVAL_CONFIG,
-  buildWhatsAppCertificateMessage,
-} from '@/config/festival.config';
+import { FESTIVAL_CONFIG } from '@/config/festival.config';
 import { Download, MessageCircle } from 'lucide-react';
-import { normalizeIndianMobileForWhatsApp } from '@/lib/validation';
 
 export interface CertificateData {
   certificateNumber: string;
@@ -407,38 +403,46 @@ export default function LandscapeCertificate({
     document.body.removeChild(a);
   };
 
-  const handleNativeShare = async () => {
-    const phoneResult = normalizeIndianMobileForWhatsApp(data.mobileNumber);
-    if (!phoneResult) {
-      alert('Please enter a valid mobile number for this contributor.');
-      return;
-    }
+  const handleWhatsAppStatusShare = async () => {
+    if (!imageUrl) return;
 
-    const message = buildWhatsAppCertificateMessage(data);
-    const whatsAppChatUrl = `https://api.whatsapp.com/send?phone=${phoneResult.whatsappPhone}&text=${encodeURIComponent(message)}`;
+    const blob = dataUrlToBlob(imageUrl);
+    const fileName = `BalaGanesh_Certificate_${data.certificateNumber}_${data.fullName.replace(/\s+/g, '_')}.jpg`;
+    const file = new File([blob], fileName, { type: 'image/jpeg' });
 
-    // Pre-copy greeting text to clipboard
-    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+    // On mobile devices supporting Web Share API:
+    // Share ONLY the image file with NO text so WhatsApp Status receives NO caption text
+    if (
+      typeof navigator !== 'undefined' &&
+      navigator.share &&
+      navigator.canShare &&
+      navigator.canShare({ files: [file] })
+    ) {
       try {
-        await navigator.clipboard.writeText(message);
-      } catch {}
+        await navigator.share({
+          files: [file],
+          // Strictly NO text, NO title, NO description — status story is shared with photo only
+        });
+        return;
+      } catch (err: any) {
+        if (err?.name === 'AbortError') return;
+        console.warn('Native share failed, using download fallback:', err);
+      }
     }
 
-    // Auto-download JPG certificate to device
+    // Fallback for desktop / browsers without file sharing:
+    // Auto-download the high-res certificate JPG so user can post to WhatsApp Status
     handleDownload();
 
-    // Also copy image to clipboard if supported (for Ctrl+V on WhatsApp Web)
-    if (imageUrl && typeof navigator !== 'undefined' && navigator.clipboard && (window as any).ClipboardItem) {
+    if (typeof navigator !== 'undefined' && navigator.clipboard && (window as any).ClipboardItem) {
       try {
-        const blob = dataUrlToBlob(imageUrl);
         await navigator.clipboard.write([
           new (window as any).ClipboardItem({ [blob.type]: blob }),
         ]);
       } catch {}
     }
 
-    // Open WhatsApp chat directly targeting the contributor's phone
-    window.open(whatsAppChatUrl, '_blank');
+    alert('Certificate JPG downloaded to your device! You can now post it to your WhatsApp Status.');
   };
 
   return (
@@ -475,11 +479,12 @@ export default function LandscapeCertificate({
           </button>
 
           <button
-            onClick={handleNativeShare}
-            className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99]"
+            onClick={handleWhatsAppStatusShare}
+            disabled={!imageUrl}
+            className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99] disabled:opacity-50"
           >
             <MessageCircle className="w-5 h-5" />
-            <span>📲 Share on WhatsApp</span>
+            <span>Share on WhatsApp Status</span>
           </button>
         </div>
       )}

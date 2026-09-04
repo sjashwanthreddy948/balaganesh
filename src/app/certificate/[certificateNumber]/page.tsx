@@ -6,7 +6,7 @@ import Footer from '@/components/Footer';
 import LandscapeCertificate, { CertificateData } from '@/components/LandscapeCertificate';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, RefreshCw, AlertCircle, PlusCircle } from 'lucide-react';
+import { ArrowLeft, RefreshCw, AlertCircle, PlusCircle, MessageCircle } from 'lucide-react';
 import { FESTIVAL_CONFIG } from '@/config/festival.config';
 
 export default function CertificateViewPage() {
@@ -58,11 +58,11 @@ export default function CertificateViewPage() {
       <main className="flex-1 max-w-3xl w-full mx-auto px-4 py-8 space-y-6">
         <div className="flex items-center justify-between">
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push(user ? '/dashboard' : '/')}
             className="flex items-center gap-1.5 text-xs text-devotional-gold-300/80 hover:text-white transition-colors font-semibold"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Dashboard</span>
+            <span>{user ? 'Dashboard' : 'Home'}</span>
           </button>
 
           <button
@@ -108,13 +108,25 @@ export default function CertificateViewPage() {
             <LandscapeCertificate data={certData} />
 
             <div className="pt-4 text-center">
-              <button
-                onClick={() => router.push('/contribute')}
-                className="px-6 py-3 rounded-2xl bg-devotional-blue-900 hover:bg-devotional-blue-800 border border-devotional-gold-500/40 text-devotional-gold-200 hover:text-white text-xs font-extrabold inline-flex items-center gap-2 shadow-sm transition-colors"
-              >
-                <PlusCircle className="w-4 h-4 text-devotional-gold-400" />
-                <span>Record Another Contribution</span>
-              </button>
+              {user ? (
+                <button
+                  onClick={() => router.push('/contribute')}
+                  className="px-6 py-3 rounded-2xl bg-devotional-blue-900 hover:bg-devotional-blue-800 border border-devotional-gold-500/40 text-devotional-gold-200 hover:text-white text-xs font-extrabold inline-flex items-center gap-2 shadow-sm transition-colors"
+                >
+                  <PlusCircle className="w-4 h-4 text-devotional-gold-400" />
+                  <span>Record Another Contribution</span>
+                </button>
+              ) : (
+                <a
+                  href={FESTIVAL_CONFIG.whatsappGroupLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-6 py-3 rounded-2xl bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 hover:text-white text-xs font-extrabold inline-flex items-center gap-2 shadow-sm transition-colors"
+                >
+                  <MessageCircle className="w-4 h-4 text-emerald-400" />
+                  <span>Join Ganesh Festival WhatsApp Group</span>
+                </a>
+              )}
             </div>
           </div>
         )}
