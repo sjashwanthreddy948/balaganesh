@@ -63,23 +63,13 @@ export function buildWhatsAppCertificateMessage(contribution: {
 }): string {
   return `Namaste ${contribution.fullName} 🙏
 
-Thank you very much for your valuable contribution to Bala Ganesh Association for Ganesh Festival ${FESTIVAL_CONFIG.festivalYear}.
+Thank you for your Chanda of ₹${contribution.amount.toLocaleString('en-IN')} for Ganesh Festival ${FESTIVAL_CONFIG.festivalYear}. (Certificate: ${contribution.certificateNumber})
 
-Your support helps us celebrate and conduct the festival with devotion and joy.
-
-Contribution Amount: ₹${contribution.amount.toLocaleString('en-IN')}
-Payment Method: ${contribution.paymentMethod}
-Certificate No: ${contribution.certificateNumber}
-
-We have attached your official Certificate of Appreciation photo above.
-
-Join our official Bala Ganesh Association WhatsApp Group:
+Join our Ganesh WhatsApp Group:
 ${FESTIVAL_CONFIG.whatsappGroupLink}
 
 Ganpati Bappa Morya! 🙏
-
-${FESTIVAL_CONFIG.associationName}
-${FESTIVAL_CONFIG.associationAddress}`;
+— ${FESTIVAL_CONFIG.associationName}`;
 }
 
 /**
