@@ -107,9 +107,9 @@ export default function CertificateViewPage() {
             {/* 16:9 Landscape Certificate */}
             <LandscapeCertificate
               data={certData}
-              showStatusShare={!user}
-              showGroupLink={!user}
-              showCertificateLink={true}
+              showStatusShare={true}
+              showGroupLink={true}
+              showCertificateLink={false}
             />
 
             {user && (
