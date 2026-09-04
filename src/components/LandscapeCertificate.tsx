@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { FESTIVAL_CONFIG } from '@/config/festival.config';
-import { Download, MessageCircle, Users } from 'lucide-react';
+import { Download, MessageCircle, Users, Link2, Copy, Check, ExternalLink } from 'lucide-react';
 
 export interface CertificateData {
   certificateNumber: string;
@@ -32,18 +32,42 @@ interface LandscapeCertificateProps {
   data: CertificateData;
   onImageReady?: (dataUrl: string, blob?: Blob) => void;
   hideActions?: boolean;
+  showStatusShare?: boolean;
+  showGroupLink?: boolean;
+  showCertificateLink?: boolean;
 }
 
 export default function LandscapeCertificate({
   data,
   onImageReady,
   hideActions = false,
+  showStatusShare = true,
+  showGroupLink = true,
+  showCertificateLink = false,
 }: LandscapeCertificateProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const blobRef = useRef<Blob | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(true);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const certUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/certificate/${data.certificateNumber}`
+      : `https://balaganesh.vercel.app/certificate/${data.certificateNumber}`;
+
+  const handleCopyLink = async () => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(certUrl);
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2500);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const drawCertificate = useCallback(() => {
     const canvas = canvasRef.current;
@@ -497,7 +521,7 @@ export default function LandscapeCertificate({
       {/* Action Buttons */}
       {!hideActions && (
         <div className="w-full max-w-2xl mt-5 space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className={`grid ${showStatusShare ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'} gap-3`}>
             <button
               onClick={handleDownload}
               disabled={!imageUrl}
@@ -507,25 +531,59 @@ export default function LandscapeCertificate({
               <span>Download Certificate</span>
             </button>
 
-            <button
-              onClick={handleWhatsAppStatusShare}
-              disabled={!imageUrl}
-              className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99] disabled:opacity-50"
-            >
-              <MessageCircle className="w-5 h-5" />
-              <span>Share on WhatsApp Status</span>
-            </button>
+            {showStatusShare && (
+              <button
+                onClick={handleWhatsAppStatusShare}
+                disabled={!imageUrl}
+                className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99] disabled:opacity-50"
+              >
+                <MessageCircle className="w-5 h-5" />
+                <span>Share on WhatsApp Status</span>
+              </button>
+            )}
           </div>
 
-          <a
-            href={FESTIVAL_CONFIG.whatsappGroupLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full py-3.5 px-4 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99]"
-          >
-            <Users className="w-5 h-5 text-white" />
-            <span>Join WhatsApp Group</span>
-          </a>
+          {showCertificateLink && (
+            <div className="p-3.5 bg-devotional-blue-950/90 rounded-xl border border-devotional-gold-500/40 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-md">
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <Link2 className="w-4 h-4 text-devotional-gold-400 shrink-0" />
+                <span className="text-xs text-devotional-gold-200 font-mono truncate select-all">
+                  {certUrl}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="flex-1 sm:flex-initial px-3.5 py-2 rounded-lg bg-devotional-gold-500 hover:bg-devotional-gold-400 text-devotional-blue-950 text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
+                >
+                  {copiedLink ? <Check className="w-3.5 h-3.5 text-devotional-blue-950" /> : <Copy className="w-3.5 h-3.5 text-devotional-blue-950" />}
+                  <span>{copiedLink ? 'Copied!' : 'Copy Link'}</span>
+                </button>
+                <a
+                  href={certUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-colors flex items-center justify-center gap-1 border border-white/20"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open</span>
+                </a>
+              </div>
+            </div>
+          )}
+
+          {showGroupLink && (
+            <a
+              href={FESTIVAL_CONFIG.whatsappGroupLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-3.5 px-4 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99]"
+            >
+              <Users className="w-5 h-5 text-white" />
+              <span>Join WhatsApp Group</span>
+            </a>
+          )}
 
           {shareNotice && (
             <div className="p-3 rounded-xl bg-emerald-950/90 border border-emerald-500/40 text-emerald-300 text-xs font-bold text-center animate-fadeIn">

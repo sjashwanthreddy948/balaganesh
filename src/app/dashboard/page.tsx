@@ -969,7 +969,12 @@ export default function DashboardPage() {
                 </button>
               </div>
 
-              <LandscapeCertificate data={viewingCertificate} />
+              <LandscapeCertificate
+                data={viewingCertificate}
+                showStatusShare={false}
+                showGroupLink={false}
+                showCertificateLink={true}
+              />
             </div>
           </div>
         )}
