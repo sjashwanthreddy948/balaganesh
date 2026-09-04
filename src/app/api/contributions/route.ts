@@ -126,9 +126,7 @@ export async function GET(req: NextRequest) {
   try {
     const whereClause: any = {};
 
-    if (session.role === 'VOLUNTEER') {
-      whereClause.createdById = session.id;
-    } else if (volunteerId && volunteerId !== 'ALL') {
+    if (volunteerId && volunteerId !== 'ALL') {
       whereClause.createdById = volunteerId;
     }
 

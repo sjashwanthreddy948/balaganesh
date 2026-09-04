@@ -12,56 +12,7 @@ export async function GET() {
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
-    // If session is Volunteer, calculate stats for this volunteer
-    if (session.role === 'VOLUNTEER') {
-      const [todayCount, todayCashResult, todayOnlineResult, totalCount, totalResult] =
-        await Promise.all([
-          prisma.contribution.count({
-            where: { createdById: session.id, createdAt: { gte: startOfToday } },
-          }),
-          prisma.contribution.aggregate({
-            where: {
-              createdById: session.id,
-              paymentMethod: 'CASH',
-              createdAt: { gte: startOfToday },
-            },
-            _sum: { amount: true },
-          }),
-          prisma.contribution.aggregate({
-            where: {
-              createdById: session.id,
-              paymentMethod: 'ONLINE',
-              createdAt: { gte: startOfToday },
-            },
-            _sum: { amount: true },
-          }),
-          prisma.contribution.count({
-            where: { createdById: session.id },
-          }),
-          prisma.contribution.aggregate({
-            where: { createdById: session.id },
-            _sum: { amount: true },
-          }),
-        ]);
-
-      const todayCash = todayCashResult._sum.amount || 0;
-      const todayOnline = todayOnlineResult._sum.amount || 0;
-
-      return NextResponse.json({
-        success: true,
-        role: 'VOLUNTEER',
-        stats: {
-          todayContributions: todayCount,
-          todayAmount: todayCash + todayOnline,
-          todayCash,
-          todayOnline,
-          totalContributions: totalCount,
-          totalAmount: totalResult._sum.amount || 0,
-        },
-      });
-    }
-
-    // Otherwise: ADMIN full metrics
+    // Full festival collection metrics for both Admin & Volunteer dashboard
     const [
       totalContributions,
       totalSumResult,
@@ -117,7 +68,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      role: 'ADMIN',
+      role: session.role,
       stats: {
         totalContributions,
         totalAmount: totalSumResult._sum.amount || 0,
