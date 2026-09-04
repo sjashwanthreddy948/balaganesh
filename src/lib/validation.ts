@@ -13,6 +13,38 @@ export const cleanIndianMobile = (val: string): string => {
   return digits;
 };
 
+export interface NormalizedPhoneResult {
+  valid: boolean;
+  tenDigit: string;
+  whatsappPhone: string; // "919876543210" for api.whatsapp.com/send?phone=919876543210
+  displayPhone: string;  // "+919876543210"
+}
+
+export const normalizeIndianMobileForWhatsApp = (val?: string | null): NormalizedPhoneResult | null => {
+  if (!val) return null;
+  const digits = val.replace(/\D/g, '');
+  let tenDigit = '';
+
+  if (digits.length === 12 && digits.startsWith('91')) {
+    tenDigit = digits.slice(2);
+  } else if (digits.length === 11 && digits.startsWith('0')) {
+    tenDigit = digits.slice(1);
+  } else if (digits.length === 10) {
+    tenDigit = digits;
+  }
+
+  if (tenDigit.length === 10 && /^[6-9]\d{9}$/.test(tenDigit)) {
+    return {
+      valid: true,
+      tenDigit,
+      whatsappPhone: `91${tenDigit}`,
+      displayPhone: `+91${tenDigit}`,
+    };
+  }
+
+  return null;
+};
+
 // Standard preset expense categories
 export const EXPENSE_CATEGORIES = [
   'Decorations',

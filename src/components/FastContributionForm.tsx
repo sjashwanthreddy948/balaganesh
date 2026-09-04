@@ -7,9 +7,8 @@ import {
   buildWhatsAppCertificateShareUrl,
   buildWhatsAppCertificateMessage,
 } from '@/config/festival.config';
-import { cleanIndianMobile } from '@/lib/validation';
+import { cleanIndianMobile, normalizeIndianMobileForWhatsApp } from '@/lib/validation';
 import LandscapeCertificate, { CertificateData, dataUrlToBlob } from './LandscapeCertificate';
-import ImageLightboxModal from './ImageLightboxModal';
 import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
 import {
@@ -68,7 +67,10 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
   const certBlobRef = useRef<Blob | null>(null);
   const certDataUrlRef = useRef<string | null>(null);
   const [isSharingWhatsApp, setIsSharingWhatsApp] = useState(false);
-  const [showPaymentPhotoModal, setShowPaymentPhotoModal] = useState(false);
+  const [whatsAppNotice, setWhatsAppNotice] = useState<{
+    type: 'error' | 'success' | 'info';
+    message: string;
+  } | null>(null);
   const [lastContributionPill, setLastContributionPill] = useState<{
     name: string;
     amount: number;
@@ -157,7 +159,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
     certBlobRef.current = null;
     certDataUrlRef.current = null;
     setIsSharingWhatsApp(false);
-    setShowPaymentPhotoModal(false);
+    setWhatsAppNotice(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -265,13 +267,24 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
   };
 
   // ==========================================
-  // SUCCESS SCREEN (CERTIFICATE + ADD ANOTHER)
+  // SUCCESS SCREEN (CLEAN: + ADD ANOTHER CHANDA & 📱 SEND VIA WHATSAPP)
   // ==========================================
   if (createdCertificate) {
     const handleWhatsAppShare = async () => {
-      setIsSharingWhatsApp(true);
+      // 1. Validate the mobile number saved with this specific contribution
+      const phoneResult = normalizeIndianMobileForWhatsApp(createdCertificate.mobileNumber);
+      if (!phoneResult) {
+        setWhatsAppNotice({
+          type: 'error',
+          message: 'Valid mobile number is required to send the certificate via WhatsApp.',
+        });
+        return;
+      }
 
-      // 1. Ensure the certificate image blob is ready
+      setIsSharingWhatsApp(true);
+      setWhatsAppNotice(null);
+
+      // 2. Ensure the certificate image blob is ready
       let blob = certBlobRef.current || certBlob;
       if (!blob && certDataUrlRef.current) {
         blob = dataUrlToBlob(certDataUrlRef.current);
@@ -297,55 +310,37 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
         });
       }
 
+      // 3. Exact greeting message for this donor & certificate
       const message = buildWhatsAppCertificateMessage(createdCertificate);
-      const rawNumber = createdCertificate.mobileNumber ? createdCertificate.mobileNumber.replace(/[^0-9]/g, '') : '';
-      const formattedPhone = rawNumber ? (rawNumber.startsWith('91') ? rawNumber : `91${rawNumber}`) : '';
-      const phoneParam = formattedPhone ? `phone=${formattedPhone}&` : '';
-      const whatsAppChatUrl = `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(message)}`;
 
-      // 2. Pre-copy greeting text + WhatsApp group link to clipboard
-      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
-        try {
-          await navigator.clipboard.writeText(message);
-        } catch {}
-      }
-
-      // 3. Share Photo directly via Web Share API
-      if (blob) {
-        const file = new File(
-          [blob],
-          `BalaGanesh_Certificate_${createdCertificate.certificateNumber}.jpg`,
-          { type: 'image/jpeg' }
-        );
-
-        if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-          try {
-            if (navigator.canShare({ files: [file], text: message })) {
-              await navigator.share({
-                files: [file],
-                text: message,
-                title: `${FESTIVAL_CONFIG.associationName} Certificate`,
-              });
-            } else {
-              await navigator.share({
-                files: [file],
-                title: `${FESTIVAL_CONFIG.associationName} Certificate`,
-              });
-            }
-            setIsSharingWhatsApp(false);
-            return; // Successfully shared photo! DO NOT trigger fallback!
-          } catch (err: any) {
-            if (err?.name === 'AbortError') {
-              setIsSharingWhatsApp(false);
-              return; // User completed or dismissed the share sheet
-            }
-            console.warn('Native photo share failed:', err);
-          }
+      // 4. Try WhatsApp Business Cloud API (if configured on server)
+      try {
+        const apiRes = await fetch('/api/whatsapp/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            certificateNumber: createdCertificate.certificateNumber,
+            mobileNumber: createdCertificate.mobileNumber,
+            fullName: createdCertificate.fullName,
+            amount: createdCertificate.amount,
+            paymentMethod: createdCertificate.paymentMethod,
+          }),
+        });
+        const apiData = await apiRes.json();
+        if (apiData.success && apiData.apiConfigured) {
+          setWhatsAppNotice({
+            type: 'success',
+            message: `✓ Certificate Sent via WhatsApp to ${phoneResult.displayPhone}`,
+          });
+          setIsSharingWhatsApp(false);
+          return;
         }
+      } catch (err) {
+        console.warn('WhatsApp API check, using direct WhatsApp chat flow:', err);
       }
 
-      // 4. Fallback for Desktop or devices without Web Share API file support:
-      // Download the photo automatically so the user has the image on their device
+      // 5. Direct WhatsApp Flow:
+      // Download contributor's exact Certificate JPG so it's ready on their device
       if (blob) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -364,15 +359,26 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
         document.body.removeChild(a);
       }
 
-      // Open WhatsApp chat
+      // Pre-copy greeting text to clipboard
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(message);
+        } catch {}
+      }
+
+      // Open WhatsApp directly targeting the contributor's validated phone number
+      const whatsAppChatUrl = `https://api.whatsapp.com/send?phone=${phoneResult.whatsappPhone}&text=${encodeURIComponent(message)}`;
       window.open(whatsAppChatUrl, '_blank');
+
+      setWhatsAppNotice({
+        type: 'info',
+        message: `WhatsApp opened for ${phoneResult.displayPhone}. Certificate JPG downloaded to your device — attach it directly in chat.`,
+      });
       setIsSharingWhatsApp(false);
     };
 
-    const paymentPhotoUrl = createdCertificate.paymentScreenshot || screenshotPreview;
-
     return (
-      <div className="w-full max-w-2xl mx-auto space-y-5 animate-fadeIn py-2">
+      <div className="w-full max-w-2xl mx-auto space-y-4 animate-fadeIn py-2">
         {/* Success Banner */}
         <div className="bg-devotional-blue-900/80 border-2 border-emerald-500/50 rounded-2xl p-4 text-center space-y-1.5 shadow-xl">
           <div className="flex items-center justify-center gap-2 text-emerald-400 font-extrabold text-base sm:text-lg">
@@ -384,8 +390,26 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
           </p>
         </div>
 
-        {/* Prominent Mobile Action Buttons */}
-        <div className={`grid grid-cols-1 sm:grid-cols-2 ${paymentPhotoUrl ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-3`}>
+        {/* WhatsApp Notice / Feedback */}
+        {whatsAppNotice && (
+          <div
+            className={`p-3.5 rounded-2xl text-xs sm:text-sm font-semibold flex items-start gap-2.5 shadow-md ${
+              whatsAppNotice.type === 'error'
+                ? 'bg-red-950/80 border-2 border-red-500/60 text-red-200'
+                : whatsAppNotice.type === 'success'
+                ? 'bg-emerald-950/80 border-2 border-emerald-500/60 text-emerald-200'
+                : 'bg-devotional-blue-950/90 border-2 border-devotional-gold-500/50 text-devotional-gold-200'
+            }`}
+          >
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-devotional-gold-400" />
+            <div className="flex-1">
+              <span>{whatsAppNotice.message}</span>
+            </div>
+          </div>
+        )}
+
+        {/* ONLY TWO ACTION BUTTONS */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Button 1: + ADD ANOTHER CHANDA */}
           <button
             type="button"
@@ -396,18 +420,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
             <span>+ ADD ANOTHER CHANDA</span>
           </button>
 
-          {/* Button 2: VIEW CERTIFICATE */}
-          <a
-            href={`/certificate/${createdCertificate.certificateNumber}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full py-3.5 px-4 rounded-2xl bg-devotional-blue-900 hover:bg-devotional-blue-800 border-2 border-devotional-gold-400/70 text-devotional-gold-200 font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95"
-          >
-            <Eye className="w-5 h-5 text-devotional-gold-400" />
-            <span>VIEW CERTIFICATE</span>
-          </a>
-
-          {/* Button 3: SEND VIA WHATSAPP (Direct JPG photo) */}
+          {/* Button 2: 📱 SEND VIA WHATSAPP */}
           <button
             type="button"
             onClick={handleWhatsAppShare}
@@ -415,24 +428,15 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
             className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 disabled:opacity-50"
           >
             <MessageCircle className="w-5 h-5" />
-            <span>{isSharingWhatsApp ? 'ATTACHING PHOTO...' : 'SEND VIA WHATSAPP'}</span>
+            <span>{isSharingWhatsApp ? 'PREPARING WHATSAPP...' : '📱 SEND VIA WHATSAPP'}</span>
           </button>
-
-          {/* Button 4: VIEW PAYMENT PHOTO (when payment photo was captured) */}
-          {paymentPhotoUrl && (
-            <button
-              type="button"
-              onClick={() => setShowPaymentPhotoModal(true)}
-              className="w-full py-3.5 px-4 rounded-2xl bg-devotional-blue-900/90 hover:bg-devotional-blue-800 border-2 border-devotional-gold-400/70 text-devotional-gold-200 font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95"
-            >
-              <Camera className="w-5 h-5 text-devotional-gold-400" />
-              <span>VIEW PAYMENT PHOTO</span>
-            </button>
-          )}
         </div>
 
-        {/* 16:9 Landscape Certificate Preview (hideActions={true} avoids duplicate buttons) */}
-        <div className="pt-1">
+        {/* Divider */}
+        <div className="border-t border-devotional-gold-500/30 my-2" />
+
+        {/* 16:9 Landscape Certificate (Directly visible, hideActions={true} suppresses duplicate buttons) */}
+        <div>
           <LandscapeCertificate
             data={createdCertificate}
             onImageReady={(url, blob) => {
@@ -450,16 +454,6 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
             hideActions={true}
           />
         </div>
-
-        {/* Payment Photo Lightbox Modal */}
-        {paymentPhotoUrl && (
-          <ImageLightboxModal
-            isOpen={showPaymentPhotoModal}
-            onClose={() => setShowPaymentPhotoModal(false)}
-            imageUrl={paymentPhotoUrl}
-            title={`Payment Photo: ${createdCertificate.fullName} (₹${createdCertificate.amount})`}
-          />
-        )}
       </div>
     );
   }

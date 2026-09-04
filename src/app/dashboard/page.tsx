@@ -8,7 +8,12 @@ import FastContributionForm from '@/components/FastContributionForm';
 import LandscapeCertificate, { CertificateData } from '@/components/LandscapeCertificate';
 import ImageLightboxModal from '@/components/ImageLightboxModal';
 import MobileBottomNav from '@/components/MobileBottomNav';
-import { FESTIVAL_CONFIG, buildWhatsAppCertificateShareUrl } from '@/config/festival.config';
+import {
+  FESTIVAL_CONFIG,
+  buildWhatsAppCertificateShareUrl,
+  buildWhatsAppCertificateMessage,
+} from '@/config/festival.config';
+import { normalizeIndianMobileForWhatsApp } from '@/lib/validation';
 import {
   PlusCircle,
   Users,
@@ -224,6 +229,28 @@ export default function DashboardPage() {
     } catch (err) {
       console.error('Failed to update status:', err);
     }
+  };
+
+  const handleDashboardWhatsAppShare = (c: ContributionItem) => {
+    const phoneResult = normalizeIndianMobileForWhatsApp(c.mobileNumber);
+    if (!phoneResult) {
+      alert('Valid mobile number is required to send the certificate via WhatsApp.');
+      return;
+    }
+
+    const message = buildWhatsAppCertificateMessage({
+      fullName: c.fullName,
+      amount: c.amount,
+      paymentMethod: c.paymentMethod,
+      certificateNumber: c.certificateNumber,
+    });
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(message).catch(() => {});
+    }
+
+    const url = `https://api.whatsapp.com/send?phone=${phoneResult.whatsappPhone}&text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
   };
 
   // Edit Save
@@ -641,107 +668,109 @@ export default function DashboardPage() {
                           </div>
                         )}
 
-                        {/* Action Buttons Row */}
-                        <div className="flex items-center gap-1.5 pt-1 border-t border-devotional-gold-500/15 flex-wrap">
-                          {/* WhatsApp */}
-                          {c.mobileNumber && (
-                            <a
-                              href={whatsAppShareUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex-1 min-w-[90px] py-2 px-2.5 rounded-xl bg-emerald-600/90 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
-                            >
-                              <Smartphone className="w-3.5 h-3.5" />
-                              <span>WhatsApp</span>
-                            </a>
-                          )}
-
-                          {/* Certificate */}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setViewingCertificate({
-                                certificateNumber: c.certificateNumber,
-                                fullName: c.fullName,
-                                mobileNumber: c.mobileNumber,
-                                amount: c.amount,
-                                paymentMethod: c.paymentMethod,
-                                paymentStatus: c.paymentStatus,
-                                createdAt: c.createdAt,
-                                volunteerName: c.volunteerName,
-                                paymentScreenshot: c.paymentScreenshot,
-                              })
-                            }
-                            className="flex-1 min-w-[85px] py-2 px-2.5 rounded-xl bg-devotional-blue-800 hover:bg-devotional-blue-700 border border-devotional-gold-400/50 text-devotional-gold-200 font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
-                          >
-                            <Eye className="w-3.5 h-3.5 text-devotional-gold-400" />
-                            <span>Certificate</span>
-                          </button>
-
-                          {/* Screenshot Lightbox */}
-                          {c.paymentScreenshot && (
+                        {/* Action Buttons */}
+                        <div className="space-y-2 pt-2 border-t border-devotional-gold-500/15">
+                          {/* 🖼 VIEW PAYMENT PHOTO (ONLINE with screenshot only — NEVER for CASH) */}
+                          {!isCash && c.paymentScreenshot && (
                             <button
                               type="button"
                               onClick={() => {
                                 setViewingScreenshotUrl(c.paymentScreenshot!);
-                                setViewingScreenshotTitle(`Payment Proof: ${c.fullName} (₹${c.amount})`);
+                                setViewingScreenshotTitle(`Payment Photo: ${c.fullName} (₹${c.amount})`);
                               }}
-                              className="py-2 px-2.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white text-xs font-bold flex items-center gap-1 active:scale-95 transition-all"
+                              className="w-full py-2.5 px-3 rounded-xl bg-devotional-blue-900/90 hover:bg-devotional-blue-800 border border-devotional-gold-400/50 text-devotional-gold-200 font-extrabold text-xs flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all"
                             >
-                              <ImageIcon className="w-3.5 h-3.5" />
-                              <span>Proof</span>
+                              <ImageIcon className="w-4 h-4 text-devotional-gold-400" />
+                              <span>🖼 VIEW PAYMENT PHOTO</span>
                             </button>
                           )}
 
-                          {/* Admin Verify/Reject inline */}
-                          {isAdmin && !isCash && isPending && (
-                            <div className="flex items-center gap-1 ml-auto">
-                              <button
-                                type="button"
-                                onClick={() => handleStatusUpdate(c.id, 'VERIFIED')}
-                                className="px-2 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px]"
-                              >
-                                Verify
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleStatusUpdate(c.id, 'REJECTED')}
-                                className="px-2 py-1.5 rounded-lg bg-red-950 border border-red-500/40 text-red-400 hover:bg-red-900 font-bold text-[10px]"
-                              >
-                                Reject
-                              </button>
-                            </div>
-                          )}
-
-                          {/* Admin Edit */}
-                          {isAdmin && (
+                          {/* 📱 SEND VIA WHATSAPP */}
+                          {c.mobileNumber && (
                             <button
                               type="button"
-                              onClick={() => {
-                                setEditingContribution(c);
-                                setEditName(c.fullName);
-                                setEditMobile(c.mobileNumber || '');
-                                setEditAddress(c.address || '');
-                                setEditAmount(c.amount);
-                              }}
-                              className="p-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white text-xs active:scale-95 transition-all"
-                              title="Edit Contribution"
+                              onClick={() => handleDashboardWhatsAppShare(c)}
+                              className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all"
                             >
-                              <Edit2 className="w-3.5 h-3.5" />
+                              <Smartphone className="w-4 h-4" />
+                              <span>📱 SEND VIA WHATSAPP</span>
                             </button>
                           )}
 
-                          {/* Admin Delete */}
-                          {isAdmin && (
+                          {/* Secondary Row: Certificate & Admin Controls */}
+                          <div className="flex items-center gap-2 flex-wrap pt-0.5">
+                            {/* Certificate */}
                             <button
                               type="button"
-                              onClick={() => handleDeleteContribution(c.id, c.fullName)}
-                              className="p-2 rounded-xl bg-red-950/70 border border-red-500/40 text-red-300 hover:text-white text-xs active:scale-95 transition-all"
-                              title="Delete Contribution"
+                              onClick={() =>
+                                setViewingCertificate({
+                                  certificateNumber: c.certificateNumber,
+                                  fullName: c.fullName,
+                                  mobileNumber: c.mobileNumber,
+                                  amount: c.amount,
+                                  paymentMethod: c.paymentMethod,
+                                  paymentStatus: c.paymentStatus,
+                                  createdAt: c.createdAt,
+                                  volunteerName: c.volunteerName,
+                                  paymentScreenshot: c.paymentScreenshot,
+                                })
+                              }
+                              className="flex-1 min-w-[90px] py-2 px-2.5 rounded-xl bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Eye className="w-3.5 h-3.5 text-devotional-gold-400" />
+                              <span>Certificate</span>
                             </button>
-                          )}
+
+                            {/* Admin Verify/Reject inline */}
+                            {isAdmin && !isCash && isPending && (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusUpdate(c.id, 'VERIFIED')}
+                                  className="px-2.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs"
+                                >
+                                  Verify
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusUpdate(c.id, 'REJECTED')}
+                                  className="px-2.5 py-2 rounded-xl bg-red-950 border border-red-500/40 text-red-400 hover:bg-red-900 font-bold text-xs"
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            )}
+
+                            {/* Admin Edit */}
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingContribution(c);
+                                  setEditName(c.fullName);
+                                  setEditMobile(c.mobileNumber || '');
+                                  setEditAddress(c.address || '');
+                                  setEditAmount(c.amount);
+                                }}
+                                className="p-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white text-xs active:scale-95 transition-all"
+                                title="Edit Contribution"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+
+                            {/* Admin Delete */}
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteContribution(c.id, c.fullName)}
+                                className="p-2 rounded-xl bg-red-950/70 border border-red-500/40 text-red-300 hover:text-white text-xs active:scale-95 transition-all"
+                                title="Delete Contribution"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
@@ -826,15 +855,14 @@ export default function DashboardPage() {
                             <td className="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
                               {/* WhatsApp */}
                               {c.mobileNumber && (
-                                <a
-                                  href={whatsAppShareUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                <button
+                                  type="button"
+                                  onClick={() => handleDashboardWhatsAppShare(c)}
                                   className="p-1.5 rounded-lg bg-emerald-950 border border-emerald-500/30 text-emerald-300 hover:text-white inline-flex items-center"
                                   title="Share on WhatsApp"
                                 >
                                   <Smartphone className="w-3.5 h-3.5" />
-                                </a>
+                                </button>
                               )}
 
                               {/* View Certificate */}
@@ -858,16 +886,16 @@ export default function DashboardPage() {
                                 <Eye className="w-3.5 h-3.5" />
                               </button>
 
-                              {/* Screenshot Lightbox */}
-                              {c.paymentScreenshot && (
+                              {/* Screenshot Lightbox (ONLINE ONLY) */}
+                              {!isCash && c.paymentScreenshot && (
                                 <button
                                   type="button"
                                   onClick={() => {
                                     setViewingScreenshotUrl(c.paymentScreenshot!);
-                                    setViewingScreenshotTitle(`Payment Proof: ${c.fullName} (₹${c.amount})`);
+                                    setViewingScreenshotTitle(`Payment Photo: ${c.fullName} (₹${c.amount})`);
                                   }}
                                   className="p-1.5 rounded-lg bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white inline-flex items-center"
-                                  title="View Payment Screenshot"
+                                  title="View Payment Photo"
                                 >
                                   <ImageIcon className="w-3.5 h-3.5" />
                                 </button>

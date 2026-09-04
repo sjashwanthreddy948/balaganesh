@@ -8,6 +8,7 @@ import {
 } from '@/config/festival.config';
 import { Download, MessageCircle, Camera } from 'lucide-react';
 import ImageLightboxModal from './ImageLightboxModal';
+import { normalizeIndianMobileForWhatsApp } from '@/lib/validation';
 
 export interface CertificateData {
   certificateNumber: string;
@@ -410,9 +411,8 @@ export default function LandscapeCertificate({
   };
 
   const handleNativeShare = async () => {
-    const rawNumber = data.mobileNumber ? data.mobileNumber.replace(/[^0-9]/g, '') : '';
-    const formattedPhone = rawNumber ? (rawNumber.startsWith('91') ? rawNumber : `91${rawNumber}`) : '';
-    const phoneParam = formattedPhone ? `phone=${formattedPhone}&` : '';
+    const normalizedPhone = normalizeIndianMobileForWhatsApp(data.mobileNumber);
+    const phoneParam = normalizedPhone ? `phone=${normalizedPhone.whatsappPhone}&` : '';
 
     const message = buildWhatsAppCertificateMessage(data);
     const whatsAppChatUrl = `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(message)}`;
@@ -462,13 +462,13 @@ export default function LandscapeCertificate({
   };
 
   return (
-    <div className="w-full flex flex-col items-center">
-      <canvas ref={canvasRef} className="hidden" />
+    <div className="flex flex-col items-center justify-center w-full">
+      {/* Hidden high-res canvas for rendering */}
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-      {/* 16:9 Landscape Certificate Container: Crisp White with Gold Frame */}
-      <div className="w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl border-2 border-devotional-gold-400 bg-white transition-all relative group">
+      {/* Responsive Preview Display */}
+      <div className="w-full max-w-2xl bg-devotional-blue-950/80 rounded-2xl p-2 border-2 border-devotional-gold-500/40 shadow-2xl overflow-hidden">
         {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={imageUrl}
             alt={`Certificate of Appreciation for ${data.fullName}`}
@@ -484,7 +484,7 @@ export default function LandscapeCertificate({
 
       {/* Action Buttons */}
       {!hideActions && (
-        <div className={`w-full max-w-2xl mt-5 grid grid-cols-1 ${data.paymentScreenshot ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-3`}>
+        <div className={`w-full max-w-2xl mt-5 grid grid-cols-1 ${data.paymentMethod !== 'CASH' && data.paymentScreenshot ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-3`}>
           <button
             onClick={handleDownload}
             disabled={!imageUrl}
@@ -502,7 +502,7 @@ export default function LandscapeCertificate({
             <span>📲 Share on WhatsApp</span>
           </button>
 
-          {data.paymentScreenshot && (
+          {data.paymentMethod !== 'CASH' && data.paymentScreenshot && (
             <button
               onClick={() => setShowPaymentProofModal(true)}
               className="w-full py-3.5 px-4 rounded-xl bg-devotional-blue-900 hover:bg-devotional-blue-800 border-2 border-devotional-gold-400/70 text-devotional-gold-200 font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99]"
@@ -514,8 +514,8 @@ export default function LandscapeCertificate({
         </div>
       )}
 
-      {/* Payment Screenshot Lightbox Modal */}
-      {data.paymentScreenshot && (
+      {/* Payment Screenshot Lightbox Modal (ONLINE ONLY) */}
+      {data.paymentMethod !== 'CASH' && data.paymentScreenshot && (
         <ImageLightboxModal
           isOpen={showPaymentProofModal}
           onClose={() => setShowPaymentProofModal(false)}

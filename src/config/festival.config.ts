@@ -1,3 +1,5 @@
+import { normalizeIndianMobileForWhatsApp } from '@/lib/validation';
+
 export const FESTIVAL_CONFIG = {
   associationName: process.env.NEXT_PUBLIC_ASSOCIATION_NAME || 'BALA GANESH ASSOCIATION',
   upiId: process.env.NEXT_PUBLIC_UPI_ID || 'rajashekarchilumula1656@okaxis',
@@ -92,9 +94,8 @@ export function buildWhatsAppCertificateShareUrl(contribution: {
   mobileNumber?: string | null;
 }): string {
   const message = buildWhatsAppCertificateMessage(contribution);
-  const rawNumber = contribution.mobileNumber ? contribution.mobileNumber.replace(/[^0-9]/g, '') : '';
-  const formattedPhone = rawNumber ? (rawNumber.startsWith('91') ? rawNumber : `91${rawNumber}`) : '';
-  const phoneParam = formattedPhone ? `phone=${formattedPhone}&` : '';
+  const normalized = normalizeIndianMobileForWhatsApp(contribution.mobileNumber);
+  const phoneParam = normalized ? `phone=${normalized.whatsappPhone}&` : '';
 
   return `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(message)}`;
 }
