@@ -9,6 +9,10 @@ export const FESTIVAL_CONFIG = {
   festivalYear: process.env.NEXT_PUBLIC_FESTIVAL_YEAR || '2026',
   receiptPrefix: process.env.NEXT_PUBLIC_RECEIPT_PREFIX || 'BG2026',
 
+  whatsappGroupLink:
+    process.env.NEXT_PUBLIC_WHATSAPP_GROUP_LINK ||
+    'https://chat.whatsapp.com/GNkn8pSUWtj9YWa9DInE8j',
+
   // Pre-configured quick donation chips
   quickAmounts: [100, 200, 500, 1000, 2000],
   defaultAmount: 500,
@@ -47,17 +51,15 @@ export function buildUpiUri(amount: number, note?: string): string {
 }
 
 /**
- * Builds standard WhatsApp Share URL for Certificate of Appreciation
- * Formats donor name, amount, payment method, certificate number, and link with +91 phone number
+ * Builds standard WhatsApp Certificate Share Message with official Ganesh WhatsApp group link
  */
-export function buildWhatsAppCertificateShareUrl(contribution: {
+export function buildWhatsAppCertificateMessage(contribution: {
   fullName: string;
   amount: number;
   paymentMethod: string;
   certificateNumber: string;
-  mobileNumber?: string | null;
 }): string {
-  const message = `Namaste ${contribution.fullName} 🙏
+  return `Namaste ${contribution.fullName} 🙏
 
 Thank you very much for your valuable contribution to Bala Ganesh Association for Ganesh Festival ${FESTIVAL_CONFIG.festivalYear}.
 
@@ -69,11 +71,27 @@ Certificate No: ${contribution.certificateNumber}
 
 We have attached your official Certificate of Appreciation photo above.
 
+Join our official Bala Ganesh Association WhatsApp Group:
+${FESTIVAL_CONFIG.whatsappGroupLink}
+
 Ganpati Bappa Morya! 🙏
 
 ${FESTIVAL_CONFIG.associationName}
 ${FESTIVAL_CONFIG.associationAddress}`;
+}
 
+/**
+ * Builds standard WhatsApp Share URL for Certificate of Appreciation
+ * Formats donor name, amount, payment method, certificate number, and link with +91 phone number
+ */
+export function buildWhatsAppCertificateShareUrl(contribution: {
+  fullName: string;
+  amount: number;
+  paymentMethod: string;
+  certificateNumber: string;
+  mobileNumber?: string | null;
+}): string {
+  const message = buildWhatsAppCertificateMessage(contribution);
   const rawNumber = contribution.mobileNumber ? contribution.mobileNumber.replace(/[^0-9]/g, '') : '';
   const formattedPhone = rawNumber ? (rawNumber.startsWith('91') ? rawNumber : `91${rawNumber}`) : '';
   const phoneParam = formattedPhone ? `phone=${formattedPhone}&` : '';

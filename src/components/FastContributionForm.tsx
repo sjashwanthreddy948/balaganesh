@@ -1,7 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { FESTIVAL_CONFIG, buildUpiUri, buildWhatsAppCertificateShareUrl } from '@/config/festival.config';
+import {
+  FESTIVAL_CONFIG,
+  buildUpiUri,
+  buildWhatsAppCertificateShareUrl,
+  buildWhatsAppCertificateMessage,
+} from '@/config/festival.config';
 import { cleanIndianMobile } from '@/lib/validation';
 import LandscapeCertificate, { CertificateData } from './LandscapeCertificate';
 import QRCode from 'qrcode';
@@ -254,22 +259,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
     const handleWhatsAppShare = async () => {
       setIsSharingWhatsApp(true);
 
-      const message = `Namaste ${createdCertificate.fullName} 🙏
-
-Thank you very much for your valuable contribution to Bala Ganesh Association for Ganesh Festival ${FESTIVAL_CONFIG.festivalYear}.
-
-Your support helps us celebrate and conduct the festival with devotion and joy.
-
-Contribution Amount: ₹${createdCertificate.amount.toLocaleString('en-IN')}
-Payment Method: ${createdCertificate.paymentMethod}
-Certificate No: ${createdCertificate.certificateNumber}
-
-We have attached your official Certificate of Appreciation photo above.
-
-Ganpati Bappa Morya! 🙏
-
-${FESTIVAL_CONFIG.associationName}
-${FESTIVAL_CONFIG.associationAddress}`;
+      const message = buildWhatsAppCertificateMessage(createdCertificate);
 
       const rawNumber = createdCertificate.mobileNumber ? createdCertificate.mobileNumber.replace(/[^0-9]/g, '') : '';
       const formattedPhone = rawNumber ? (rawNumber.startsWith('91') ? rawNumber : `91${rawNumber}`) : '';

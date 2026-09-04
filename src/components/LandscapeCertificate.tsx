@@ -1,7 +1,11 @@
 'use client';
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { FESTIVAL_CONFIG, buildWhatsAppCertificateShareUrl } from '@/config/festival.config';
+import {
+  FESTIVAL_CONFIG,
+  buildWhatsAppCertificateShareUrl,
+  buildWhatsAppCertificateMessage,
+} from '@/config/festival.config';
 import { Download, MessageCircle } from 'lucide-react';
 
 export interface CertificateData {
@@ -386,22 +390,7 @@ export default function LandscapeCertificate({
     const formattedPhone = rawNumber ? (rawNumber.startsWith('91') ? rawNumber : `91${rawNumber}`) : '';
     const phoneParam = formattedPhone ? `phone=${formattedPhone}&` : '';
 
-    const message = `Namaste ${data.fullName} 🙏
-
-Thank you very much for your valuable contribution to Bala Ganesh Association for Ganesh Festival ${FESTIVAL_CONFIG.festivalYear}.
-
-Your support helps us celebrate and conduct the festival with devotion and joy.
-
-Contribution Amount: ₹${data.amount.toLocaleString('en-IN')}
-Payment Method: ${data.paymentMethod}
-Certificate No: ${data.certificateNumber}
-
-We have attached your official Certificate of Appreciation photo above.
-
-Ganpati Bappa Morya! 🙏
-
-${FESTIVAL_CONFIG.associationName}
-${FESTIVAL_CONFIG.associationAddress}`;
+    const message = buildWhatsAppCertificateMessage(data);
 
     const whatsAppChatUrl = `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(message)}`;
 

@@ -23,6 +23,9 @@ const nextConfig = {
     NEXT_PUBLIC_ASSOCIATION_ADDRESS:
       process.env.NEXT_PUBLIC_ASSOCIATION_ADDRESS ||
       'Bhavani Nagar, Shankarpally, Telangana',
+    NEXT_PUBLIC_WHATSAPP_GROUP_LINK:
+      process.env.NEXT_PUBLIC_WHATSAPP_GROUP_LINK ||
+      'https://chat.whatsapp.com/GNkn8pSUWtj9YWa9DInE8j',
   },
   experimental: {
     serverComponentsExternalPackages: ['@prisma/client', 'bcryptjs'],
