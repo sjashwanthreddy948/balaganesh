@@ -119,9 +119,6 @@ export default function ExpensesPage() {
         const meJson = await meRes.json();
         setUserRole(meJson.user.role);
         setCurrentUserName(meJson.user.name || '');
-        if (!enteredBy) {
-          setEnteredBy(meJson.user.name || '');
-        }
       } else {
         router.replace('/login?redirect=/expenses');
         return;
@@ -151,7 +148,7 @@ export default function ExpensesPage() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, categoryFilter, methodFilter, dateFilter, router, enteredBy]);
+  }, [searchQuery, categoryFilter, methodFilter, dateFilter, router]);
 
   useEffect(() => {
     fetchExpensesAndSummary();
@@ -236,6 +233,7 @@ export default function ExpensesPage() {
       // Reset form & close modal
       setShowAddModal(false);
       setShopName('');
+      setEnteredBy('');
       setDescription('');
       setAmount('');
       setNotes('');
@@ -446,9 +444,6 @@ export default function ExpensesPage() {
         {/* PRIMARY CTA: [ + ADD EXPENSE ] */}
         <button
           onClick={() => {
-            if (!enteredBy && currentUserName) {
-              setEnteredBy(currentUserName);
-            }
             setShowAddModal(true);
           }}
           className="w-full py-4 px-6 rounded-2xl btn-gold text-devotional-blue-950 font-black text-lg tracking-wide shadow-gold-md flex items-center justify-center gap-3 transition-transform active:scale-[0.99]"
