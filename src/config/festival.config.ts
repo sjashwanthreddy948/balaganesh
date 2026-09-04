@@ -80,13 +80,9 @@ We sincerely appreciate your support.
 Your Certificate of Appreciation:
 ${certUrl}
 
-Join our Ganesh Festival WhatsApp Group for updates:
-${FESTIVAL_CONFIG.whatsappGroupLink}
-
 Ganpati Bappa Morya! 🙏
 
-— ${FESTIVAL_CONFIG.associationName}
-${FESTIVAL_CONFIG.associationAddress}`;
+— ${FESTIVAL_CONFIG.associationName}`;
 }
 
 /**

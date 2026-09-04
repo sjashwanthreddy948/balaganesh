@@ -107,8 +107,8 @@ export default function CertificateViewPage() {
             {/* 16:9 Landscape Certificate */}
             <LandscapeCertificate data={certData} />
 
-            <div className="pt-4 text-center">
-              {user ? (
+            {user && (
+              <div className="pt-2 text-center">
                 <button
                   onClick={() => router.push('/contribute')}
                   className="px-6 py-3 rounded-2xl bg-devotional-blue-900 hover:bg-devotional-blue-800 border border-devotional-gold-500/40 text-devotional-gold-200 hover:text-white text-xs font-extrabold inline-flex items-center gap-2 shadow-sm transition-colors"
@@ -116,18 +116,8 @@ export default function CertificateViewPage() {
                   <PlusCircle className="w-4 h-4 text-devotional-gold-400" />
                   <span>Record Another Contribution</span>
                 </button>
-              ) : (
-                <a
-                  href={FESTIVAL_CONFIG.whatsappGroupLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-6 py-3 rounded-2xl bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 hover:text-white text-xs font-extrabold inline-flex items-center gap-2 shadow-sm transition-colors"
-                >
-                  <MessageCircle className="w-4 h-4 text-emerald-400" />
-                  <span>Join Ganesh Festival WhatsApp Group</span>
-                </a>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
       </main>

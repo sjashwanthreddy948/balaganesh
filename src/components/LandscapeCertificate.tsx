@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { FESTIVAL_CONFIG } from '@/config/festival.config';
-import { Download, MessageCircle } from 'lucide-react';
+import { Download, MessageCircle, Users } from 'lucide-react';
 
 export interface CertificateData {
   certificateNumber: string;
@@ -313,15 +313,10 @@ export default function LandscapeCertificate({
       ctx.letterSpacing = '2px';
       ctx.fillText(FESTIVAL_CONFIG.associationName.toUpperCase(), width / 2, 874);
 
-      ctx.font = 'bold 17px sans-serif';
-      ctx.fillStyle = '#475569';
-      ctx.letterSpacing = '1px';
-      ctx.fillText(FESTIVAL_CONFIG.associationAddress, width / 2, 908);
-
       ctx.font = 'bold 24px sans-serif';
       ctx.fillStyle = '#b8860b';
       ctx.letterSpacing = '1.5px';
-      ctx.fillText('Ganpati Bappa Morya! 🙏', width / 2, 952);
+      ctx.fillText('Ganpati Bappa Morya! 🙏', width / 2, 928);
 
       // 14. OFFICIAL RED SEAL PROVIDED FOR PROJECT (RIGHT BOTTOM)
       if (stampLoaded && stampImage.width > 0) {
@@ -335,10 +330,11 @@ export default function LandscapeCertificate({
       }
 
       // 15. FOOTNOTE FINE PRINT
+      const last4Digits = data.certificateNumber ? data.certificateNumber.slice(-4) : '';
       ctx.font = '13px monospace';
       ctx.fillStyle = '#64748b';
       ctx.fillText(
-        `OFFICIAL DIGITAL CERTIFICATE • CERT NO: ${data.certificateNumber} • ${FESTIVAL_CONFIG.associationAddress}`,
+        `OFFICIAL DIGITAL CERTIFICATE • NO: ${last4Digits}`,
         width / 2,
         1025
       );
@@ -520,6 +516,16 @@ export default function LandscapeCertificate({
               <span>Share on WhatsApp Status</span>
             </button>
           </div>
+
+          <a
+            href={FESTIVAL_CONFIG.whatsappGroupLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-3.5 px-4 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99]"
+          >
+            <Users className="w-5 h-5 text-white" />
+            <span>Join WhatsApp Group</span>
+          </a>
 
           {shareNotice && (
             <div className="p-3 rounded-xl bg-emerald-950/90 border border-emerald-500/40 text-emerald-300 text-xs font-bold text-center animate-fadeIn">
