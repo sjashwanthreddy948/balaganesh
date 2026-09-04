@@ -30,6 +30,9 @@ import {
   MessageCircle,
   Scale,
   AlertTriangle,
+  Settings,
+  Shield,
+  Copy,
 } from 'lucide-react';
 
 interface UserProfile {
@@ -85,6 +88,47 @@ export default function DashboardPage() {
   const [editMobile, setEditMobile] = useState('');
   const [editAddress, setEditAddress] = useState('');
   const [editAmount, setEditAmount] = useState<number>(0);
+
+  // Admin Settings Modal (Admin only)
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [newVolunteerPassword, setNewVolunteerPassword] = useState('');
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsStatus, setSettingsStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [copiedUpi, setCopiedUpi] = useState(false);
+
+  const handleUpdateVolunteerPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newVolunteerPassword || newVolunteerPassword.length < 6) {
+      setSettingsStatus({ type: 'error', message: 'Password must be at least 6 characters.' });
+      return;
+    }
+    setSettingsLoading(true);
+    setSettingsStatus(null);
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newVolunteerPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setSettingsStatus({ type: 'error', message: data.error || 'Failed to update volunteer password.' });
+      } else {
+        setSettingsStatus({ type: 'success', message: 'Volunteer password updated successfully!' });
+        setNewVolunteerPassword('');
+      }
+    } catch {
+      setSettingsStatus({ type: 'error', message: 'Network error updating settings.' });
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const copyUpiToClipboard = () => {
+    navigator.clipboard.writeText(FESTIVAL_CONFIG.upiId);
+    setCopiedUpi(true);
+    setTimeout(() => setCopiedUpi(false), 2000);
+  };
 
   // Load Session & Chanda Data
   const loadDashboardData = useCallback(async () => {
@@ -257,14 +301,28 @@ export default function DashboardPage() {
             </button>
 
             {isAdmin && (
-              <a
-                href="/api/admin/export"
-                download
-                className="px-3 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-200 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
-              >
-                <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-                <span className="hidden sm:inline">Export Chanda CSV</span>
-              </a>
+              <>
+                <button
+                  onClick={() => {
+                    setSettingsStatus(null);
+                    setShowSettingsModal(true);
+                  }}
+                  className="px-3 py-2 rounded-xl bg-devotional-blue-900 hover:bg-devotional-blue-800 border border-devotional-gold-500/30 text-devotional-gold-200 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+                  title="Manage System & Volunteer Settings"
+                >
+                  <Settings className="w-4 h-4 text-devotional-gold-400" />
+                  <span className="hidden sm:inline">Settings</span>
+                </button>
+
+                <a
+                  href="/api/admin/export"
+                  download
+                  className="px-3 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-200 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                  <span className="hidden sm:inline">Export Chanda CSV</span>
+                </a>
+              </>
             )}
 
             <button
@@ -289,148 +347,110 @@ export default function DashboardPage() {
         </div>
 
         {/* ============================================================ */}
-        {/* MOBILE DASHBOARD STATS (TIERED HIERARCHY AS PER SECTION 6)   */}
+        {/* CHANDA ACTIVITY OVERVIEW ONLY (SECTION 9 STRICTLY)          */}
         {/* ============================================================ */}
         <div className="space-y-3">
-          {/* TIER 1: PRIMARY OVERVIEW (Total Chanda, Total Expenses, Remaining Balance) */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Total Chanda */}
-            <div className="rounded-2xl border border-devotional-gold-500/40 bg-gradient-to-br from-devotional-blue-900/90 to-[#0c1e54]/90 p-4 space-y-1 shadow-lg relative overflow-hidden">
-              <div className="flex items-center justify-between text-devotional-gold-400">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider">
-                  Total Chanda
-                </span>
-                <span className="text-base">🕉️</span>
+          {/* TIER 1: TOTAL CHANDA OVERVIEW (NO EXPENSES ON DASHBOARD) */}
+          <div className="rounded-3xl border-2 border-devotional-gold-500/50 bg-gradient-to-br from-devotional-blue-900/95 to-[#08153a]/95 p-5 sm:p-6 shadow-xl relative overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 text-devotional-gold-400 mb-1">
+                  <span className="text-xs font-extrabold uppercase tracking-wider">
+                    Total Chanda Collection
+                  </span>
+                  <span className="text-base">🕉️</span>
+                </div>
+                <p className="text-3xl sm:text-4xl font-black text-devotional-gold-300">
+                  ₹{(financialSummary?.income?.totalChanda ?? stats?.totalAmount ?? 0).toLocaleString('en-IN')}
+                </p>
+                <p className="text-xs text-gray-300 mt-1">
+                  {stats?.totalContributions || 0} total contributions recorded
+                </p>
               </div>
-              <p className="text-2xl sm:text-3xl font-black text-devotional-gold-300">
-                ₹{((financialSummary?.income?.totalChanda ?? stats?.totalAmount) || 0).toLocaleString('en-IN')}
-              </p>
-              <p className="text-[10px] text-gray-300">
-                {stats?.totalContributions || 0} total contributions
-              </p>
-            </div>
 
-            {/* Total Expenses */}
-            <div className="rounded-2xl border border-rose-500/30 bg-gradient-to-br from-rose-950/40 to-devotional-blue-950/80 p-4 space-y-1 shadow-lg relative overflow-hidden">
-              <div className="flex items-center justify-between text-rose-400">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider">
-                  Total Expenses
-                </span>
-                <Receipt className="w-4 h-4" />
+              {/* Dedicated link to separate Expenses tracker */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => router.push('/expenses')}
+                  className="w-full sm:w-auto px-4 py-3 rounded-2xl bg-devotional-blue-950/90 hover:bg-devotional-blue-900 border border-devotional-gold-500/40 text-devotional-gold-200 hover:text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-sm transition-all"
+                >
+                  <Receipt className="w-4 h-4 text-rose-400" />
+                  <span>View Expense Tracker & Balance →</span>
+                </button>
               </div>
-              <p className="text-2xl sm:text-3xl font-black text-rose-300">
-                ₹{(financialSummary?.expenses?.totalExpenses || 0).toLocaleString('en-IN')}
-              </p>
-              <p className="text-[10px] text-gray-300">
-                {financialSummary?.expenses?.totalExpenseCount || 0} expenses recorded
-              </p>
-            </div>
-
-            {/* Remaining Balance */}
-            <div className="rounded-2xl border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-950/50 to-[#041a1a]/90 p-4 space-y-1 shadow-xl relative overflow-hidden">
-              <div className="flex items-center justify-between text-emerald-400">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider">
-                  Remaining Balance
-                </span>
-                <Scale className="w-4 h-4" />
-              </div>
-              <p className="text-2xl sm:text-3xl font-black text-emerald-300">
-                ₹{(financialSummary?.balance?.remainingBalance ?? (((financialSummary?.income?.totalChanda ?? stats?.totalAmount) || 0) - (financialSummary?.expenses?.totalExpenses || 0))).toLocaleString('en-IN')}
-              </p>
-              <p className="text-[10px] text-emerald-200/80 font-medium">
-                Net available festival funds
-              </p>
             </div>
           </div>
 
-          {/* TIER 2: PAYMENT METHOD BREAKDOWN (Cash Chanda, Online Chanda, Cash Expenses, Online Expenses) */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 text-xs">
+          {/* TIER 2: PAYMENT METHOD BREAKDOWN (CASH CHANDA & ONLINE CHANDA ONLY) */}
+          <div className="grid grid-cols-2 gap-3 text-xs">
             {/* Cash Chanda */}
-            <div className="rounded-2xl border border-emerald-500/30 bg-devotional-blue-950/70 p-3 space-y-0.5 shadow-sm">
+            <div className="rounded-2xl border border-emerald-500/40 bg-devotional-blue-950/80 p-4 space-y-1 shadow-sm">
               <div className="flex items-center justify-between text-emerald-400">
-                <span className="text-[10px] font-bold uppercase">Cash Chanda</span>
-                <Banknote className="w-3.5 h-3.5" />
+                <span className="text-[11px] font-bold uppercase tracking-wider">Cash Chanda</span>
+                <Banknote className="w-4 h-4" />
               </div>
-              <p className="text-lg sm:text-xl font-black text-emerald-300">
-                ₹{((financialSummary?.income?.cashChanda ?? stats?.cashAmount) || 0).toLocaleString('en-IN')}
+              <p className="text-xl sm:text-2xl font-black text-emerald-300">
+                ₹{(financialSummary?.income?.cashChanda ?? stats?.cashAmount ?? 0).toLocaleString('en-IN')}
+              </p>
+              <p className="text-[10px] text-emerald-300/70">
+                Physical cash received
               </p>
             </div>
 
             {/* Online Chanda */}
-            <div className="rounded-2xl border border-devotional-gold-500/30 bg-devotional-blue-950/70 p-3 space-y-0.5 shadow-sm">
+            <div className="rounded-2xl border border-devotional-gold-500/40 bg-devotional-blue-950/80 p-4 space-y-1 shadow-sm">
               <div className="flex items-center justify-between text-devotional-gold-400">
-                <span className="text-[10px] font-bold uppercase">Online Chanda</span>
-                <Smartphone className="w-3.5 h-3.5" />
+                <span className="text-[11px] font-bold uppercase tracking-wider">Online Chanda</span>
+                <Smartphone className="w-4 h-4" />
               </div>
-              <p className="text-lg sm:text-xl font-black text-devotional-gold-300">
-                ₹{((financialSummary?.income?.onlineChanda ?? stats?.onlineAmount) || 0).toLocaleString('en-IN')}
+              <p className="text-xl sm:text-2xl font-black text-devotional-gold-300">
+                ₹{(financialSummary?.income?.onlineChanda ?? stats?.onlineAmount ?? 0).toLocaleString('en-IN')}
               </p>
-            </div>
-
-            {/* Cash Expenses */}
-            <div className="rounded-2xl border border-rose-500/30 bg-devotional-blue-950/70 p-3 space-y-0.5 shadow-sm">
-              <div className="flex items-center justify-between text-rose-400">
-                <span className="text-[10px] font-bold uppercase">Cash Expenses</span>
-                <Receipt className="w-3.5 h-3.5" />
-              </div>
-              <p className="text-lg sm:text-xl font-black text-rose-300">
-                ₹{(financialSummary?.expenses?.cashExpenses || 0).toLocaleString('en-IN')}
-              </p>
-            </div>
-
-            {/* Online Expenses */}
-            <div className="rounded-2xl border border-rose-500/30 bg-devotional-blue-950/70 p-3 space-y-0.5 shadow-sm">
-              <div className="flex items-center justify-between text-rose-400">
-                <span className="text-[10px] font-bold uppercase">Online Expenses</span>
-                <Smartphone className="w-3.5 h-3.5" />
-              </div>
-              <p className="text-lg sm:text-xl font-black text-rose-300">
-                ₹{(financialSummary?.expenses?.onlineExpenses || 0).toLocaleString('en-IN')}
+              <p className="text-[10px] text-devotional-gold-300/70">
+                UPI & QR payments
               </p>
             </div>
           </div>
 
-          {/* TIER 3: DAILY & PENDING INSIGHTS */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 text-xs">
-            {/* Pending Online Payments */}
-            <div className="rounded-2xl border border-amber-500/40 bg-amber-950/30 p-3 flex items-center justify-between shadow-sm">
-              <div>
-                <span className="text-[10px] font-bold uppercase text-amber-400 block">
-                  Pending Verification
-                </span>
-                <span className="text-lg font-black text-amber-300">
-                  {stats?.pendingOnlinePayments || 0} Online Chanda
-                </span>
-              </div>
-              <Clock className="w-5 h-5 text-amber-400 shrink-0" />
-            </div>
-
-            {/* Today's Chanda */}
-            <div className="rounded-2xl border border-devotional-gold-500/30 bg-devotional-blue-950/70 p-3 flex items-center justify-between shadow-sm">
+          {/* TIER 3: TODAY'S ACTIVITY & PENDING VERIFICATIONS */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            {/* Today's Chanda Collection */}
+            <div className="rounded-2xl border border-devotional-gold-500/30 bg-devotional-blue-950/70 p-3.5 flex items-center justify-between shadow-sm">
               <div>
                 <span className="text-[10px] font-bold uppercase text-devotional-gold-400 block">
-                  Today&apos;s Chanda
+                  Today&apos;s Chanda Collection
                 </span>
-                <span className="text-lg font-black text-devotional-gold-300">
+                <span className="text-lg sm:text-xl font-black text-devotional-gold-300">
                   ₹{(stats?.todayAmount || 0).toLocaleString('en-IN')}
                 </span>
+                <span className="text-[10px] text-gray-400 block mt-0.5">
+                  {stats?.todayContributions || 0} entries recorded today
+                </span>
               </div>
-              <span className="text-xs text-gray-400 font-bold">
-                {stats?.todayContributions || 0} entries
-              </span>
+              <Calendar className="w-6 h-6 text-devotional-gold-400/60" />
             </div>
 
-            {/* Today's Expenses */}
-            <div className="rounded-2xl border border-rose-500/30 bg-devotional-blue-950/70 p-3 flex items-center justify-between shadow-sm">
+            {/* Pending Online Verifications */}
+            <div
+              onClick={() => {
+                setStatusFilter('PENDING');
+                setMethodFilter('ONLINE');
+              }}
+              className="rounded-2xl border border-amber-500/40 bg-amber-950/30 p-3.5 flex items-center justify-between shadow-sm cursor-pointer hover:bg-amber-950/50 transition-colors"
+              title="Click to filter pending contributions"
+            >
               <div>
-                <span className="text-[10px] font-bold uppercase text-rose-400 block">
-                  Today&apos;s Expenses
+                <span className="text-[10px] font-bold uppercase text-amber-400 block">
+                  Pending Online Verification
                 </span>
-                <span className="text-lg font-black text-rose-300">
-                  ₹{(stats?.todayExpenses || 0).toLocaleString('en-IN')}
+                <span className="text-lg sm:text-xl font-black text-amber-300">
+                  {stats?.pendingOnlinePayments || 0} Online Chanda
+                </span>
+                <span className="text-[10px] text-amber-200/70 block mt-0.5">
+                  {isAdmin ? 'Tap to review & verify' : 'Awaiting admin verification'}
                 </span>
               </div>
-              <Receipt className="w-5 h-5 text-rose-400 shrink-0" />
+              <Clock className="w-6 h-6 text-amber-400 shrink-0" />
             </div>
           </div>
         </div>
@@ -1018,6 +1038,136 @@ export default function DashboardPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL: ADMIN SETTINGS MODAL */}
+        {showSettingsModal && isAdmin && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+            <div className="w-full max-w-md bg-[#071338] border-2 border-devotional-gold-500/50 rounded-3xl p-6 shadow-2xl space-y-5">
+              <div className="flex items-center justify-between border-b border-devotional-gold-500/20 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-devotional-gold-500/20 border border-devotional-gold-400 flex items-center justify-center">
+                    <Settings className="w-4 h-4 text-devotional-gold-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-devotional-gold-300">
+                      Association & Security Settings
+                    </h3>
+                    <p className="text-[10px] text-gray-300">
+                      Committee Admin Controls
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowSettingsModal(false)}
+                  className="p-1.5 rounded-lg bg-gray-800 text-gray-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* UPI ID Configuration View */}
+              <div className="p-3.5 rounded-2xl bg-devotional-blue-950 border border-devotional-gold-500/30 space-y-1.5">
+                <span className="text-[10px] font-bold text-devotional-gold-300 uppercase tracking-wider block">
+                  Active Chanda UPI ID
+                </span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-sm font-black text-white truncate">
+                    {FESTIVAL_CONFIG.upiId}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={copyUpiToClipboard}
+                    className="px-2.5 py-1 rounded-lg bg-devotional-blue-900 border border-devotional-gold-500/40 text-[11px] font-bold text-devotional-gold-200 flex items-center gap-1 hover:text-white shrink-0"
+                  >
+                    {copiedUpi ? (
+                      <>
+                        <Check className="w-3 h-3 text-emerald-400" />
+                        <span className="text-emerald-400">Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-400">
+                  Payee: {FESTIVAL_CONFIG.upiPayeeName} • {FESTIVAL_CONFIG.associationAddress}
+                </p>
+              </div>
+
+              {/* Shared Volunteer Password Manager */}
+              <div className="p-3.5 rounded-2xl bg-devotional-blue-950 border border-devotional-gold-500/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-devotional-gold-300 block">
+                      Shared Volunteer Account
+                    </span>
+                    <span className="text-[10px] text-gray-400">
+                      Login ID: <b className="font-mono text-white">balaganesh</b>
+                    </span>
+                  </div>
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+                    Active
+                  </span>
+                </div>
+
+                <form onSubmit={handleUpdateVolunteerPassword} className="space-y-2">
+                  <label className="block text-[11px] font-semibold text-gray-300">
+                    Set New Volunteer Password:
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      placeholder="Minimum 6 characters"
+                      value={newVolunteerPassword}
+                      onChange={(e) => setNewVolunteerPassword(e.target.value)}
+                      className="flex-1 px-3 py-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white text-xs focus:outline-none focus:border-devotional-gold-400"
+                    />
+                    <button
+                      type="submit"
+                      disabled={settingsLoading || !newVolunteerPassword}
+                      className="px-3 py-2 rounded-xl btn-gold text-devotional-blue-950 font-bold text-xs disabled:opacity-50 shrink-0"
+                    >
+                      {settingsLoading ? 'Saving...' : 'Update'}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-gray-400">
+                    Changes take effect immediately for all volunteers logging in with balaganesh.
+                  </p>
+                </form>
+
+                {settingsStatus && (
+                  <div
+                    className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
+                      settingsStatus.type === 'success'
+                        ? 'bg-emerald-950/80 border border-emerald-500/50 text-emerald-200'
+                        : 'bg-red-950/80 border border-red-500/50 text-red-200'
+                    }`}
+                  >
+                    {settingsStatus.type === 'success' ? (
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                    )}
+                    <span>{settingsStatus.message}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-1 text-center">
+                <button
+                  type="button"
+                  onClick={() => setShowSettingsModal(false)}
+                  className="w-full py-2.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-200 font-bold text-xs hover:text-white"
+                >
+                  Close Settings
+                </button>
+              </div>
             </div>
           </div>
         )}

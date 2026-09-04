@@ -49,6 +49,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
   // Dynamic QR Helper Drawer for online donor
   const [showQrModal, setShowQrModal] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
+  const [copiedUpi, setCopiedUpi] = useState(false);
 
   // Submission State
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -542,7 +543,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
             </div>
           ) : (
             /* ONLINE FIELDS: UTR (OPTIONAL) + CAMERA / GALLERY PHOTO UPLOAD */
-            <div className="bg-devotional-blue-950/90 border border-devotional-gold-500/30 rounded-2xl p-4 space-y-4 animate-fadeIn">
+            <div className="bg-devotional-blue-950/90 border border-devotional-gold-500/30 rounded-2xl p-4 space-y-3.5 animate-fadeIn">
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-devotional-gold-300 font-bold block text-sm">
@@ -557,10 +558,29 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
                 <button
                   type="button"
                   onClick={() => setShowQrModal(true)}
-                  className="px-3 py-1.5 rounded-xl bg-devotional-blue-800 border border-devotional-gold-400/50 text-devotional-gold-200 text-xs font-bold flex items-center gap-1.5 shadow-sm hover:bg-devotional-blue-700 transition-colors"
+                  className="px-3 py-1.5 rounded-xl bg-devotional-gold-500 text-devotional-blue-950 text-xs font-black flex items-center gap-1.5 shadow-sm hover:bg-devotional-gold-400 transition-colors"
                 >
-                  <QrCode className="w-4 h-4 text-devotional-gold-400" />
+                  <QrCode className="w-4 h-4" />
                   <span>Show UPI QR</span>
+                </button>
+              </div>
+
+              {/* UPI ID Display & Copy Button */}
+              <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-devotional-blue-900/70 border border-devotional-gold-500/25">
+                <div className="text-xs text-gray-300 truncate">
+                  <span className="text-devotional-gold-400 font-bold">UPI ID:</span>{' '}
+                  <span className="font-mono text-white font-bold">{FESTIVAL_CONFIG.upiId}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(FESTIVAL_CONFIG.upiId);
+                    setCopiedUpi(true);
+                    setTimeout(() => setCopiedUpi(false), 2000);
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-devotional-blue-800 text-[11px] font-bold text-devotional-gold-200 border border-devotional-gold-400/40 hover:text-white shrink-0"
+                >
+                  {copiedUpi ? 'Copied ✓' : 'Copy'}
                 </button>
               </div>
 
@@ -726,9 +746,22 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
               )}
             </div>
 
-            <p className="text-xs font-bold text-devotional-gold-200">
-              UPI ID: <span className="font-mono text-white">{FESTIVAL_CONFIG.upiId}</span>
-            </p>
+            <div className="flex items-center justify-center gap-2">
+              <p className="text-xs font-bold text-devotional-gold-200">
+                UPI ID: <span className="font-mono text-white">{FESTIVAL_CONFIG.upiId}</span>
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(FESTIVAL_CONFIG.upiId);
+                  setCopiedUpi(true);
+                  setTimeout(() => setCopiedUpi(false), 2000);
+                }}
+                className="px-2.5 py-0.5 rounded-lg bg-devotional-blue-800 text-[11px] font-bold text-devotional-gold-200 border border-devotional-gold-400/40 hover:text-white"
+              >
+                {copiedUpi ? 'Copied ✓' : 'Copy'}
+              </button>
+            </div>
 
             <button
               onClick={() => setShowQrModal(false)}

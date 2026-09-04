@@ -34,12 +34,42 @@ async function main() {
 
   console.log(`✓ Admin user configured: ${admin.username} (Role: ${admin.role})`);
 
-  // Remove any obsolete sample volunteer test accounts
+  // 2. Production Shared Volunteer User (balaganesh)
+  const volunteerUsername = process.env.VOLUNTEER_DEFAULT_USER || 'balaganesh';
+  const volunteerPassword = process.env.VOLUNTEER_DEFAULT_PASSWORD || 'Bala@Ganesh2026';
+  const hashedVolunteerPassword = await bcrypt.hash(volunteerPassword, salt);
+
+  const volunteer = await prisma.user.upsert({
+    where: { username: volunteerUsername },
+    update: {
+      password: hashedVolunteerPassword,
+      role: 'VOLUNTEER',
+      name: 'balaganesh',
+      isActive: true,
+      canAddExpenses: true,
+    },
+    create: {
+      username: volunteerUsername,
+      name: 'balaganesh',
+      password: hashedVolunteerPassword,
+      role: 'VOLUNTEER',
+      isActive: true,
+      canAddExpenses: true,
+    },
+  });
+
+  console.log(`✓ Shared volunteer configured: ${volunteer.username} (Role: ${volunteer.role})`);
+
+  // 3. Remove any obsolete test accounts
   const deletedVolunteers = await prisma.user.deleteMany({
-    where: { username: 'volunteer' },
+    where: {
+      username: {
+        in: ['volunteer', 'testvolunteer', 'testuser'],
+      },
+    },
   });
   if (deletedVolunteers.count > 0) {
-    console.log(`✓ Removed ${deletedVolunteers.count} sample volunteer test accounts.`);
+    console.log(`✓ Removed ${deletedVolunteers.count} obsolete test accounts.`);
   }
 }
 

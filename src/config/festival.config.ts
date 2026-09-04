@@ -1,11 +1,11 @@
 export const FESTIVAL_CONFIG = {
   associationName: process.env.NEXT_PUBLIC_ASSOCIATION_NAME || 'BALA GANESH ASSOCIATION',
-  upiId: process.env.NEXT_PUBLIC_UPI_ID || 'balaganesh@upi',
+  upiId: process.env.NEXT_PUBLIC_UPI_ID || 'rajashekarchilumula1656@okaxis',
   upiPayeeName: process.env.NEXT_PUBLIC_UPI_PAYEE_NAME || 'BALA GANESH ASSOCIATION',
   whatsappNumber: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '919876543210',
   contactNumber: process.env.NEXT_PUBLIC_CONTACT_NUMBER || '+91 98765 43210',
   associationAddress:
-    process.env.NEXT_PUBLIC_ASSOCIATION_ADDRESS || 'Main Road, Ganesh Pandal Ground, Hyderabad, Telangana',
+    process.env.NEXT_PUBLIC_ASSOCIATION_ADDRESS || 'Bhavani Nagar, Shankarpally, Telangana',
   festivalYear: process.env.NEXT_PUBLIC_FESTIVAL_YEAR || '2026',
   receiptPrefix: process.env.NEXT_PUBLIC_RECEIPT_PREFIX || 'BG2026',
 
@@ -20,6 +20,7 @@ export const FESTIVAL_CONFIG = {
   pandalLandscapeImage: '/images/ganesh-landscape-pandal.jpg',
   portraitPandalImage: '/images/ganesh-festival.jpg',
   bannerImage: '/images/ganesh-banner.jpg',
+  officialStampRedImage: '/images/bala-ganesh-stamp-red.png',
   officialStampBlueImage: '/images/bala-ganesh-stamp-blue.png',
 
   // Devotional mantras & strings
@@ -47,6 +48,7 @@ export function buildUpiUri(amount: number, note?: string): string {
 
 /**
  * Builds standard WhatsApp Share URL for Certificate of Appreciation
+ * Formats donor name, amount, payment method, certificate number, and link with +91 phone number
  */
 export function buildWhatsAppCertificateShareUrl(contribution: {
   fullName: string;
@@ -54,22 +56,34 @@ export function buildWhatsAppCertificateShareUrl(contribution: {
   paymentMethod: string;
   certificateNumber: string;
   mobileNumber?: string | null;
+  certificateUrl?: string;
 }): string {
-  const message = `🙏 *${FESTIVAL_CONFIG.associationName}*
+  const host = typeof window !== 'undefined' ? window.location.origin : 'https://balaganesh.org';
+  const certLink = contribution.certificateUrl || `${host}/certificate/${encodeURIComponent(contribution.certificateNumber)}`;
 
-Thank you *${contribution.fullName}* for your valuable contribution towards our Ganesh Festival.
+  const message = `Namaste ${contribution.fullName} 🙏
 
-*Contribution:* ₹${contribution.amount.toLocaleString('en-IN')}
-*Payment Method:* ${contribution.paymentMethod}
-*Certificate No:* ${contribution.certificateNumber}
+Thank you very much for your valuable contribution to Bala Ganesh Association for Ganesh Festival ${FESTIVAL_CONFIG.festivalYear}.
 
-Ganpati Bappa Morya! 🙏`;
+Your support helps us celebrate and conduct the festival with devotion and joy.
 
-  const targetNumber = contribution.mobileNumber
-    ? contribution.mobileNumber.replace(/[^0-9]/g, '')
-    : FESTIVAL_CONFIG.whatsappNumber.replace(/[^0-9]/g, '');
+Contribution Amount: ₹${contribution.amount.toLocaleString('en-IN')}
+Payment Method: ${contribution.paymentMethod}
+Certificate No: ${contribution.certificateNumber}
 
-  const phoneParam = targetNumber ? `phone=${targetNumber.startsWith('91') ? targetNumber : '91' + targetNumber}&` : '';
+View / Download Certificate:
+${certLink}
+
+We sincerely thank you for your generous support.
+
+Ganpati Bappa Morya! 🙏
+
+${FESTIVAL_CONFIG.associationName}
+${FESTIVAL_CONFIG.associationAddress}`;
+
+  const rawNumber = contribution.mobileNumber ? contribution.mobileNumber.replace(/[^0-9]/g, '') : '';
+  const formattedPhone = rawNumber ? (rawNumber.startsWith('91') ? rawNumber : `91${rawNumber}`) : '';
+  const phoneParam = formattedPhone ? `phone=${formattedPhone}&` : '';
 
   return `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(message)}`;
 }
@@ -90,3 +104,4 @@ export function buildWhatsAppShareUrl(contribution: {
     certificateNumber: contribution.receiptNumber,
   });
 }
+

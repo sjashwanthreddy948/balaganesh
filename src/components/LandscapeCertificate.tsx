@@ -42,9 +42,9 @@ export default function LandscapeCertificate({ data, onImageReady }: LandscapeCe
     bgImage.src = FESTIVAL_CONFIG.pandalLandscapeImage;
     bgImage.crossOrigin = 'anonymous';
 
-    // Load official blue Bala Ganesh stamp
+    // Load official red Bala Ganesh stamp/seal provided for project
     const stampImage = new Image();
-    stampImage.src = FESTIVAL_CONFIG.officialStampBlueImage;
+    stampImage.src = FESTIVAL_CONFIG.officialStampRedImage || '/images/bala-ganesh-stamp-red.png';
     stampImage.crossOrigin = 'anonymous';
 
     const renderLayers = (imgLoaded: boolean, stampLoaded: boolean) => {
@@ -193,14 +193,9 @@ export default function LandscapeCertificate({ data, onImageReady }: LandscapeCe
       ctx.stroke();
 
       // 10. PURPOSE LINE
-      ctx.font = 'italic 21px Georgia, serif';
-      ctx.fillStyle = '#475569';
-      ctx.fillText('in recognition and sincere gratitude for their valuable contribution towards', width / 2, 494);
-
-      ctx.font = 'bold 28px sans-serif';
-      ctx.fillStyle = '#0c1e54';
-      ctx.letterSpacing = '2px';
-      ctx.fillText('GANESH FESTIVAL CHANDA & UTSAV CELEBRATIONS', width / 2, 534);
+      ctx.font = 'italic 22px Georgia, serif';
+      ctx.fillStyle = '#334155';
+      ctx.fillText('In appreciation of your valuable contribution towards the Ganesh Festival Chanda.', width / 2, 510);
 
       // 11. DETAILS GRID BOX (Crisp White Card with Royal Blue & Gold Borders)
       const boxW = 1440;
@@ -329,30 +324,35 @@ export default function LandscapeCertificate({ data, onImageReady }: LandscapeCe
         820
       );
 
-      // 14. OFFICIAL TRUST SIGN-OFF (Center Bottom)
+      // 14. OFFICIAL FOOTER (Sections 7 & 8)
       ctx.font = 'bold 15px sans-serif';
       ctx.fillStyle = '#b8860b';
       ctx.letterSpacing = '3px';
-      ctx.fillText('WITH GRATITUDE & SINCERE PRANAMS', width / 2, 882);
+      ctx.fillText('WITH GRATITUDE', width / 2, 874);
 
-      ctx.font = 'bold 28px sans-serif';
+      ctx.font = 'bold 30px sans-serif';
       ctx.fillStyle = '#0c1e54';
       ctx.letterSpacing = '2px';
-      ctx.fillText(FESTIVAL_CONFIG.associationName.toUpperCase(), width / 2, 922);
+      ctx.fillText(FESTIVAL_CONFIG.associationName.toUpperCase(), width / 2, 912);
 
-      ctx.font = 'bold 25px sans-serif';
-      ctx.fillStyle = '#b8860b';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillStyle = '#475569';
       ctx.letterSpacing = '1px';
-      ctx.fillText('Ganpati Bappa Morya! 🙏', width / 2, 962);
+      ctx.fillText(FESTIVAL_CONFIG.associationAddress, width / 2, 942);
 
-      // 15. OFFICIAL BALA GANESH BLUE STAMP (RIGHT BOTTOM in place of official seal)
+      ctx.font = 'bold 24px sans-serif';
+      ctx.fillStyle = '#b8860b';
+      ctx.letterSpacing = '1.5px';
+      ctx.fillText('Ganpati Bappa Morya! 🙏', width / 2, 978);
+
+      // 15. OFFICIAL RED SEAL PROVIDED FOR PROJECT (RIGHT BOTTOM)
       if (stampLoaded && stampImage.width > 0) {
         ctx.save();
-        const blueStampW = 225;
-        const blueStampH = 150;
-        const blueStampX = width - 350; // Right side position
-        const blueStampY = 840;
-        ctx.drawImage(stampImage, blueStampX, blueStampY, blueStampW, blueStampH);
+        const redSealW = 220;
+        const redSealH = 145;
+        const redSealX = width - 360;
+        const redSealY = 840;
+        ctx.drawImage(stampImage, redSealX, redSealY, redSealW, redSealH);
         ctx.restore();
       }
 
