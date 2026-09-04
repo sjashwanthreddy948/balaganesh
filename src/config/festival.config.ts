@@ -56,11 +56,7 @@ export function buildWhatsAppCertificateShareUrl(contribution: {
   paymentMethod: string;
   certificateNumber: string;
   mobileNumber?: string | null;
-  certificateUrl?: string;
 }): string {
-  const host = typeof window !== 'undefined' ? window.location.origin : 'https://balaganesh.org';
-  const certLink = contribution.certificateUrl || `${host}/certificate/${encodeURIComponent(contribution.certificateNumber)}`;
-
   const message = `Namaste ${contribution.fullName} 🙏
 
 Thank you very much for your valuable contribution to Bala Ganesh Association for Ganesh Festival ${FESTIVAL_CONFIG.festivalYear}.
@@ -71,10 +67,7 @@ Contribution Amount: ₹${contribution.amount.toLocaleString('en-IN')}
 Payment Method: ${contribution.paymentMethod}
 Certificate No: ${contribution.certificateNumber}
 
-View / Download Certificate:
-${certLink}
-
-We sincerely thank you for your generous support.
+We have attached your official Certificate of Appreciation photo above.
 
 Ganpati Bappa Morya! 🙏
 

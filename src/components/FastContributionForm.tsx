@@ -57,6 +57,8 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
 
   // Success / Generated Certificate State
   const [createdCertificate, setCreatedCertificate] = useState<CertificateData | null>(null);
+  const [certImageDataUrl, setCertImageDataUrl] = useState<string | null>(null);
+  const [isSharingWhatsApp, setIsSharingWhatsApp] = useState(false);
   const [lastContributionPill, setLastContributionPill] = useState<{
     name: string;
     amount: number;
@@ -249,13 +251,68 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
   // SUCCESS SCREEN (CERTIFICATE + ADD ANOTHER)
   // ==========================================
   if (createdCertificate) {
-    const whatsAppUrl = buildWhatsAppCertificateShareUrl({
-      fullName: createdCertificate.fullName,
-      amount: createdCertificate.amount,
-      paymentMethod: createdCertificate.paymentMethod,
-      certificateNumber: createdCertificate.certificateNumber,
-      mobileNumber: createdCertificate.mobileNumber,
-    });
+    const handleWhatsAppShare = async () => {
+      setIsSharingWhatsApp(true);
+
+      const message = `Namaste ${createdCertificate.fullName} 🙏
+
+Thank you very much for your valuable contribution to Bala Ganesh Association for Ganesh Festival ${FESTIVAL_CONFIG.festivalYear}.
+
+Your support helps us celebrate and conduct the festival with devotion and joy.
+
+Contribution Amount: ₹${createdCertificate.amount.toLocaleString('en-IN')}
+Payment Method: ${createdCertificate.paymentMethod}
+Certificate No: ${createdCertificate.certificateNumber}
+
+We have attached your official Certificate of Appreciation photo above.
+
+Ganpati Bappa Morya! 🙏
+
+${FESTIVAL_CONFIG.associationName}
+${FESTIVAL_CONFIG.associationAddress}`;
+
+      const rawNumber = createdCertificate.mobileNumber ? createdCertificate.mobileNumber.replace(/[^0-9]/g, '') : '';
+      const formattedPhone = rawNumber ? (rawNumber.startsWith('91') ? rawNumber : `91${rawNumber}`) : '';
+      const phoneParam = formattedPhone ? `phone=${formattedPhone}&` : '';
+      const whatsAppChatUrl = `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(message)}`;
+
+      try {
+        if (certImageDataUrl && navigator.share && navigator.canShare) {
+          const res = await fetch(certImageDataUrl);
+          const blob = await res.blob();
+          const file = new File(
+            [blob],
+            `BalaGanesh_Certificate_${createdCertificate.certificateNumber}.jpg`,
+            { type: 'image/jpeg' }
+          );
+
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: `${FESTIVAL_CONFIG.associationName} - Certificate of Appreciation`,
+              text: message,
+              files: [file],
+            });
+            setIsSharingWhatsApp(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Native photo share failed or was dismissed:', err);
+      }
+
+      // Fallback: auto-download JPG certificate and open WhatsApp chat
+      if (certImageDataUrl) {
+        const a = document.createElement('a');
+        a.href = certImageDataUrl;
+        a.download = `BalaGanesh_Certificate_${createdCertificate.certificateNumber}_${createdCertificate.fullName.replace(/\s+/g, '_')}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+
+      window.open(whatsAppChatUrl, '_blank');
+      setIsSharingWhatsApp(false);
+    };
 
     return (
       <div className="w-full max-w-2xl mx-auto space-y-5 animate-fadeIn py-2">
@@ -270,7 +327,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
           </p>
         </div>
 
-        {/* 3 Prominent Mobile Action Buttons */}
+        {/* 3 Prominent Mobile Action Buttons (Exactly ONE WhatsApp button) */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {/* Button 1: + ADD ANOTHER CHANDA */}
           <button
@@ -293,21 +350,25 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
             <span>VIEW CERTIFICATE</span>
           </a>
 
-          {/* Button 3: SEND VIA WHATSAPP */}
-          <a
-            href={whatsAppUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95"
+          {/* Button 3: SEND VIA WHATSAPP (Direct JPG photo) */}
+          <button
+            type="button"
+            onClick={handleWhatsAppShare}
+            disabled={isSharingWhatsApp}
+            className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 disabled:opacity-50"
           >
             <MessageCircle className="w-5 h-5" />
-            <span>SEND VIA WHATSAPP</span>
-          </a>
+            <span>{isSharingWhatsApp ? 'SHARING PHOTO...' : 'SEND VIA WHATSAPP'}</span>
+          </button>
         </div>
 
-        {/* 16:9 Landscape Certificate Preview */}
+        {/* 16:9 Landscape Certificate Preview (hideActions={true} avoids duplicate buttons) */}
         <div className="pt-1">
-          <LandscapeCertificate data={createdCertificate} />
+          <LandscapeCertificate
+            data={createdCertificate}
+            onImageReady={(url) => setCertImageDataUrl(url)}
+            hideActions={true}
+          />
         </div>
       </div>
     );

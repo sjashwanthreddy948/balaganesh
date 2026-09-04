@@ -10,22 +10,10 @@ import { Lock, User, AlertCircle, LogIn, MapPin } from 'lucide-react';
 export default function HomePage() {
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<'VOLUNTEER' | 'ADMIN'>('VOLUNTEER');
-  const [username, setUsername] = useState('balaganesh');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const switchTab = (tab: 'VOLUNTEER' | 'ADMIN') => {
-    setActiveTab(tab);
-    setError(null);
-    setPassword('');
-    if (tab === 'VOLUNTEER') {
-      setUsername('balaganesh');
-    } else {
-      setUsername('admin');
-    }
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +30,7 @@ export default function HomePage() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setError(data.error || `Invalid ${activeTab === 'VOLUNTEER' ? 'Volunteer' : 'Admin'} Password.`);
+        setError(data.error || 'Invalid Login ID or Password.');
         setLoading(false);
         return;
       }
@@ -84,64 +72,15 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* SEPARATED LOGIN PORTAL CONTAINER */}
+        {/* UNIFIED LOGIN PORTAL CONTAINER */}
         <div className="w-full rounded-3xl border-2 border-devotional-gold-500/50 bg-[#071338]/90 backdrop-blur-md p-5 sm:p-7 shadow-2xl space-y-5">
-          {/* TAB SWITCHER: VOLUNTEER vs ADMIN */}
-          <div className="grid grid-cols-2 p-1 rounded-2xl bg-devotional-blue-950 border border-devotional-gold-500/30">
-            <button
-              type="button"
-              onClick={() => switchTab('VOLUNTEER')}
-              className={`py-2.5 px-3 rounded-xl text-xs sm:text-sm font-black flex items-center justify-center gap-1.5 transition-all ${
-                activeTab === 'VOLUNTEER'
-                  ? 'bg-devotional-gold-500 text-devotional-blue-950 shadow-gold-sm scale-[1.02]'
-                  : 'text-devotional-gold-200 hover:text-white'
-              }`}
-            >
-              <span>🪔</span>
-              <span>VOLUNTEER</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => switchTab('ADMIN')}
-              className={`py-2.5 px-3 rounded-xl text-xs sm:text-sm font-black flex items-center justify-center gap-1.5 transition-all ${
-                activeTab === 'ADMIN'
-                  ? 'bg-devotional-gold-500 text-devotional-blue-950 shadow-gold-sm scale-[1.02]'
-                  : 'text-devotional-gold-200 hover:text-white'
-              }`}
-            >
-              <Lock className="w-3.5 h-3.5" />
-              <span>ADMIN</span>
-            </button>
-          </div>
-
-          {/* TAB HEADER */}
           <div className="text-center space-y-1 border-b border-devotional-gold-500/20 pb-3">
-            {activeTab === 'VOLUNTEER' ? (
-              <>
-                <h2 className="text-base sm:text-lg font-black text-devotional-gold-300 flex items-center justify-center gap-2">
-                  <span>Volunteer Access</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-devotional-gold-500/20 text-devotional-gold-300 border border-devotional-gold-500/40">
-                    Shared ID
-                  </span>
-                </h2>
-                <p className="text-[11px] text-gray-300">
-                  Shared access for all volunteers to collect Chanda & add expenses
-                </p>
-              </>
-            ) : (
-              <>
-                <h2 className="text-base sm:text-lg font-black text-devotional-gold-300 flex items-center justify-center gap-2">
-                  <span>Admin Access</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40">
-                    Full Control
-                  </span>
-                </h2>
-                <p className="text-[11px] text-gray-300">
-                  Restricted to authorized association committee members
-                </p>
-              </>
-            )}
+            <h2 className="text-base sm:text-lg font-black text-devotional-gold-300">
+              Portal Login
+            </h2>
+            <p className="text-[11px] text-gray-300">
+              Enter your credentials to access the festival portal
+            </p>
           </div>
 
           {error && (
@@ -154,45 +93,38 @@ export default function HomePage() {
           <form onSubmit={handleLogin} className="space-y-4 text-xs">
             <div>
               <label className="block text-devotional-gold-200 font-semibold mb-1 text-xs">
-                {activeTab === 'VOLUNTEER' ? 'Shared Volunteer ID' : 'Admin Login ID'}{' '}
-                <span className="text-amber-400 font-bold">*</span>
+                Login ID <span className="text-amber-400 font-bold">*</span>
               </label>
               <div className="relative flex items-center">
                 <User className="absolute left-3.5 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
                   required
-                  placeholder={activeTab === 'VOLUNTEER' ? 'balaganesh' : 'admin'}
+                  placeholder="Enter Login ID"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
                   className="w-full pl-10 pr-4 py-3.5 rounded-xl bg-devotional-blue-950 border border-devotional-gold-500/30 text-white placeholder-gray-500 text-base font-medium focus:outline-none focus:border-devotional-gold-400"
+                  autoFocus
                 />
               </div>
-              {activeTab === 'VOLUNTEER' && (
-                <p className="text-[10px] text-devotional-gold-300/80 mt-1">
-                  Volunteer ID: <b className="font-mono text-white">balaganesh</b> (used by all association volunteers)
-                </p>
-              )}
             </div>
 
             <div>
               <label className="block text-devotional-gold-200 font-semibold mb-1 text-xs">
-                {activeTab === 'VOLUNTEER' ? 'Volunteer Password' : 'Admin Password'}{' '}
-                <span className="text-amber-400 font-bold">*</span>
+                Password <span className="text-amber-400 font-bold">*</span>
               </label>
               <div className="relative flex items-center">
                 <Lock className="absolute left-3.5 w-4 h-4 text-gray-400" />
                 <input
                   type="password"
                   required
-                  placeholder={activeTab === 'VOLUNTEER' ? 'Enter Volunteer Password' : 'Enter Admin Password'}
+                  placeholder="Enter Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-4 py-3.5 rounded-xl bg-devotional-blue-950 border border-devotional-gold-500/30 text-white placeholder-gray-500 text-base font-medium focus:outline-none focus:border-devotional-gold-400"
-                  autoFocus
                 />
               </div>
             </div>
@@ -210,20 +142,11 @@ export default function HomePage() {
               ) : (
                 <>
                   <LogIn className="w-4 h-4" />
-                  <span>{activeTab === 'VOLUNTEER' ? '🪔 Login as Volunteer' : '🔐 Login as Admin'}</span>
+                  <span>Login to Portal</span>
                 </>
               )}
             </button>
           </form>
-
-          {/* Volunteer / Admin Quick Toggle Footer Note */}
-          <div className="pt-2 text-center text-[11px] text-gray-400 border-t border-devotional-gold-500/10">
-            {activeTab === 'VOLUNTEER' ? (
-              <span>Are you a committee member? Switch to <b>Admin Login</b> above.</span>
-            ) : (
-              <span>Collecting Chanda? Switch to <b>Volunteer Login</b> above.</span>
-            )}
-          </div>
         </div>
 
         {/* Pandal Info Footer */}

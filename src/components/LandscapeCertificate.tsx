@@ -18,9 +18,14 @@ export interface CertificateData {
 interface LandscapeCertificateProps {
   data: CertificateData;
   onImageReady?: (dataUrl: string) => void;
+  hideActions?: boolean;
 }
 
-export default function LandscapeCertificate({ data, onImageReady }: LandscapeCertificateProps) {
+export default function LandscapeCertificate({
+  data,
+  onImageReady,
+  hideActions = false,
+}: LandscapeCertificateProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(true);
@@ -273,90 +278,48 @@ export default function LandscapeCertificate({ data, onImageReady }: LandscapeCe
         ctx.stroke();
       });
 
-      // 12. STATUS BADGE (Emerald on White Paper)
-      const isCash = data.paymentMethod === 'CASH';
-      const isVerified = data.paymentStatus === 'VERIFIED' || isCash;
-      const isRejected = data.paymentStatus === 'REJECTED';
-
-      const stampW = 460;
-      const stampH = 42;
-      const stampX = (width - stampW) / 2;
-      const stampY = 735;
-
-      if (isVerified) {
-        ctx.fillStyle = '#ecfdf5';
-        ctx.strokeStyle = '#059669';
-      } else if (isRejected) {
-        ctx.fillStyle = '#fef2f2';
-        ctx.strokeStyle = '#dc2626';
-      } else {
-        ctx.fillStyle = '#fffbeb';
-        ctx.strokeStyle = '#d97706';
-      }
-      ctx.lineWidth = 1.5;
-      roundRect(ctx, stampX, stampY, stampW, stampH, 21);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.textAlign = 'center';
-      ctx.font = 'bold 17px sans-serif';
-      ctx.letterSpacing = '1px';
-      if (isCash) {
-        ctx.fillStyle = '#065f46';
-        ctx.fillText('✓ STATUS: CASH RECEIVED', width / 2, stampY + 27);
-      } else if (isVerified) {
-        ctx.fillStyle = '#065f46';
-        ctx.fillText('✓ STATUS: PAYMENT VERIFIED', width / 2, stampY + 27);
-      } else if (isRejected) {
-        ctx.fillStyle = '#991b1b';
-        ctx.fillText('✕ STATUS: PAYMENT REJECTED', width / 2, stampY + 27);
-      } else {
-        ctx.fillStyle = '#92400e';
-        ctx.fillText('⏳ STATUS: PENDING VERIFICATION', width / 2, stampY + 27);
-      }
-
-      // 13. DEVOTIONAL BLESSING QUOTE
-      ctx.font = 'italic 21px Georgia, serif';
+      // 12. DEVOTIONAL BLESSING QUOTE
+      ctx.font = 'italic 23px Georgia, serif';
       ctx.fillStyle = '#1e293b';
       ctx.fillText(
         '"May Lord Ganesha shower divine blessings of health, happiness, and prosperity upon your family."',
         width / 2,
-        820
+        760
       );
 
-      // 14. OFFICIAL FOOTER (Sections 7 & 8)
+      // 13. OFFICIAL FOOTER
       ctx.font = 'bold 15px sans-serif';
       ctx.fillStyle = '#b8860b';
       ctx.letterSpacing = '3px';
-      ctx.fillText('WITH GRATITUDE', width / 2, 874);
+      ctx.fillText('WITH GRATITUDE', width / 2, 830);
 
-      ctx.font = 'bold 30px sans-serif';
+      ctx.font = 'bold 32px sans-serif';
       ctx.fillStyle = '#0c1e54';
       ctx.letterSpacing = '2px';
-      ctx.fillText(FESTIVAL_CONFIG.associationName.toUpperCase(), width / 2, 912);
+      ctx.fillText(FESTIVAL_CONFIG.associationName.toUpperCase(), width / 2, 874);
 
-      ctx.font = 'bold 16px sans-serif';
+      ctx.font = 'bold 17px sans-serif';
       ctx.fillStyle = '#475569';
       ctx.letterSpacing = '1px';
-      ctx.fillText(FESTIVAL_CONFIG.associationAddress, width / 2, 942);
+      ctx.fillText(FESTIVAL_CONFIG.associationAddress, width / 2, 908);
 
       ctx.font = 'bold 24px sans-serif';
       ctx.fillStyle = '#b8860b';
       ctx.letterSpacing = '1.5px';
-      ctx.fillText('Ganpati Bappa Morya! 🙏', width / 2, 978);
+      ctx.fillText('Ganpati Bappa Morya! 🙏', width / 2, 952);
 
-      // 15. OFFICIAL RED SEAL PROVIDED FOR PROJECT (RIGHT BOTTOM)
+      // 14. OFFICIAL RED SEAL PROVIDED FOR PROJECT (RIGHT BOTTOM)
       if (stampLoaded && stampImage.width > 0) {
         ctx.save();
         const redSealW = 220;
         const redSealH = 145;
         const redSealX = width - 360;
-        const redSealY = 840;
+        const redSealY = 820;
         ctx.drawImage(stampImage, redSealX, redSealY, redSealW, redSealH);
         ctx.restore();
       }
 
-      // 16. FOOTNOTE FINE PRINT
+      // 15. FOOTNOTE FINE PRINT
       ctx.font = '13px monospace';
       ctx.fillStyle = '#64748b';
       ctx.fillText(
@@ -419,44 +382,55 @@ export default function LandscapeCertificate({ data, onImageReady }: LandscapeCe
   };
 
   const handleNativeShare = async () => {
-    if (!canvasRef.current) return;
-    try {
-      if (navigator.share && navigator.canShare) {
-        canvasRef.current.toBlob(async (blob) => {
-          if (!blob) return;
-          const file = new File(
-            [blob],
-            `Certificate_${data.certificateNumber}.jpg`,
-            { type: 'image/jpeg' }
-          );
+    const rawNumber = data.mobileNumber ? data.mobileNumber.replace(/[^0-9]/g, '') : '';
+    const formattedPhone = rawNumber ? (rawNumber.startsWith('91') ? rawNumber : `91${rawNumber}`) : '';
+    const phoneParam = formattedPhone ? `phone=${formattedPhone}&` : '';
 
-          if (navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              title: `${FESTIVAL_CONFIG.associationName} - Certificate of Appreciation`,
-              text: `Certificate of Appreciation for ${data.fullName} (₹${data.amount}) - Ganpati Bappa Morya!`,
-              files: [file],
-            });
-            return;
-          }
-          handleWhatsAppShare();
-        }, 'image/jpeg', 0.95);
-      } else {
-        handleWhatsAppShare();
+    const message = `Namaste ${data.fullName} 🙏
+
+Thank you very much for your valuable contribution to Bala Ganesh Association for Ganesh Festival ${FESTIVAL_CONFIG.festivalYear}.
+
+Your support helps us celebrate and conduct the festival with devotion and joy.
+
+Contribution Amount: ₹${data.amount.toLocaleString('en-IN')}
+Payment Method: ${data.paymentMethod}
+Certificate No: ${data.certificateNumber}
+
+We have attached your official Certificate of Appreciation photo above.
+
+Ganpati Bappa Morya! 🙏
+
+${FESTIVAL_CONFIG.associationName}
+${FESTIVAL_CONFIG.associationAddress}`;
+
+    const whatsAppChatUrl = `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(message)}`;
+
+    if (imageUrl) {
+      try {
+        const res = await fetch(imageUrl);
+        const blob = await res.blob();
+        const file = new File(
+          [blob],
+          `BalaGanesh_Certificate_${data.certificateNumber}.jpg`,
+          { type: 'image/jpeg' }
+        );
+
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: `${FESTIVAL_CONFIG.associationName} - Certificate of Appreciation`,
+            text: message,
+            files: [file],
+          });
+          return;
+        }
+      } catch (err) {
+        console.warn('Native file share failed or dismissed:', err);
       }
-    } catch {
-      handleWhatsAppShare();
     }
-  };
 
-  const handleWhatsAppShare = () => {
-    const url = buildWhatsAppCertificateShareUrl({
-      fullName: data.fullName,
-      amount: data.amount,
-      paymentMethod: data.paymentMethod,
-      certificateNumber: data.certificateNumber,
-      mobileNumber: data.mobileNumber,
-    });
-    window.open(url, '_blank');
+    // Fallback: auto-download JPG photo & open WhatsApp chat
+    handleDownload();
+    window.open(whatsAppChatUrl, '_blank');
   };
 
   return (
@@ -481,24 +455,26 @@ export default function LandscapeCertificate({ data, onImageReady }: LandscapeCe
       </div>
 
       {/* Action Buttons */}
-      <div className="w-full max-w-2xl mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <button
-          onClick={handleDownload}
-          disabled={!imageUrl}
-          className="w-full py-3.5 px-4 rounded-xl btn-gold text-devotional-blue-950 font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99] disabled:opacity-50"
-        >
-          <Download className="w-5 h-5 text-devotional-blue-950" />
-          <span>Download Certificate (JPG)</span>
-        </button>
+      {!hideActions && (
+        <div className="w-full max-w-2xl mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            onClick={handleDownload}
+            disabled={!imageUrl}
+            className="w-full py-3.5 px-4 rounded-xl btn-gold text-devotional-blue-950 font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99] disabled:opacity-50"
+          >
+            <Download className="w-5 h-5 text-devotional-blue-950" />
+            <span>Download Certificate (JPG)</span>
+          </button>
 
-        <button
-          onClick={handleNativeShare}
-          className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99]"
-        >
-          <MessageCircle className="w-5 h-5" />
-          <span>📲 Share on WhatsApp</span>
-        </button>
-      </div>
+          <button
+            onClick={handleNativeShare}
+            className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99]"
+          >
+            <MessageCircle className="w-5 h-5" />
+            <span>📲 Share on WhatsApp</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

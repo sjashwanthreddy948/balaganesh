@@ -16,9 +16,13 @@ const nextConfig = {
       process.env.NEXT_PUBLIC_ASSOCIATION_NAME || 'BALA GANESH ASSOCIATION',
     NEXT_PUBLIC_FESTIVAL_YEAR: process.env.NEXT_PUBLIC_FESTIVAL_YEAR || '2026',
     NEXT_PUBLIC_RECEIPT_PREFIX: process.env.NEXT_PUBLIC_RECEIPT_PREFIX || 'BG2026',
-    NEXT_PUBLIC_UPI_ID: process.env.NEXT_PUBLIC_UPI_ID || 'balaganesh@upi',
+    NEXT_PUBLIC_UPI_ID:
+      process.env.NEXT_PUBLIC_UPI_ID || 'rajashekarchilumula1656@okaxis',
     NEXT_PUBLIC_UPI_PAYEE_NAME:
       process.env.NEXT_PUBLIC_UPI_PAYEE_NAME || 'BALA GANESH ASSOCIATION',
+    NEXT_PUBLIC_ASSOCIATION_ADDRESS:
+      process.env.NEXT_PUBLIC_ASSOCIATION_ADDRESS ||
+      'Bhavani Nagar, Shankarpally, Telangana',
   },
   experimental: {
     serverComponentsExternalPackages: ['@prisma/client', 'bcryptjs'],
