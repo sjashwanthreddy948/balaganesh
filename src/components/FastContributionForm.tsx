@@ -326,6 +326,32 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
 
       // 4. Try WhatsApp Business Cloud API (if configured on server)
       try {
+        let uploadedCertUrl: string | null = null;
+        if (blob) {
+          try {
+            const uploadFormData = new FormData();
+            uploadFormData.append(
+              'file',
+              blob,
+              `BalaGanesh_Certificate_${createdCertificate.certificateNumber}.jpg`
+            );
+            const uploadRes = await fetch('/api/upload', {
+              method: 'POST',
+              body: uploadFormData,
+            });
+            if (uploadRes.ok) {
+              const uploadJson = await uploadRes.json();
+              if (uploadJson.url) {
+                uploadedCertUrl = uploadJson.url.startsWith('http')
+                  ? uploadJson.url
+                  : `${window.location.origin}${uploadJson.url}`;
+              }
+            }
+          } catch (uploadErr) {
+            console.warn('Certificate upload skipped for WhatsApp Cloud API:', uploadErr);
+          }
+        }
+
         const apiRes = await fetch('/api/whatsapp/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -335,19 +361,20 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
             fullName: createdCertificate.fullName,
             amount: createdCertificate.amount,
             paymentMethod: createdCertificate.paymentMethod,
+            certificateImageUrl: uploadedCertUrl,
           }),
         });
         const apiData = await apiRes.json();
         if (apiData.success && apiData.apiConfigured) {
           setWhatsAppNotice({
             type: 'success',
-            message: `✓ Certificate Sent via WhatsApp to ${phoneResult.displayPhone}`,
+            message: `✓ Certificate and VIEW GROUP button sent via WhatsApp to ${phoneResult.displayPhone}!`,
           });
           setIsSharingWhatsApp(false);
           return;
         }
       } catch (err) {
-        console.warn('WhatsApp API check, using direct WhatsApp chat flow:', err);
+        console.warn('WhatsApp API check, using direct WhatsApp share flow:', err);
       }
 
       // 4. Primary Mobile Flow: Attach and share actual Certificate JPG via Web Share API

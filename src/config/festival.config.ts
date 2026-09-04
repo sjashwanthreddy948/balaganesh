@@ -12,6 +12,7 @@ export const FESTIVAL_CONFIG = {
   receiptPrefix: process.env.NEXT_PUBLIC_RECEIPT_PREFIX || 'BG2026',
 
   whatsappGroupLink:
+    process.env.WHATSAPP_GROUP_INVITE_URL ||
     process.env.NEXT_PUBLIC_WHATSAPP_GROUP_LINK ||
     'https://chat.whatsapp.com/GNkn8pSUWtj9YWa9DInE8j',
 
@@ -58,18 +59,26 @@ export function buildUpiUri(amount: number, note?: string): string {
 export function buildWhatsAppCertificateMessage(contribution: {
   fullName: string;
   amount: number;
-  paymentMethod: string;
+  paymentMethod?: string;
   certificateNumber: string;
 }): string {
   return `Namaste ${contribution.fullName} 🙏
 
-Thank you for your Chanda of ₹${contribution.amount.toLocaleString('en-IN')} for Ganesh Festival ${FESTIVAL_CONFIG.festivalYear}. (Certificate: ${contribution.certificateNumber})
+Thank you for your valuable contribution of ₹${contribution.amount.toLocaleString('en-IN')}
+to Bala Ganesh Association – Ganesh Festival ${FESTIVAL_CONFIG.festivalYear}.
 
-Join our Ganesh WhatsApp Group:
-${FESTIVAL_CONFIG.whatsappGroupLink}
+Certificate No: ${contribution.certificateNumber}
+
+We sincerely appreciate your support.
+
+Join our Ganesh Festival WhatsApp Group for updates.
+
+[ VIEW GROUP ]
 
 Ganpati Bappa Morya! 🙏
-— ${FESTIVAL_CONFIG.associationName}`;
+
+— ${FESTIVAL_CONFIG.associationName}
+${FESTIVAL_CONFIG.associationAddress}`;
 }
 
 /**
