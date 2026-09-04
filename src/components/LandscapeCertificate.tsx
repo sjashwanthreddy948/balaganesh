@@ -6,8 +6,7 @@ import {
   buildWhatsAppCertificateShareUrl,
   buildWhatsAppCertificateMessage,
 } from '@/config/festival.config';
-import { Download, MessageCircle, Camera } from 'lucide-react';
-import ImageLightboxModal from './ImageLightboxModal';
+import { Download, MessageCircle } from 'lucide-react';
 import { normalizeIndianMobileForWhatsApp } from '@/lib/validation';
 
 export interface CertificateData {
@@ -48,7 +47,6 @@ export default function LandscapeCertificate({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(true);
-  const [showPaymentProofModal, setShowPaymentProofModal] = useState(false);
 
   const drawCertificate = useCallback(() => {
     const canvas = canvasRef.current;
@@ -391,9 +389,9 @@ export default function LandscapeCertificate({
       tryRender();
     };
 
-    if (bgDone || stampDone) {
-      tryRender();
-    }
+    // Always render immediately with base paper, text, borders & QR,
+    // then re-render if background watermark or stamp completes loading.
+    tryRender();
   }, [data, onImageReady]);
 
   useEffect(() => {
@@ -417,7 +415,7 @@ export default function LandscapeCertificate({
     const message = buildWhatsAppCertificateMessage(data);
     const whatsAppChatUrl = `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(message)}`;
 
-    // Try clipboard copy so message + group link is ready
+    // Pre-copy greeting text to clipboard
     if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
       try {
         await navigator.clipboard.writeText(message);
@@ -429,23 +427,15 @@ export default function LandscapeCertificate({
         const blob = dataUrlToBlob(imageUrl);
         const file = new File(
           [blob],
-          `BalaGanesh_Certificate_${data.certificateNumber}.jpg`,
+          `BalaGanesh_Certificate_${data.certificateNumber}_${data.fullName.replace(/\s+/g, '_')}.jpg`,
           { type: 'image/jpeg' }
         );
 
         if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-          if (navigator.canShare({ files: [file], text: message })) {
-            await navigator.share({
-              files: [file],
-              text: message,
-              title: `${FESTIVAL_CONFIG.associationName} Certificate`,
-            });
-          } else {
-            await navigator.share({
-              files: [file],
-              title: `${FESTIVAL_CONFIG.associationName} Certificate`,
-            });
-          }
+          await navigator.share({
+            files: [file],
+            title: `${FESTIVAL_CONFIG.associationName} Certificate - ${data.fullName}`,
+          });
           return;
         }
       } catch (err: any) {
@@ -484,7 +474,7 @@ export default function LandscapeCertificate({
 
       {/* Action Buttons */}
       {!hideActions && (
-        <div className={`w-full max-w-2xl mt-5 grid grid-cols-1 ${data.paymentMethod !== 'CASH' && data.paymentScreenshot ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-3`}>
+        <div className="w-full max-w-2xl mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
             onClick={handleDownload}
             disabled={!imageUrl}
@@ -501,27 +491,7 @@ export default function LandscapeCertificate({
             <MessageCircle className="w-5 h-5" />
             <span>📲 Share on WhatsApp</span>
           </button>
-
-          {data.paymentMethod !== 'CASH' && data.paymentScreenshot && (
-            <button
-              onClick={() => setShowPaymentProofModal(true)}
-              className="w-full py-3.5 px-4 rounded-xl bg-devotional-blue-900 hover:bg-devotional-blue-800 border-2 border-devotional-gold-400/70 text-devotional-gold-200 font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99]"
-            >
-              <Camera className="w-5 h-5 text-devotional-gold-400" />
-              <span>View Payment Photo</span>
-            </button>
-          )}
         </div>
-      )}
-
-      {/* Payment Screenshot Lightbox Modal (ONLINE ONLY) */}
-      {data.paymentMethod !== 'CASH' && data.paymentScreenshot && (
-        <ImageLightboxModal
-          isOpen={showPaymentProofModal}
-          onClose={() => setShowPaymentProofModal(false)}
-          imageUrl={data.paymentScreenshot}
-          title={`Payment Photo: ${data.fullName} (₹${data.amount})`}
-        />
       )}
     </div>
   );

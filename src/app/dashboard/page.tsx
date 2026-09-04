@@ -6,7 +6,6 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import FastContributionForm from '@/components/FastContributionForm';
 import LandscapeCertificate, { CertificateData } from '@/components/LandscapeCertificate';
-import ImageLightboxModal from '@/components/ImageLightboxModal';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import {
   FESTIVAL_CONFIG,
@@ -31,7 +30,6 @@ import {
   Calendar,
   Receipt,
   Trash2,
-  Image as ImageIcon,
   MessageCircle,
   Scale,
   AlertTriangle,
@@ -82,10 +80,6 @@ export default function DashboardPage() {
 
   // Certificate Modal
   const [viewingCertificate, setViewingCertificate] = useState<CertificateData | null>(null);
-
-  // Screenshot Lightbox Modal
-  const [viewingScreenshotUrl, setViewingScreenshotUrl] = useState<string | null>(null);
-  const [viewingScreenshotTitle, setViewingScreenshotTitle] = useState<string>('');
 
   // Edit Modal (Admin only)
   const [editingContribution, setEditingContribution] = useState<ContributionItem | null>(null);
@@ -670,20 +664,6 @@ export default function DashboardPage() {
 
                         {/* Action Buttons */}
                         <div className="space-y-2 pt-2 border-t border-devotional-gold-500/15">
-                          {/* 🖼 VIEW PAYMENT PHOTO (ONLINE with screenshot only — NEVER for CASH) */}
-                          {!isCash && c.paymentScreenshot && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setViewingScreenshotUrl(c.paymentScreenshot!);
-                                setViewingScreenshotTitle(`Payment Photo: ${c.fullName} (₹${c.amount})`);
-                              }}
-                              className="w-full py-2.5 px-3 rounded-xl bg-devotional-blue-900/90 hover:bg-devotional-blue-800 border border-devotional-gold-400/50 text-devotional-gold-200 font-extrabold text-xs flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all"
-                            >
-                              <ImageIcon className="w-4 h-4 text-devotional-gold-400" />
-                              <span>🖼 VIEW PAYMENT PHOTO</span>
-                            </button>
-                          )}
 
                           {/* 📱 SEND VIA WHATSAPP */}
                           {c.mobileNumber && (
@@ -886,20 +866,6 @@ export default function DashboardPage() {
                                 <Eye className="w-3.5 h-3.5" />
                               </button>
 
-                              {/* Screenshot Lightbox (ONLINE ONLY) */}
-                              {!isCash && c.paymentScreenshot && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setViewingScreenshotUrl(c.paymentScreenshot!);
-                                    setViewingScreenshotTitle(`Payment Photo: ${c.fullName} (₹${c.amount})`);
-                                  }}
-                                  className="p-1.5 rounded-lg bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white inline-flex items-center"
-                                  title="View Payment Photo"
-                                >
-                                  <ImageIcon className="w-3.5 h-3.5" />
-                                </button>
-                              )}
 
                               {/* Admin Verify / Reject */}
                               {isAdmin && !isCash && isPending && (
@@ -1201,14 +1167,6 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
-
-        {/* MODAL: IMAGE LIGHTBOX FOR SCREENSHOTS */}
-        <ImageLightboxModal
-          isOpen={!!viewingScreenshotUrl}
-          onClose={() => setViewingScreenshotUrl(null)}
-          imageUrl={viewingScreenshotUrl}
-          title={viewingScreenshotTitle}
-        />
       </main>
 
       <Footer />

@@ -339,7 +339,42 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
         console.warn('WhatsApp API check, using direct WhatsApp chat flow:', err);
       }
 
-      // 5. Direct WhatsApp Flow:
+      // 4. Primary Mobile Flow: Attach and share actual Certificate JPG via Web Share API
+      if (blob) {
+        const file = new File(
+          [blob],
+          `BalaGanesh_Certificate_${createdCertificate.certificateNumber}_${createdCertificate.fullName.replace(/\s+/g, '_')}.jpg`,
+          { type: 'image/jpeg' }
+        );
+
+        if (
+          typeof navigator !== 'undefined' &&
+          navigator.share &&
+          navigator.canShare &&
+          navigator.canShare({ files: [file] })
+        ) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: `${FESTIVAL_CONFIG.associationName} Certificate - ${createdCertificate.fullName}`,
+            });
+            setWhatsAppNotice({
+              type: 'success',
+              message: `✓ Certificate JPG shared! (Greeting message copied to clipboard).`,
+            });
+            setIsSharingWhatsApp(false);
+            return;
+          } catch (err: any) {
+            if (err?.name === 'AbortError') {
+              setIsSharingWhatsApp(false);
+              return;
+            }
+            console.warn('Native share failed, using download + WhatsApp link fallback:', err);
+          }
+        }
+      }
+
+      // 5. Desktop / Fallback Flow:
       // Download contributor's exact Certificate JPG so it's ready on their device
       if (blob) {
         const url = URL.createObjectURL(blob);
@@ -359,10 +394,12 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
         document.body.removeChild(a);
       }
 
-      // Pre-copy greeting text to clipboard
-      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+      // Also copy image to clipboard if supported (for Ctrl+V directly into WhatsApp Web)
+      if (blob && typeof navigator !== 'undefined' && navigator.clipboard && (window as any).ClipboardItem) {
         try {
-          await navigator.clipboard.writeText(message);
+          await navigator.clipboard.write([
+            new (window as any).ClipboardItem({ [blob.type]: blob }),
+          ]);
         } catch {}
       }
 
@@ -372,7 +409,7 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
 
       setWhatsAppNotice({
         type: 'info',
-        message: `WhatsApp opened for ${phoneResult.displayPhone}. Certificate JPG downloaded to your device — attach it directly in chat.`,
+        message: `WhatsApp opened for ${phoneResult.displayPhone}. Certificate JPG downloaded & copied to clipboard — attach it directly in chat.`,
       });
       setIsSharingWhatsApp(false);
     };
@@ -427,8 +464,17 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
             disabled={isSharingWhatsApp}
             className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 disabled:opacity-50"
           >
-            <MessageCircle className="w-5 h-5" />
-            <span>{isSharingWhatsApp ? 'PREPARING WHATSAPP...' : '📱 SEND VIA WHATSAPP'}</span>
+            {isSharingWhatsApp ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>ATTACHING CERTIFICATE...</span>
+              </>
+            ) : (
+              <>
+                <MessageCircle className="w-5 h-5" />
+                <span>📱 SEND VIA WHATSAPP</span>
+              </>
+            )}
           </button>
         </div>
 
