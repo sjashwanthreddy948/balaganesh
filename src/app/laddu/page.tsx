@@ -26,6 +26,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  Trash2,
 } from 'lucide-react';
 
 interface LadduRecord {
@@ -77,6 +78,9 @@ export default function LadduHubPage() {
   const [selectedContributorId, setSelectedContributorId] = useState<string | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [lightboxTitle, setLightboxTitle] = useState('');
+  const [deletingLaddu, setDeletingLaddu] = useState<{ id: string; name: string; due: number } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Payment Form States (For payingLaddu)
   const [payAmount, setPayAmount] = useState('');
@@ -226,6 +230,29 @@ export default function LadduHubPage() {
       setPayError('Network error while recording payment.');
     } finally {
       setPaySubmitting(false);
+    }
+  };
+
+  // Handle Delete Laddu Record (Admin)
+  const handleDeleteLaddu = async () => {
+    if (!deletingLaddu) return;
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/laddu/${deletingLaddu.id}`, {
+        method: 'DELETE',
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setDeleteError(json.error || 'Failed to delete Laddu record.');
+      } else {
+        setDeletingLaddu(null);
+        await fetchLadduData();
+      }
+    } catch {
+      setDeleteError('Network error while deleting Laddu record.');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -665,6 +692,20 @@ export default function LadduHubPage() {
                                 <User className="w-3.5 h-3.5" />
                               </button>
                             )}
+
+                            {user?.role === 'ADMIN' && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDeletingLaddu({ id: r.id, name: r.personName, due: r.totalDue });
+                                  setDeleteError(null);
+                                }}
+                                className="p-1.5 rounded-lg bg-red-950/60 border border-red-500/30 text-red-400 hover:text-red-200 inline-flex items-center active:scale-95 transition-all"
+                                title="Delete Laddu Record"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -798,6 +839,20 @@ export default function LadduHubPage() {
                           title="Profile"
                         >
                           <User className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+
+                      {user?.role === 'ADMIN' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeletingLaddu({ id: r.id, name: r.personName, due: r.totalDue });
+                            setDeleteError(null);
+                          }}
+                          className="p-2 rounded-xl bg-red-950/60 border border-red-500/30 text-red-400 hover:text-red-200 text-xs flex items-center justify-center active:scale-95 transition-all"
+                          title="Delete Laddu Record"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       )}
                     </div>
@@ -1234,6 +1289,63 @@ export default function LadduHubPage() {
         title={lightboxTitle}
         onClose={() => setLightboxUrl(null)}
       />
+
+      {/* MODAL 6: Delete Laddu Record Confirmation */}
+      {deletingLaddu && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-sm rounded-3xl border border-red-500/50 bg-[#06102f] p-6 shadow-2xl space-y-4 text-center">
+            <div className="w-12 h-12 rounded-full bg-red-950 border border-red-500/40 mx-auto flex items-center justify-center text-red-400">
+              <Trash2 className="w-6 h-6" />
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="font-bold text-white text-base">Delete Laddu Record?</h3>
+              <p className="text-xs text-gray-300">
+                Are you sure you want to permanently delete the Laddu record for{' '}
+                <strong className="text-amber-300 font-bold">{deletingLaddu.name}</strong> (₹{deletingLaddu.due.toLocaleString('en-IN')})?
+              </p>
+              <p className="text-[11px] text-red-400/90 font-medium">
+                All recorded installment payments, receipts, and balances for this person will be permanently erased.
+              </p>
+            </div>
+
+            {deleteError && (
+              <div className="p-2.5 rounded-xl bg-red-950/80 border border-red-500/50 text-red-200 text-xs text-left">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-2 text-xs">
+              <button
+                type="button"
+                disabled={deleteLoading}
+                onClick={() => {
+                  setDeletingLaddu(null);
+                  setDeleteError(null);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-gray-800 text-gray-300 font-bold hover:bg-gray-700 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteLoading}
+                onClick={handleDeleteLaddu}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {deleteLoading ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <span>Confirm Delete</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
       {user && <MobileBottomNav userRole={user.role} userName={user.name} />}
