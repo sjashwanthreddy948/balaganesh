@@ -275,11 +275,14 @@ export function buildWhatsAppExpenseVoucherShareUrl(expense: {
 }
 
 /**
- * Builds standard WhatsApp Festival Invitation Message
+ * Builds standard WhatsApp Festival Invitation Message in bilingual Telugu & English
+ * Supports family/couple hosting (husband and wife names) like Ravindar Reddy & Maneela
  */
 export function buildWhatsAppInvitationMessage(invitation: {
   title: string;
   invitees: string;
+  husbandName?: string | null;
+  wifeName?: string | null;
   eventDate: string | Date;
   eventTime: string;
   venue: string;
@@ -296,6 +299,33 @@ export function buildWhatsAppInvitationMessage(invitation: {
         year: 'numeric',
       });
 
+  const hName = invitation.husbandName?.trim();
+  const wName = invitation.wifeName?.trim();
+  const hasCouple = Boolean(hName || wName);
+
+  let coupleBlockTelugu = '';
+  let coupleBlockEnglish = '';
+
+  if (hasCouple) {
+    const coupleTextTelugu =
+      hName && wName
+        ? `శ్రీ మరియు శ్రీమతి ${hName} - ${wName} దంపతులు & కుటుంబ సభ్యులు`
+        : hName
+        ? `శ్రీ ${hName} & కుటుంబ సభ్యులు`
+        : `శ్రీమతి ${wName} & కుటుంబ సభ్యులు`;
+
+    const coupleTextEnglish =
+      hName && wName
+        ? `Sri ${hName} & Smt. ${wName} (and Family)`
+        : hName
+        ? `Sri ${hName} & Family`
+        : `Smt. ${wName} & Family`;
+
+    coupleBlockTelugu = `\n🌸 *నేటి విశేష పూజా దంపతులు (POOJA HOSTS):*\n🙏 *${coupleTextTelugu}*\n(Host: ${coupleTextEnglish})\n\nవారి సౌజన్యంతో నేటి శ్రీ గణపతి విశేష పూజ మరియు ప్రసాద వితరణ కార్యక్రమం భక్తిశ్రద్ధలతో నిర్వహించబడుచున్నది.\n`;
+
+    coupleBlockEnglish = `Today's auspicious Ganesh Pooja is graciously hosted by:\n⭐ *${coupleTextEnglish}* ⭐\n`;
+  }
+
   const detailsBlock = invitation.description?.trim()
     ? `\n✨ *కార్యక్రమ వివరాలు / Program Details:*\n${invitation.description.trim()}\n`
     : '';
@@ -304,31 +334,32 @@ export function buildWhatsAppInvitationMessage(invitation: {
     ? `📞 *సంప్రదించండి / Contact:* ${invitation.contactInfo.trim()}\n`
     : `📞 *Contact:* ${FESTIVAL_CONFIG.contactNumber}\n`;
 
-  return `🕉️ *శ్రీ వినాయక చవితి మహోత్సవ ఆహ్వానం* 🕉️
+  return `🕉️ *శ్రీ వినాయక చవితి విశేష పూజా ఆహ్వానం* 🕉️
 *${FESTIVAL_CONFIG.associationName}*
 *${FESTIVAL_CONFIG.associationAddress}*
 ━━━━━━━━━━━━━━━━━━━━━━━
 🌸 *CORDIAL INVITATION / సాదర ఆహ్వానం* 🌸
 
 గౌరవనీయులైన / Dear *${invitation.invitees}*,
+${coupleBlockTelugu}
+మేము మిమ్మల్ని మరియు మీ కుటుంబ సభ్యులను నేటి విశేష పూజా కార్యక్రమంలో పాల్గొనవలసిందిగా సాదరంగా ఆహ్వానిస్తున్నాము.
 
-మేము మిమ్మల్ని మరియు మీ కుటుంబ సభ్యులను, స్నేహితులను మా గణేష్ ఉత్సవాల్లో పాల్గొనవలసిందిగా సాదరంగా ఆహ్వానిస్తున్నాము.
-
-We cordially invite you and your family to grace the auspicious occasion of:
+${coupleBlockEnglish}We cordially invite you and your family to join us for:
 
 🪔 *${invitation.title.toUpperCase()}* 🪔
 ━━━━━━━━━━━━━━━━━━━━━━━
 📅 *తేదీ / Date:* ${formattedDate}
 ⏰ *సమయం / Time:* ${invitation.eventTime}
 📍 *వేదిక / Venue:* ${invitation.venue}
+🍽️ *తీర్థ ప్రసాదం:* పూజ అనంతరం భక్తులందరికీ ప్రసాద వితరణ / అన్నప్రసాదం (Followed by Divine Mahaprasadam)
 ${detailsBlock}
-🙏 *మీ రాకయే మాకు శుభప్రదం! Lord Ganesha blessings to you and your family.*
+🙏 *మీ రాకయే మాకు శుభప్రదం! All devotees are invited to seek the divine blessings of Lord Ganesha.*
 
 👥 *Join Our Official Bala Ganesh WhatsApp Group:*
 ${FESTIVAL_CONFIG.whatsappGroupLink}
 
 ━━━━━━━━━━━━━━━━━━━━━━━
-— *Bala Ganesh Association Committee & Youth Members*
+${hasCouple ? `— *సౌజన్యం: ${hName || ''}${hName && wName ? ' & ' : ''}${wName || ''} & కుటుంబ సభ్యులు*\n` : ''}— *నిర్వాహకులు: Bala Ganesh Association Committee & Youth Members*
 ${contactBlock}
 🙏 *Ganpati Bappa Morya!* 🙏`;
 }
@@ -339,6 +370,8 @@ ${contactBlock}
 export function buildWhatsAppInvitationShareUrl(invitation: {
   title: string;
   invitees: string;
+  husbandName?: string | null;
+  wifeName?: string | null;
   eventDate: string | Date;
   eventTime: string;
   venue: string;

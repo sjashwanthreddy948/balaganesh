@@ -209,6 +209,8 @@ export const loginSchema = z.object({
 export const createInvitationSchema = z.object({
   title: z.string().trim().min(2, 'Event / Invitation title is required.').max(150),
   invitees: z.string().trim().min(2, 'Invitee name(s) is required.').max(200),
+  husbandName: z.string().trim().max(100).optional().or(z.literal('')),
+  wifeName: z.string().trim().max(100).optional().or(z.literal('')),
   eventDate: z.string().trim().min(1, 'Please select event date.'),
   eventTime: z.string().trim().min(1, 'Please specify event time (e.g. 7:00 PM).').max(80),
   venue: z.string().trim().min(2, 'Venue is required.').max(250),

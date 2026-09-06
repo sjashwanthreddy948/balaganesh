@@ -32,12 +32,24 @@ import {
 
 const PRESET_EVENTS = [
   {
+    id: 'couple-pooja',
+    title: "Today's Special Ganesh Pooja & Mahaprasadam",
+    telugu: 'నేటి విశేష పూజ & అన్నప్రసాద వితరణ',
+    defaultTime: '07:30 PM onwards',
+    defaultDescription:
+      'Special Ganesh Abhishekam, Archana, and Maha Aarti, followed by sacred Mahaprasadam.',
+    defaultHusband: 'Ravindar Reddy',
+    defaultWife: 'Maneela',
+  },
+  {
     id: 'sthapana',
     title: 'Sri Ganesh Murti Sthapana & Prana Pratishtha',
     telugu: 'శ్రీ విగ్రహ ప్రతిష్టాపన & విశేష పూజ',
     defaultTime: '08:30 AM onwards',
     defaultDescription:
       'Divine Ganesh Murti Sthapana, Vedic Pooja, Homam & Theertha Prasadam distribution.',
+    defaultHusband: '',
+    defaultWife: '',
   },
   {
     id: 'aarti',
@@ -46,6 +58,8 @@ const PRESET_EVENTS = [
     defaultTime: '07:30 PM onwards',
     defaultDescription:
       'Evening Grand Dhoop Deepa Maha Aarti followed by devotional bhajans and prasadam.',
+    defaultHusband: '',
+    defaultWife: '',
   },
   {
     id: 'annadanam',
@@ -54,6 +68,8 @@ const PRESET_EVENTS = [
     defaultTime: '12:30 PM to 04:00 PM',
     defaultDescription:
       'Community Mahaprasadam Annadanam. All devotees are cordially invited to partake in sacred meal.',
+    defaultHusband: '',
+    defaultWife: '',
   },
   {
     id: 'laddu',
@@ -62,6 +78,8 @@ const PRESET_EVENTS = [
     defaultTime: '08:00 PM onwards',
     defaultDescription:
       'Annual auspicious Laddu Prasadam Auction. Seek divine prosperity and blessings of Lord Ganesha.',
+    defaultHusband: '',
+    defaultWife: '',
   },
   {
     id: 'visarjan',
@@ -70,6 +88,8 @@ const PRESET_EVENTS = [
     defaultTime: '02:00 PM onwards',
     defaultDescription:
       'Grand colorful Shobha Yatra with traditional music, drums, dance, and sacred Nimajjanam.',
+    defaultHusband: '',
+    defaultWife: '',
   },
 ];
 
@@ -80,7 +100,9 @@ export default function InvitationsPage() {
   const [user, setUser] = useState<{ id: string; name: string; role: string } | null>(null);
 
   // Form Fields
-  const [invitees, setInvitees] = useState('All Devotees & Families');
+  const [invitees, setInvitees] = useState('All Devotees, Colony Residents & Friends');
+  const [husbandName, setHusbandName] = useState('Ravindar Reddy');
+  const [wifeName, setWifeName] = useState('Maneela');
   const [title, setTitle] = useState(PRESET_EVENTS[0].title);
   const [eventDate, setEventDate] = useState(() => {
     // Default to today's date in YYYY-MM-DD
@@ -144,12 +166,20 @@ export default function InvitationsPage() {
     setTitle(preset.title);
     setEventTime(preset.defaultTime);
     setDescription(preset.defaultDescription);
+    if (preset.defaultHusband !== undefined) {
+      setHusbandName(preset.defaultHusband);
+    }
+    if (preset.defaultWife !== undefined) {
+      setWifeName(preset.defaultWife);
+    }
   };
 
   // Prepare current in-progress invitation data object
   const currentInvitationData: InvitationData = {
     title: title.trim() || 'Ganesh Festival Celebration',
     invitees: invitees.trim() || 'All Devotees & Families',
+    husbandName: husbandName.trim() || null,
+    wifeName: wifeName.trim() || null,
     eventDate: eventDate || new Date().toISOString(),
     eventTime: eventTime.trim() || '7:00 PM onwards',
     venue: venue.trim() || FESTIVAL_CONFIG.associationAddress,
@@ -171,6 +201,8 @@ export default function InvitationsPage() {
         body: JSON.stringify({
           title,
           invitees,
+          husbandName: husbandName || undefined,
+          wifeName: wifeName || undefined,
           eventDate,
           eventTime,
           venue,
@@ -361,6 +393,85 @@ export default function InvitationsPage() {
             )}
 
             <form onSubmit={handleSaveInvitation} className="space-y-4 text-xs">
+              {/* POOJA HOSTS / పూజా దంపతులు (HUSBAND & WIFE NAMES) */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-br from-amber-500/15 via-devotional-gold-500/10 to-transparent border border-amber-500/40 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">🌸</span>
+                    <div>
+                      <h3 className="text-xs font-black text-amber-300">
+                        Pooja Hosts / నేటి విశేష పూజా దంపతులు
+                      </h3>
+                      <p className="text-[10px] text-gray-300">
+                        Enter Husband &amp; Wife names hosting today&apos;s pooja followed by prasadam
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Quick toggle sample button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHusbandName('Ravindar Reddy');
+                      setWifeName('Maneela');
+                    }}
+                    className="text-[10px] px-2 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-200 font-bold transition-colors"
+                  >
+                    Sample: Ravindar &amp; Maneela
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-devotional-gold-200 font-bold mb-1">
+                      Husband Name / యజమాని పేరు
+                    </label>
+                    <input
+                      type="text"
+                      value={husbandName}
+                      onChange={(e) => setHusbandName(e.target.value)}
+                      placeholder="e.g. Ravindar Reddy (or Sri Ravindar Reddy)"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-devotional-blue-950 border border-amber-500/40 text-white placeholder-gray-500 focus:outline-none focus:border-amber-400 font-medium"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-devotional-gold-200 font-bold mb-1">
+                      Wife Name / ధర్మపత్ని పేరు
+                    </label>
+                    <input
+                      type="text"
+                      value={wifeName}
+                      onChange={(e) => setWifeName(e.target.value)}
+                      placeholder="e.g. Maneela (or Smt. Maneela)"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-devotional-blue-950 border border-amber-500/40 text-white placeholder-gray-500 focus:outline-none focus:border-amber-400 font-medium"
+                    />
+                  </div>
+                </div>
+
+                {/* Live Preview Pill for Couple */}
+                {(husbandName || wifeName) && (
+                  <div className="p-2.5 rounded-xl bg-devotional-blue-950/80 border border-amber-500/30 text-[11px] space-y-1">
+                    <p className="text-devotional-gold-300 font-bold">
+                      🕉️ <span className="underline">తెలుగు:</span>{' '}
+                      {husbandName && wifeName
+                        ? `శ్రీ మరియు శ్రీమతి ${husbandName} - ${wifeName} దంపతులు & కుటుంబ సభ్యులు`
+                        : husbandName
+                        ? `శ్రీ ${husbandName} & కుటుంబ సభ్యులు`
+                        : `శ్రీమతి ${wifeName} & కుటుంబ సభ్యులు`}
+                    </p>
+                    <p className="text-gray-300 font-medium">
+                      ⭐ <span className="underline">English:</span>{' '}
+                      {husbandName && wifeName
+                        ? `Sri ${husbandName} & Smt. ${wifeName} (and Family)`
+                        : husbandName
+                        ? `Sri ${husbandName} & Family`
+                        : `Smt. ${wifeName} & Family`}
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {/* Invitee Names */}
               <div>
                 <label className="block text-devotional-gold-200 font-bold mb-1">
@@ -667,6 +778,17 @@ export default function InvitationsPage() {
                       </h3>
 
                       <div className="space-y-1 text-xs text-gray-300">
+                        {(inv.husbandName || inv.wifeName) && (
+                          <div className="p-1.5 rounded-lg bg-amber-500/15 border border-amber-400/30 text-[11px] text-amber-200 font-semibold flex items-center gap-1.5">
+                            <span className="text-xs">🌸</span>
+                            <span>
+                              {inv.husbandName && inv.wifeName
+                                ? `${inv.husbandName} & ${inv.wifeName}`
+                                : inv.husbandName || inv.wifeName}
+                            </span>
+                          </div>
+                        )}
+
                         <div className="flex items-center gap-1.5 text-[11px] text-gray-300">
                           <Users className="w-3.5 h-3.5 text-devotional-gold-400 shrink-0" />
                           <span className="font-semibold text-devotional-gold-200 truncate">

@@ -174,8 +174,10 @@ model Expense {
 
 model Invitation {
   id          String   @id @default(cuid())
-  title       String   // e.g. "Sri Ganesh Chaturthi Sthapana & Pooja", "Maha Annadanam", "Laddu Auction"
-  invitees    String   // e.g. "All Devotees & Families", or specific person name
+  title       String   // e.g. "Today's Special Ganesh Pooja & Prasadam"
+  invitees    String   // e.g. "All Devotees & Families"
+  husbandName String?  // e.g. "Ravindar Reddy"
+  wifeName    String?  // e.g. "Maneela"
   eventDate   DateTime // Event date
   eventTime   String   // e.g. "07:00 PM onwards"
   venue       String   // e.g. "Bhavani Nagar, Shankarpally"

@@ -23,6 +23,8 @@ export interface InvitationData {
   id?: string;
   title: string;
   invitees: string;
+  husbandName?: string | null;
+  wifeName?: string | null;
   eventDate: string | Date;
   eventTime: string;
   venue: string;
@@ -190,47 +192,121 @@ export default function InvitationCardModal({ invitation, onClose }: InvitationC
     ctx.fillText('★ CORDIAL INVITATION / సాదర ఆహ్వానం ★', width / 2, bannerY + 36);
     ctx.letterSpacing = '0px';
 
-    // 6. Invitee Name Card (Respectful Dedication)
-    const inviteBoxY = 385;
-    const inviteBoxWidth = 920;
-    const inviteBoxHeight = 120;
+    const hName = invitation.husbandName?.trim();
+    const wName = invitation.wifeName?.trim();
+    const hasCouple = Boolean(hName || wName);
+
+    let nextY = 380;
+
+    if (hasCouple) {
+      // 6A. POOJA HOST COUPLE BOX (TELUGU & ENGLISH)
+      const hostBoxY = nextY;
+      const hostBoxWidth = 1000;
+      const hostBoxHeight = 150;
+      const hostBoxX = (width - hostBoxWidth) / 2;
+
+      // Golden border box for the hosts
+      const hostGrad = ctx.createLinearGradient(hostBoxX, 0, hostBoxX + hostBoxWidth, 0);
+      hostGrad.addColorStop(0, 'rgba(234, 179, 8, 0.08)');
+      hostGrad.addColorStop(0.5, 'rgba(250, 204, 21, 0.22)');
+      hostGrad.addColorStop(1, 'rgba(234, 179, 8, 0.08)');
+
+      ctx.fillStyle = hostGrad;
+      ctx.beginPath();
+      ctx.roundRect(hostBoxX, hostBoxY, hostBoxWidth, hostBoxHeight, 22);
+      ctx.fill();
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Host Category Header
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 16px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#fde047';
+      ctx.letterSpacing = '1px';
+      ctx.fillText('🌸  నేటి విశేష పూజా దంపతులు / TODAY\'S POOJA HOSTS  🌸', width / 2, hostBoxY + 30);
+      ctx.letterSpacing = '0px';
+
+      // Couple Names in Telugu
+      const coupleTelugu =
+        hName && wName
+          ? `శ్రీ మరియు శ్రీమతి ${hName} - ${wName} దంపతులు`
+          : hName
+          ? `శ్రీ ${hName} & కుటుంబ సభ్యులు`
+          : `శ్రీమతి ${wName} & కుటుంబ సభ్యులు`;
+
+      ctx.font = 'bold 30px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(coupleTelugu, width / 2, hostBoxY + 70);
+
+      // Couple Names in English
+      const coupleEnglish =
+        hName && wName
+          ? `Sri ${hName} & Smt. ${wName} (and Family)`
+          : hName
+          ? `Sri ${hName} & Family`
+          : `Smt. ${wName} & Family`;
+
+      ctx.font = '600 20px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#fef08a';
+      ctx.fillText(coupleEnglish, width / 2, hostBoxY + 102);
+
+      // Sponsoring note
+      ctx.font = 'italic 15px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillText(
+        'వారి సౌజన్యంతో నేటి విశేష పూజ & తీర్థ ప్రసాద వితరణ కార్యక్రమం • Followed by Divine Mahaprasadam',
+        width / 2,
+        hostBoxY + 130
+      );
+
+      nextY = hostBoxY + hostBoxHeight + 25;
+    }
+
+    // 6B. Invitee Dedication Card
+    const inviteBoxY = nextY;
+    const inviteBoxWidth = 960;
+    const inviteBoxHeight = hasCouple ? 75 : 120;
     const inviteBoxX = (width - inviteBoxWidth) / 2;
 
     ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
     ctx.beginPath();
-    ctx.roundRect(inviteBoxX, inviteBoxY, inviteBoxWidth, inviteBoxHeight, 20);
+    ctx.roundRect(inviteBoxX, inviteBoxY, inviteBoxWidth, inviteBoxHeight, 18);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(250, 204, 21, 0.4)';
+    ctx.strokeStyle = 'rgba(250, 204, 21, 0.35)';
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    ctx.font = 'normal 17px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = '#cbd5e1';
-    ctx.fillText('గౌరవనీయులైన / Cordially Inviting:', width / 2, inviteBoxY + 36);
+    if (hasCouple) {
+      ctx.font = '600 18px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillText(`ఆహ్వానితులు / Cordially Inviting: `, width / 2, inviteBoxY + 30);
 
-    ctx.font = 'bold 34px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = '#fef08a';
-    // Truncate invitees if extremely long
-    let displayInvitees = invitation.invitees;
-    if (displayInvitees.length > 55) {
-      displayInvitees = displayInvitees.substring(0, 52) + '...';
+      ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#fef08a';
+      let dispInv = invitation.invitees;
+      if (dispInv.length > 60) dispInv = dispInv.substring(0, 57) + '...';
+      ctx.fillText(dispInv, width / 2, inviteBoxY + 58);
+      nextY = inviteBoxY + inviteBoxHeight + 20;
+    } else {
+      ctx.font = 'normal 17px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillText('గౌరవనీయులైన / Cordially Inviting:', width / 2, inviteBoxY + 36);
+
+      ctx.font = 'bold 34px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#fef08a';
+      let displayInvitees = invitation.invitees;
+      if (displayInvitees.length > 55) {
+        displayInvitees = displayInvitees.substring(0, 52) + '...';
+      }
+      ctx.fillText(displayInvitees, width / 2, inviteBoxY + 84);
+      nextY = inviteBoxY + inviteBoxHeight + 25;
     }
-    ctx.fillText(displayInvitees, width / 2, inviteBoxY + 84);
 
-    // 7. Invitation Lead-in Text
-    const leadY = 540;
-    ctx.font = '500 20px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = '#e2e8f0';
-    ctx.fillText(
-      'We cordially invite you with your family and friends to participate in the sacred celebrations of:',
-      width / 2,
-      leadY
-    );
-
-    // 8. Event Title Box (Luminous & Golden)
-    const eventBoxY = 575;
-    const eventBoxWidth = 960;
-    const eventBoxHeight = 90;
+    // 7. Event Title Box (Luminous & Golden)
+    const eventBoxY = nextY;
+    const eventBoxWidth = 980;
+    const eventBoxHeight = 85;
     const eventBoxX = (width - eventBoxWidth) / 2;
 
     const eventGrad = ctx.createLinearGradient(eventBoxX, 0, eventBoxX + eventBoxWidth, 0);
@@ -246,20 +322,22 @@ export default function InvitationCardModal({ invitation, onClose }: InvitationC
     ctx.lineWidth = 2.5;
     ctx.stroke();
 
-    ctx.font = '900 38px "Segoe UI", Arial, sans-serif';
+    ctx.font = '900 36px "Segoe UI", Arial, sans-serif';
     ctx.fillStyle = '#ffffff';
     ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
     ctx.shadowBlur = 10;
-    ctx.fillText(`🪔  ${invitation.title.toUpperCase()}  🪔`, width / 2, eventBoxY + 58);
+    ctx.fillText(`🪔  ${invitation.title.toUpperCase()}  🪔`, width / 2, eventBoxY + 55);
     ctx.shadowBlur = 0;
 
-    // 9. Auspicious Details Box (Date, Time, Venue)
-    const detailsY = 695;
-    const detailsWidth = 960;
-    const detailsHeight = 220;
+    nextY = eventBoxY + eventBoxHeight + 25;
+
+    // 8. Auspicious Details Box (Date, Time, Venue, Prasadam)
+    const detailsY = nextY;
+    const detailsWidth = 980;
+    const detailsHeight = 250;
     const detailsX = (width - detailsWidth) / 2;
 
-    ctx.fillStyle = 'rgba(10, 25, 65, 0.7)';
+    ctx.fillStyle = 'rgba(10, 25, 65, 0.75)';
     ctx.beginPath();
     ctx.roundRect(detailsX, detailsY, detailsWidth, detailsHeight, 20);
     ctx.fill();
@@ -267,38 +345,53 @@ export default function InvitationCardModal({ invitation, onClose }: InvitationC
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // 3 Items Grid inside Details Box
+    // 4 Items inside Details Box
     // Date
     ctx.textAlign = 'left';
     ctx.fillStyle = '#facc15';
-    ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif';
-    ctx.fillText('📅  తేదీ / DATE:', detailsX + 45, detailsY + 55);
+    ctx.font = 'bold 21px "Segoe UI", Arial, sans-serif';
+    ctx.fillText('📅  తేదీ / DATE:', detailsX + 45, detailsY + 50);
 
-    ctx.font = '600 22px "Segoe UI", Arial, sans-serif';
+    ctx.font = '600 21px "Segoe UI", Arial, sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(formattedDate, detailsX + 260, detailsY + 55);
+    ctx.fillText(formattedDate, detailsX + 270, detailsY + 50);
 
     // Time
     ctx.fillStyle = '#facc15';
-    ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif';
-    ctx.fillText('⏰  సమయం / TIME:', detailsX + 45, detailsY + 115);
+    ctx.font = 'bold 21px "Segoe UI", Arial, sans-serif';
+    ctx.fillText('⏰  సమయం / TIME:', detailsX + 45, detailsY + 105);
 
-    ctx.font = '600 22px "Segoe UI", Arial, sans-serif';
+    ctx.font = '600 21px "Segoe UI", Arial, sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(invitation.eventTime, detailsX + 260, detailsY + 115);
+    ctx.fillText(invitation.eventTime, detailsX + 270, detailsY + 105);
 
     // Venue
     ctx.fillStyle = '#facc15';
-    ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif';
-    ctx.fillText('📍  వేదిక / VENUE:', detailsX + 45, detailsY + 175);
+    ctx.font = 'bold 21px "Segoe UI", Arial, sans-serif';
+    ctx.fillText('📍  వేదిక / VENUE:', detailsX + 45, detailsY + 160);
 
-    ctx.font = '600 20px "Segoe UI", Arial, sans-serif';
+    ctx.font = '600 19px "Segoe UI", Arial, sans-serif';
     ctx.fillStyle = '#ffffff';
     let displayVenue = invitation.venue;
     if (displayVenue.length > 48) {
       displayVenue = displayVenue.substring(0, 45) + '...';
     }
-    ctx.fillText(displayVenue, detailsX + 260, detailsY + 175);
+    ctx.fillText(displayVenue, detailsX + 270, detailsY + 160);
+
+    // Followed by Prasadam
+    ctx.fillStyle = '#fde047';
+    ctx.font = 'bold 20px "Segoe UI", Arial, sans-serif';
+    ctx.fillText('🍽️  తీర్థ ప్రసాదం:', detailsX + 45, detailsY + 215);
+
+    ctx.font = '600 18px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#a7f3d0';
+    ctx.fillText(
+      'పూజ అనంతరం భక్తులందరికీ ప్రసాద వితరణ / అన్నప్రసాదం (Followed by Mahaprasadam)',
+      detailsX + 270,
+      detailsY + 215
+    );
+
+    nextY = detailsY + detailsHeight + 25;
 
     // 10. Program Highlights / Schedule Details (if provided)
     ctx.textAlign = 'center';

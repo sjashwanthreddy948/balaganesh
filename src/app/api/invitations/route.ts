@@ -78,6 +78,8 @@ export async function POST(req: NextRequest) {
       data: {
         title: data.title.trim(),
         invitees: data.invitees.trim(),
+        husbandName: data.husbandName?.trim() || null,
+        wifeName: data.wifeName?.trim() || null,
         eventDate: new Date(data.eventDate),
         eventTime: data.eventTime.trim(),
         venue: data.venue.trim(),
