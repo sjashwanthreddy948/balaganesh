@@ -442,18 +442,19 @@ export default function InvitationsPage() {
 
                 {/* Live Preview Pill for Couple */}
                 {(husbandName || wifeName) && (
-                  <div className="p-2.5 rounded-xl bg-devotional-blue-950/80 border border-amber-500/30 text-[11px] space-y-1">
-                    <p className="text-devotional-gold-300 font-bold">
-                      🕉️ <span className="underline">తెలుగు:</span>{' '}
-                      {husbandName && wifeName
-                        ? `శ్రీ మరియు శ్రీమతి ${husbandName} - ${wifeName} దంపతులు & కుటుంబ సభ్యులు`
+                  <div className="p-3.5 rounded-2xl bg-devotional-blue-950 border-2 border-amber-400/60 shadow-lg space-y-1.5">
+                    <span className="text-[10px] uppercase font-black tracking-wider text-amber-400 block">
+                      🌸 నేటి విశేష పూజా దంపతులు / POOJA HOSTS:
+                    </span>
+                    <p className="text-sm sm:text-base font-black text-white leading-snug">
+                      🕉️ {husbandName && wifeName
+                        ? `శ్రీ మరియు శ్రీమతి ${husbandName} - ${wifeName} దంపతులు`
                         : husbandName
                         ? `శ్రీ ${husbandName} & కుటుంబ సభ్యులు`
                         : `శ్రీమతి ${wifeName} & కుటుంబ సభ్యులు`}
                     </p>
-                    <p className="text-gray-300 font-medium">
-                      ⭐ <span className="underline">English:</span>{' '}
-                      {husbandName && wifeName
+                    <p className="text-xs sm:text-sm font-bold text-devotional-gold-300">
+                      ⭐ {husbandName && wifeName
                         ? `Sri ${husbandName} & Smt. ${wifeName} (and Family)`
                         : husbandName
                         ? `Sri ${husbandName} & Family`
@@ -838,13 +839,18 @@ export default function InvitationsPage() {
 
                       <div className="space-y-1.5 text-xs text-slate-700 font-medium">
                         {(inv.husbandName || inv.wifeName) && (
-                          <div className="p-2 rounded-xl bg-amber-50 border border-amber-300/80 text-[11px] text-[#92400e] font-bold flex items-center gap-1.5 shadow-xs">
-                            <span className="text-xs">🌸</span>
-                            <span className="truncate">
-                              {inv.husbandName && inv.wifeName
-                                ? `${inv.husbandName} & ${inv.wifeName}`
-                                : inv.husbandName || inv.wifeName}
-                            </span>
+                          <div className="p-2.5 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-400 text-xs sm:text-sm text-[#7c2d12] font-black flex items-center gap-2 shadow-sm">
+                            <span className="text-base shrink-0">🌸</span>
+                            <div className="min-w-0">
+                              <span className="text-[10px] uppercase font-bold text-amber-800/80 block leading-tight">
+                                పూజా దంపతులు / Pooja Hosts:
+                              </span>
+                              <span className="truncate text-xs sm:text-sm font-black text-[#7c2d12] block">
+                                {inv.husbandName && inv.wifeName
+                                  ? `${inv.husbandName} & ${inv.wifeName}`
+                                  : inv.husbandName || inv.wifeName}
+                              </span>
+                            </div>
                           </div>
                         )}
 

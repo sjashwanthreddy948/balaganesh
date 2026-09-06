@@ -235,87 +235,212 @@ export default function InvitationCardRenderer({
       ctx.letterSpacing = '0px';
       currentY = ribbonY + ribbonH + 32;
 
-      // 8. POOJA HOST COUPLE SECTION (If Husband / Wife Names Provided)
+      // 8. POOJA HOST COUPLE SECTION (HERO HOST SECTION)
       const hName = invitation.husbandName?.trim();
       const wName = invitation.wifeName?.trim();
       const hasCouple = Boolean(hName || wName);
 
       if (hasCouple) {
-        const hostBoxW = 980;
-        const hostBoxH = 145;
+        const isBilingual = language === 'BOTH';
+        const hostBoxW = 1020;
+        const hostBoxH = isBilingual ? 210 : 175;
         const hostBoxX = (width - hostBoxW) / 2;
         const hostBoxY = currentY;
 
-        // Clean White Card with Royal Blue and Gold Border
+        // Luxury White Card with Gold Drop Shadow & Double Gold-Royal Blue Borders
+        ctx.save();
+        ctx.shadowColor = 'rgba(12, 30, 84, 0.12)';
+        ctx.shadowBlur = 16;
+        ctx.shadowOffsetY = 6;
         ctx.fillStyle = '#ffffff';
-        drawRoundRect(ctx, hostBoxX, hostBoxY, hostBoxW, hostBoxH, 18);
+        drawRoundRect(ctx, hostBoxX, hostBoxY, hostBoxW, hostBoxH, 20);
         ctx.fill();
+        ctx.restore();
 
-        // Dual Border
+        // Outer Burnished Gold Frame
         ctx.strokeStyle = '#c69214';
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 3.5;
+        drawRoundRect(ctx, hostBoxX, hostBoxY, hostBoxW, hostBoxH, 20);
         ctx.stroke();
 
-        // Top Header inside Host Box
-        ctx.font = 'bold 15px "Segoe UI", Arial, sans-serif';
+        // Inner Royal Blue Hairline
+        ctx.strokeStyle = 'rgba(12, 30, 84, 0.35)';
+        ctx.lineWidth = 1.2;
+        drawRoundRect(ctx, hostBoxX + 6, hostBoxY + 6, hostBoxW - 12, hostBoxH - 12, 16);
+        ctx.stroke();
+
+        // Top Category Pill/Header
+        const categoryY = hostBoxY + 30;
+        ctx.font = 'bold 16px "Segoe UI", Arial, sans-serif';
         ctx.fillStyle = '#991b1b';
-        ctx.letterSpacing = '1px';
+        ctx.letterSpacing = '1.5px';
         const hostCategory =
           language === 'TE'
-            ? '🌸  నేటి విశేష పూజా దంపతులు  🌸'
+            ? '🌸  నేటి విశేష పూజా దంపతులు (POOJA HOSTS)  🌸'
             : language === 'EN'
-            ? "🌸  TODAY'S SPECIAL POOJA HOSTS  🌸"
+            ? "🌸  TODAY'S AUSPICIOUS POOJA HOSTS  🌸"
             : "🌸  నేటి విశేష పూజా దంపతులు / TODAY'S POOJA HOSTS  🌸";
-        ctx.fillText(hostCategory, width / 2, hostBoxY + 28);
+        ctx.fillText(hostCategory, width / 2, categoryY);
         ctx.letterSpacing = '0px';
 
-        // Couple Names in Telugu
-        if (language !== 'EN') {
-          const coupleTelugu =
-            hName && wName
-              ? `శ్రీ మరియు శ్రీమతి ${hName} - ${wName} దంపతులు`
-              : hName
-              ? `శ్రీ ${hName} & కుటుంబ సభ్యులు`
-              : `శ్రీమతి ${wName} & కుటుంబ సభ్యులు`;
+        // HERO COUPLE NAMES
+        const coupleTelugu =
+          hName && wName
+            ? `శ్రీ మరియు శ్రీమతి ${hName} - ${wName} దంపతులు`
+            : hName
+            ? `శ్రీ ${hName} & కుటుంబ సభ్యులు`
+            : `శ్రీమతి ${wName} & కుటుంబ సభ్యులు`;
 
-          ctx.font = 'bold 28px "Segoe UI", Arial, sans-serif';
+        const coupleEnglish =
+          hName && wName
+            ? `Sri ${hName} & Smt. ${wName} (and Family)`
+            : hName
+            ? `Sri ${hName} & Family`
+            : `Smt. ${wName} & Family`;
+
+        if (language === 'TE') {
+          // PURE TELUGU HERO DISPLAY (EXTRA LARGE 44px)
+          let teSize = 44;
+          ctx.font = `bold ${teSize}px "Segoe UI", Arial, sans-serif`;
+          while (ctx.measureText(coupleTelugu).width > 940 && teSize > 28) {
+            teSize -= 2;
+            ctx.font = `bold ${teSize}px "Segoe UI", Arial, sans-serif`;
+          }
           ctx.fillStyle = '#0c1e54';
-          ctx.fillText(coupleTelugu, width / 2, hostBoxY + 68);
-        }
+          const nameY = hostBoxY + 84;
+          ctx.fillText(coupleTelugu, width / 2, nameY);
 
-        // Couple Names in English
-        if (language !== 'TE') {
-          const coupleEnglish =
-            hName && wName
-              ? `Sri ${hName} & Smt. ${wName} (and Family)`
-              : hName
-              ? `Sri ${hName} & Family`
-              : `Smt. ${wName} & Family`;
+          // Ornate Gold Underline with Diamond
+          const teWidth = Math.min(ctx.measureText(coupleTelugu).width + 60, 920);
+          ctx.strokeStyle = '#c69214';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.moveTo(width / 2 - teWidth / 2, nameY + 16);
+          ctx.lineTo(width / 2 + teWidth / 2, nameY + 16);
+          ctx.stroke();
 
-          ctx.font =
-            language === 'EN'
-              ? 'bold 28px "Segoe UI", Arial, sans-serif'
-              : '600 20px "Segoe UI", Arial, sans-serif';
-          ctx.fillStyle = language === 'EN' ? '#0c1e54' : '#b8860b';
+          // Center Diamond on Underline
+          ctx.fillStyle = '#0c1e54';
+          ctx.strokeStyle = '#c69214';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(width / 2, nameY + 9);
+          ctx.lineTo(width / 2 + 7, nameY + 16);
+          ctx.lineTo(width / 2, nameY + 23);
+          ctx.lineTo(width / 2 - 7, nameY + 16);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          // Sponsoring note
+          ctx.font = 'italic 16px "Segoe UI", Arial, sans-serif';
+          ctx.fillStyle = '#475569';
           ctx.fillText(
-            coupleEnglish,
+            'వారి సౌజన్యంతో నేటి విశేష పూజ & తీర్థ ప్రసాద వితరణ కార్యక్రమం',
             width / 2,
-            language === 'EN' ? hostBoxY + 74 : hostBoxY + 98
+            hostBoxY + 144
+          );
+        } else if (language === 'EN') {
+          // PURE ENGLISH HERO DISPLAY (EXTRA LARGE 44px)
+          let enSize = 44;
+          ctx.font = `bold ${enSize}px Georgia, "Segoe UI", Arial, sans-serif`;
+          while (ctx.measureText(coupleEnglish).width > 940 && enSize > 28) {
+            enSize -= 2;
+            ctx.font = `bold ${enSize}px Georgia, "Segoe UI", Arial, sans-serif`;
+          }
+          ctx.fillStyle = '#0c1e54';
+          const nameY = hostBoxY + 84;
+          ctx.fillText(coupleEnglish, width / 2, nameY);
+
+          // Ornate Gold Underline with Diamond
+          const enWidth = Math.min(ctx.measureText(coupleEnglish).width + 60, 920);
+          ctx.strokeStyle = '#c69214';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.moveTo(width / 2 - enWidth / 2, nameY + 16);
+          ctx.lineTo(width / 2 + enWidth / 2, nameY + 16);
+          ctx.stroke();
+
+          // Center Diamond on Underline
+          ctx.fillStyle = '#0c1e54';
+          ctx.strokeStyle = '#c69214';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(width / 2, nameY + 9);
+          ctx.lineTo(width / 2 + 7, nameY + 16);
+          ctx.lineTo(width / 2, nameY + 23);
+          ctx.lineTo(width / 2 - 7, nameY + 16);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          // Sponsoring note
+          ctx.font = 'italic 16px "Segoe UI", Arial, sans-serif';
+          ctx.fillStyle = '#475569';
+          ctx.fillText(
+            "Graciously hosting today's sacred pooja followed by divine Mahaprasadam",
+            width / 2,
+            hostBoxY + 144
+          );
+        } else {
+          // BILINGUAL DISPLAY (TELUGU 38px + ENGLISH 28px HERO DUAL DISPLAY)
+          let teSize = 38;
+          ctx.font = `bold ${teSize}px "Segoe UI", Arial, sans-serif`;
+          while (ctx.measureText(coupleTelugu).width > 940 && teSize > 26) {
+            teSize -= 2;
+            ctx.font = `bold ${teSize}px "Segoe UI", Arial, sans-serif`;
+          }
+          ctx.fillStyle = '#0c1e54';
+          const teY = hostBoxY + 76;
+          ctx.fillText(coupleTelugu, width / 2, teY);
+
+          let enSize = 28;
+          ctx.font = `bold ${enSize}px "Segoe UI", Arial, sans-serif`;
+          while (ctx.measureText(coupleEnglish).width > 940 && enSize > 20) {
+            enSize -= 2;
+            ctx.font = `bold ${enSize}px "Segoe UI", Arial, sans-serif`;
+          }
+          ctx.fillStyle = '#b8860b';
+          const enY = hostBoxY + 120;
+          ctx.fillText(coupleEnglish, width / 2, enY);
+
+          // Ornate Gold Underline with Diamond under English
+          const dualWidth = Math.min(
+            Math.max(ctx.measureText(coupleTelugu).width, ctx.measureText(coupleEnglish).width) +
+              50,
+            920
+          );
+          ctx.strokeStyle = '#c69214';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(width / 2 - dualWidth / 2, enY + 16);
+          ctx.lineTo(width / 2 + dualWidth / 2, enY + 16);
+          ctx.stroke();
+
+          // Diamond
+          ctx.fillStyle = '#0c1e54';
+          ctx.strokeStyle = '#c69214';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(width / 2, enY + 10);
+          ctx.lineTo(width / 2 + 6, enY + 16);
+          ctx.lineTo(width / 2, enY + 22);
+          ctx.lineTo(width / 2 - 6, enY + 16);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          // Sponsoring note
+          ctx.font = 'italic 15px "Segoe UI", Arial, sans-serif';
+          ctx.fillStyle = '#475569';
+          ctx.fillText(
+            'వారి సౌజన్యంతో నేటి విశేష పూజ & ప్రసాదం • Followed by Divine Mahaprasadam',
+            width / 2,
+            hostBoxY + 184
           );
         }
 
-        // Sponsoring note
-        ctx.font = 'italic 15px "Segoe UI", Arial, sans-serif';
-        ctx.fillStyle = '#475569';
-        const sponsorNote =
-          language === 'TE'
-            ? 'వారి సౌజన్యంతో నేటి విశేష పూజ & తీర్థ ప్రసాద వితరణ కార్యక్రమం'
-            : language === 'EN'
-            ? "Graciously hosting today's sacred pooja followed by divine Mahaprasadam"
-            : 'వారి సౌజన్యంతో నేటి విశేష పూజ & ప్రసాదం • Followed by Divine Mahaprasadam';
-        ctx.fillText(sponsorNote, width / 2, hostBoxY + 128);
-
-        currentY = hostBoxY + hostBoxH + 25;
+        currentY = hostBoxY + hostBoxH + 24;
       }
 
       // 9. INVITEE DEDICATION CARD
