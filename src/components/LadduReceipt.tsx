@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { FESTIVAL_CONFIG, buildWhatsAppLadduReceiptShareUrl } from '@/config/festival.config';
@@ -32,6 +32,25 @@ export function ladduDataUrlToBlob(dataUrl: string): Blob {
     uInt8Array[i] = raw.charCodeAt(i);
   }
   return new Blob([uInt8Array], { type: contentType });
+}
+
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+) {
+  if (w < 2 * r) r = w / 2;
+  if (h < 2 * r) r = h / 2;
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
 }
 
 interface LadduReceiptProps {
@@ -81,90 +100,143 @@ export default function LadduReceipt({
     canvas.width = width;
     canvas.height = height;
 
-    // Load authentic stamp image if available
+    const bgImage = new Image();
+    bgImage.src = '/images/ganesh-landscape-pandal.jpg';
+    bgImage.crossOrigin = 'anonymous';
+
     const stampImage = new Image();
     stampImage.src = FESTIVAL_CONFIG.officialStampRedImage || '/images/bala-ganesh-stamp-red.png';
     stampImage.crossOrigin = 'anonymous';
 
-    const renderLayers = (stampLoaded: boolean) => {
-      // 1. BASE: Royal Parchment Ivory Background
+    const renderLayers = (bgLoaded: boolean, stampLoaded: boolean) => {
+      // 1. BASE: Premium Parchment Ivory Gradient Background
       const bgGrad = ctx.createLinearGradient(0, 0, width, height);
       bgGrad.addColorStop(0, '#ffffff');
-      bgGrad.addColorStop(0.5, '#fcfaf4');
-      bgGrad.addColorStop(1, '#f7f2e5');
+      bgGrad.addColorStop(0.4, '#fdfbf7');
+      bgGrad.addColorStop(1, '#f8f3e8');
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, width, height);
 
-      // 2. ORNATE DEVOTIONAL BORDERS
-      // Outer Gold Frame
-      ctx.strokeStyle = '#d4af37';
-      ctx.lineWidth = 14;
-      ctx.strokeRect(36, 36, width - 72, height - 72);
-
-      // Thin Inner Border
-      ctx.strokeStyle = '#8b6508';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(54, 54, width - 108, height - 108);
-
-      // Corner Accents
-      const drawCorner = (x: number, y: number, rot: number) => {
+      // 2. SUBTLE WATERMARK: Pandal / Deity Watermark (7.5% Opacity)
+      if (bgLoaded && bgImage.complete && bgImage.naturalWidth > 0) {
         ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(rot);
-        ctx.fillStyle = '#d4af37';
-        ctx.fillRect(0, 0, 48, 8);
-        ctx.fillRect(0, 0, 8, 48);
-        ctx.beginPath();
-        ctx.arc(20, 20, 6, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.globalAlpha = 0.075;
+        ctx.drawImage(bgImage, 0, 0, width, height);
         ctx.restore();
-      };
-      drawCorner(70, 70, 0);
-      drawCorner(width - 70, 70, Math.PI / 2);
-      drawCorner(width - 70, height - 70, Math.PI);
-      drawCorner(70, height - 70, -Math.PI / 2);
+      }
 
-      // 3. WATERMARK: Ganesh Mantra Watermark in Center
-      ctx.save();
-      ctx.font = 'bold 240px serif';
-      ctx.fillStyle = 'rgba(212, 175, 55, 0.05)';
+      // 3. ELEGANT ROYAL BLUE & METALLIC GOLD DUAL BORDERS
+      // Outer Deep Royal Blue Thick Border
+      ctx.strokeStyle = '#0c1e54';
+      ctx.lineWidth = 14;
+      ctx.strokeRect(32, 32, width - 64, height - 64);
+
+      // Middle Burnished Metallic Gold Border
+      ctx.strokeStyle = '#c69214';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(48, 48, width - 96, height - 96);
+
+      // Inner Hairline Border
+      ctx.strokeStyle = 'rgba(12, 30, 84, 0.25)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(58, 58, width - 116, height - 116);
+
+      // 4. CORNER ROSETTES & ORNAMENTS
+      const cornerInsets = [
+        [48, 48],
+        [width - 48, 48],
+        [48, height - 48],
+        [width - 48, height - 48],
+      ];
+
+      cornerInsets.forEach(([cx, cy]) => {
+        // Outer Gold Ring
+        ctx.strokeStyle = '#c69214';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 22, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Inner Gold Rosette
+        ctx.fillStyle = '#dfb135';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Royal Blue Center Jewel
+        ctx.fillStyle = '#0c1e54';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // 5. SACRED INVOCATION & TOP HEADER
       ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('🕉️', width / 2, height / 2);
-      ctx.restore();
 
-      // 4. HEADER: Association Branding
-      ctx.fillStyle = '#7a1f0a'; // Sacred Kumkum / Deep Maroon
-      ctx.font = 'bold 36px "Cinzel", "Times New Roman", serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('🙏 ॐ गं गणपतये नमः • वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ 🙏', width / 2, 110);
+      // Sacred Om
+      ctx.font = 'bold 30px Georgia, serif';
+      ctx.fillStyle = '#b8860b';
+      ctx.fillText('ॐ', width / 2, 94);
 
-      ctx.fillStyle = '#081735'; // Deep Midnight Blue
-      ctx.font = '900 68px "Cinzel", "Arial", sans-serif';
-      ctx.fillText(FESTIVAL_CONFIG.associationName, width / 2, 185);
+      // Sanskrit Header
+      ctx.font = 'bold 16px Georgia, serif';
+      ctx.fillStyle = '#b8860b';
+      ctx.letterSpacing = '3px';
+      ctx.fillText('॥ श्री गणेशाय नमः ॥', width / 2, 122);
 
-      ctx.fillStyle = '#555555';
-      ctx.font = '600 28px "Arial", sans-serif';
-      ctx.fillText(FESTIVAL_CONFIG.associationAddress, width / 2, 230);
-
-      // 5. RECEIPT BANNER
-      ctx.fillStyle = '#991b1b'; // Crimson Red Pill
-      ctx.beginPath();
-      ctx.roundRect(width / 2 - 380, 260, 760, 56, 28);
-      ctx.fill();
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '900 32px "Arial", sans-serif';
+      // Association Name
+      ctx.font = 'bold 44px sans-serif';
+      ctx.fillStyle = '#0c1e54';
       ctx.letterSpacing = '4px';
-      ctx.fillText('LADDU PAYMENT RECEIPT', width / 2, 298);
+      ctx.fillText(FESTIVAL_CONFIG.associationName.toUpperCase(), width / 2, 172);
 
-      // 6. RECEIPT META BAR (Receipt # and Date)
-      ctx.fillStyle = '#444444';
-      ctx.font = 'bold 26px monospace';
+      // Association Location Subtitle
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.letterSpacing = '1.5px';
+      ctx.fillText('Bhavani Nagar, Shankarpally, Telangana • Ganesh Festival Annual Utsav', width / 2, 204);
+
+      // Title Ribbon: LADDU PAYMENT RECEIPT
+      const ribbonW = 740;
+      const ribbonH = 44;
+      const ribbonX = (width - ribbonW) / 2;
+      const ribbonY = 226;
+
+      const ribbonGrad = ctx.createLinearGradient(ribbonX, ribbonY, ribbonX + ribbonW, ribbonY + ribbonH);
+      ribbonGrad.addColorStop(0, '#0c1e54');
+      ribbonGrad.addColorStop(0.5, '#1e3a8a');
+      ribbonGrad.addColorStop(1, '#0c1e54');
+      ctx.fillStyle = ribbonGrad;
+      ctx.strokeStyle = '#c69214';
+      ctx.lineWidth = 2;
+      roundRect(ctx, ribbonX, ribbonY, ribbonW, ribbonH, 22);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.letterSpacing = '3.5px';
+      ctx.fillText('LADDU PAYMENT RECEIPT', width / 2, ribbonY + 29);
+
+      // 6. RECEIPT META BAR (Receipt No, Utsav Year, Date)
+      const metaY = 304;
+
+      // Receipt Number (Left)
       ctx.textAlign = 'left';
-      ctx.fillText(`RECEIPT NO: ${data.receiptNumber}`, 140, 365);
+      ctx.font = 'bold 18px monospace';
+      ctx.fillStyle = '#0c1e54';
+      ctx.fillText(`RECEIPT NO: ${data.receiptNumber}`, 120, metaY);
 
-      const formattedDate = new Date(data.date).toLocaleDateString('en-IN', {
+      // Auction Year (Center)
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 17px sans-serif';
+      ctx.fillStyle = '#b8860b';
+      ctx.letterSpacing = '1.5px';
+      ctx.fillText(`LADDU UTSAV: ${data.ladduYear}`, width / 2, metaY);
+
+      // Formatted Date (Right)
+      const dateObj = new Date(data.date);
+      const formattedDate = dateObj.toLocaleDateString('en-IN', {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
@@ -172,174 +244,393 @@ export default function LadduReceipt({
         minute: '2-digit',
       });
       ctx.textAlign = 'right';
-      ctx.font = 'bold 26px "Arial", sans-serif';
-      ctx.fillText(`DATE: ${formattedDate}`, width - 140, 365);
+      ctx.font = 'bold 17px sans-serif';
+      ctx.fillStyle = '#475569';
+      ctx.fillText(`DATE: ${formattedDate}`, width - 120, metaY);
 
-      // Separator Line
-      ctx.strokeStyle = '#e2d8b7';
-      ctx.lineWidth = 3;
+      // Divider Line Under Meta Bar
+      ctx.strokeStyle = '#c69214';
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(140, 385);
-      ctx.lineTo(width - 140, 385);
+      ctx.moveTo(120, 322);
+      ctx.lineTo(width - 120, 322);
       ctx.stroke();
 
-      // 7. MAIN PARTICULARS GRID
-      // Left Box: Devotee & Laddu Info
-      ctx.fillStyle = '#faf7ed';
+      // 7. DEVOTEE HONOR BANNER (Clean, Non-Overlapping Hero)
+      ctx.textAlign = 'center';
+      ctx.font = 'italic 19px Georgia, serif';
+      ctx.fillStyle = '#64748b';
+      ctx.letterSpacing = '0px';
+      ctx.fillText('Receipt issued with gratitude to', width / 2, 354);
+
+      // Devotee Full Name with Auto-Scaling Font to Prevent Clipping
+      let nameFontSize = 46;
+      ctx.font = `bold ${nameFontSize}px Georgia, serif`;
+      const displayName = data.personName.toUpperCase();
+      while (ctx.measureText(displayName).width > 1200 && nameFontSize > 28) {
+        nameFontSize -= 2;
+        ctx.font = `bold ${nameFontSize}px Georgia, serif`;
+      }
+      ctx.fillStyle = '#0c1e54';
+      ctx.letterSpacing = '1.5px';
+      ctx.fillText(displayName, width / 2, 404);
+
+      // Ornate Underline with Center Diamond
+      ctx.strokeStyle = '#c69214';
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.roundRect(140, 410, 800, 360, 18);
+      ctx.moveTo(width / 2 - 280, 420);
+      ctx.lineTo(width / 2 + 280, 420);
+      ctx.stroke();
+
+      // Center Diamond
+      ctx.fillStyle = '#0c1e54';
+      ctx.strokeStyle = '#c69214';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(width / 2, 413);
+      ctx.lineTo(width / 2 + 7, 420);
+      ctx.lineTo(width / 2, 427);
+      ctx.lineTo(width / 2 - 7, 420);
+      ctx.closePath();
       ctx.fill();
-      ctx.strokeStyle = '#d5c79e';
-      ctx.lineWidth = 2;
       ctx.stroke();
 
-      ctx.textAlign = 'left';
-      ctx.fillStyle = '#8b6508';
-      ctx.font = 'bold 24px "Arial", sans-serif';
-      ctx.fillText('DEVOTEE PARTICULARS', 175, 455);
+      // Devotee Mobile & Address Subtitle
+      const contactParts = [];
+      if (data.mobileNumber) contactParts.push(`📱 +91 ${data.mobileNumber}`);
+      if (data.address) contactParts.push(`📍 ${data.address}`);
+      const contactText = contactParts.length > 0 ? contactParts.join('  •  ') : 'Registered Association Devotee';
 
-      ctx.fillStyle = '#111827';
-      ctx.font = 'bold 24px "Arial", sans-serif';
-      ctx.fillText('Person Name:', 175, 510);
-      ctx.font = '900 36px "Arial", sans-serif';
-      ctx.fillStyle = '#081735';
-      ctx.fillText(data.personName, 380, 510);
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillStyle = '#475569';
+      ctx.letterSpacing = '0.5px';
+      ctx.fillText(contactText, width / 2, 446);
 
-      ctx.fillStyle = '#111827';
-      ctx.font = 'bold 24px "Arial", sans-serif';
-      ctx.fillText('Mobile No:', 175, 565);
-      ctx.font = 'bold 28px monospace';
-      ctx.fillText(data.mobileNumber || 'Not Specified', 380, 565);
+      // 8. TWO FLOATING PARTICULARS CARDS (Side-by-Side with Wide Breathing Room)
+      const cardY = 475;
+      const cardH = 290;
+      const cardW = 820;
 
-      ctx.fillStyle = '#111827';
-      ctx.font = 'bold 24px "Arial", sans-serif';
-      ctx.fillText('Laddu Auction Year:', 175, 620);
-      ctx.font = '900 32px "Arial", sans-serif';
-      ctx.fillStyle = '#b45309';
-      ctx.fillText(`${data.ladduYear} Utsav`, 430, 620);
-
-      ctx.fillStyle = '#111827';
-      ctx.font = 'bold 24px "Arial", sans-serif';
-      ctx.fillText('Payment Method:', 175, 675);
-      ctx.font = 'bold 26px "Arial", sans-serif';
-      ctx.fillStyle = data.paymentMethod === 'ONLINE' ? '#2563eb' : '#059669';
-      ctx.fillText(`${data.paymentMethod}${data.utr ? ` (UTR: ${data.utr})` : ''}`, 410, 675);
-
-      ctx.fillStyle = '#111827';
-      ctx.font = 'bold 24px "Arial", sans-serif';
-      ctx.fillText('Received By:', 175, 730);
-      ctx.font = 'bold 26px "Arial", sans-serif';
-      ctx.fillStyle = '#4b5563';
-      ctx.fillText(data.volunteerName || 'Association Committee', 380, 730);
-
-      // Right Box: Financial Breakdown
-      ctx.fillStyle = '#faf7ed';
-      ctx.beginPath();
-      ctx.roundRect(980, 410, 800, 360, 18);
-      ctx.fill();
-      ctx.strokeStyle = '#d5c79e';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      ctx.fillStyle = '#8b6508';
-      ctx.font = 'bold 24px "Arial", sans-serif';
-      ctx.fillText('PAYMENT BREAKDOWN', 1015, 455);
-
-      // Total Due
-      ctx.fillStyle = '#4b5563';
-      ctx.font = 'bold 26px "Arial", sans-serif';
-      ctx.fillText('Total Laddu Due:', 1015, 510);
-      ctx.textAlign = 'right';
-      ctx.font = 'bold 30px "Arial", sans-serif';
-      ctx.fillStyle = '#111827';
-      ctx.fillText(`₹${data.totalDue.toLocaleString('en-IN')}`, 1740, 510);
-
-      // Amount Paid This Receipt
-      ctx.textAlign = 'left';
-      ctx.fillStyle = '#065f46';
-      ctx.font = 'bold 28px "Arial", sans-serif';
-      ctx.fillText('Amount Paid Now:', 1015, 570);
-      ctx.textAlign = 'right';
-      ctx.font = '900 38px "Arial", sans-serif';
-      ctx.fillStyle = '#047857';
-      ctx.fillText(`₹${data.amountPaid.toLocaleString('en-IN')}`, 1740, 570);
-
-      // Total Paid So Far
-      ctx.textAlign = 'left';
-      ctx.fillStyle = '#4b5563';
-      ctx.font = 'bold 26px "Arial", sans-serif';
-      ctx.fillText('Total Paid To Date:', 1015, 625);
-      ctx.textAlign = 'right';
-      ctx.font = 'bold 30px "Arial", sans-serif';
-      ctx.fillStyle = '#111827';
-      ctx.fillText(`₹${data.totalPaid.toLocaleString('en-IN')}`, 1740, 625);
-
-      // Divider inside Right Box
-      ctx.strokeStyle = '#d5c79e';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(1015, 655);
-      ctx.lineTo(1740, 655);
-      ctx.stroke();
-
-      // Remaining Balance
-      ctx.textAlign = 'left';
-      ctx.fillStyle = isFullyPaid ? '#065f46' : '#b45309';
-      ctx.font = '900 30px "Arial", sans-serif';
-      ctx.fillText('Remaining Balance:', 1015, 715);
-      ctx.textAlign = 'right';
-      ctx.font = '900 42px "Arial", sans-serif';
-      ctx.fillStyle = isFullyPaid ? '#047857' : '#d97706';
-      ctx.fillText(`₹${data.remainingBalance.toLocaleString('en-IN')}`, 1740, 715);
-
-      // 8. BIG STATUS STAMP
+      // -------------------------------------------------------------
+      // LEFT CARD: Devotee & Transaction Particulars
+      // -------------------------------------------------------------
+      const leftX = 120;
       ctx.save();
-      ctx.translate(width / 2, 855);
-      if (isFullyPaid) {
-        // GREEN FULLY PAID STAMP
-        ctx.fillStyle = '#ecfdf5';
-        ctx.beginPath();
-        ctx.roundRect(-240, -42, 480, 84, 42);
-        ctx.fill();
-        ctx.strokeStyle = '#059669';
-        ctx.lineWidth = 6;
-        ctx.stroke();
+      ctx.shadowColor = 'rgba(12, 30, 84, 0.06)';
+      ctx.shadowBlur = 16;
+      ctx.shadowOffsetY = 4;
+      ctx.fillStyle = '#ffffff';
+      roundRect(ctx, leftX, cardY, cardW, cardH, 16);
+      ctx.fill();
+      ctx.restore();
 
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#065f46';
-        ctx.font = '900 36px "Arial", sans-serif';
-        ctx.fillText('✓ FULLY PAID', 0, 12);
+      ctx.strokeStyle = '#c69214';
+      ctx.lineWidth = 2;
+      roundRect(ctx, leftX, cardY, cardW, cardH, 16);
+      ctx.stroke();
+
+      // Left Card Header Bar
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath();
+      ctx.moveTo(leftX + 16, cardY);
+      ctx.lineTo(leftX + cardW - 16, cardY);
+      ctx.arcTo(leftX + cardW, cardY, leftX + cardW, cardY + 16, 16);
+      ctx.lineTo(leftX + cardW, cardY + 44);
+      ctx.lineTo(leftX, cardY + 44);
+      ctx.lineTo(leftX, cardY + 16);
+      ctx.arcTo(leftX, cardY, leftX + 16, cardY, 16);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(198, 146, 20, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(leftX, cardY + 44);
+      ctx.lineTo(leftX + cardW, cardY + 44);
+      ctx.stroke();
+
+      ctx.textAlign = 'left';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillStyle = '#b8860b';
+      ctx.letterSpacing = '1.5px';
+      ctx.fillText('PARTICULARS & PAYMENT METHOD', leftX + 30, cardY + 28);
+
+      // Left Card: Row 1
+      const col1X = leftX + 30;
+      const col2X = leftX + 440;
+
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.letterSpacing = '1px';
+      ctx.fillText('PAYMENT MODE', col1X, cardY + 76);
+      ctx.fillText('AUCTION UTSAV YEAR', col2X, cardY + 76);
+
+      ctx.font = 'bold 22px sans-serif';
+      ctx.fillStyle = data.paymentMethod === 'ONLINE' ? '#1d4ed8' : '#047857';
+      ctx.fillText(data.paymentMethod === 'ONLINE' ? 'ONLINE (UPI)' : 'CASH PAYMENT', col1X, cardY + 104);
+
+      ctx.fillStyle = '#b8860b';
+      ctx.fillText(`${data.ladduYear} Annual Utsav`, col2X, cardY + 104);
+
+      // Left Card: Row 1 Divider
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.8)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(col1X, cardY + 124);
+      ctx.lineTo(leftX + cardW - 30, cardY + 124);
+      ctx.stroke();
+
+      // Left Card: Row 2
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.letterSpacing = '1px';
+      ctx.fillText(data.paymentMethod === 'ONLINE' ? 'TRANSACTION ID / UTR' : 'PAYMENT TYPE', col1X, cardY + 152);
+      ctx.fillText('SETTLEMENT STATUS', col2X, cardY + 152);
+
+      if (data.paymentMethod === 'ONLINE') {
+        ctx.font = 'bold 19px monospace';
+        ctx.fillStyle = '#0c1e54';
+        ctx.fillText(data.utr || 'VERIFIED ONLINE', col1X, cardY + 180);
       } else {
-        // AMBER REMAINING BALANCE STAMP
-        ctx.fillStyle = '#fffbeb';
-        ctx.beginPath();
-        ctx.roundRect(-300, -42, 600, 84, 42);
+        ctx.font = 'bold 20px sans-serif';
+        ctx.fillStyle = '#059669';
+        ctx.fillText('Direct Cash Handover', col1X, cardY + 180);
+      }
+
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillStyle = isFullyPaid ? '#047857' : '#d97706';
+      ctx.fillText(isFullyPaid ? '✓ FULLY SETTLED' : 'PARTIAL INSTALLMENT', col2X, cardY + 180);
+
+      // Left Card: Row 2 Divider
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.8)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(col1X, cardY + 202);
+      ctx.lineTo(leftX + cardW - 30, cardY + 202);
+      ctx.stroke();
+
+      // Left Card: Row 3
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.letterSpacing = '1px';
+      ctx.fillText('RECEIVED ON BEHALF OF', col1X, cardY + 230);
+      ctx.fillText('RECORDED BY VOLUNTEER', col2X, cardY + 230);
+
+      ctx.font = 'bold 19px sans-serif';
+      ctx.fillStyle = '#0c1e54';
+      ctx.fillText('Bala Ganesh Association', col1X, cardY + 258);
+
+      ctx.fillStyle = '#334155';
+      ctx.fillText(data.volunteerName || 'Association Committee', col2X, cardY + 258);
+
+      // -------------------------------------------------------------
+      // RIGHT CARD: Financial Account Breakdown
+      // -------------------------------------------------------------
+      const rightX = 980;
+      ctx.save();
+      ctx.shadowColor = 'rgba(12, 30, 84, 0.06)';
+      ctx.shadowBlur = 16;
+      ctx.shadowOffsetY = 4;
+      ctx.fillStyle = '#ffffff';
+      roundRect(ctx, rightX, cardY, cardW, cardH, 16);
+      ctx.fill();
+      ctx.restore();
+
+      ctx.strokeStyle = '#c69214';
+      ctx.lineWidth = 2;
+      roundRect(ctx, rightX, cardY, cardW, cardH, 16);
+      ctx.stroke();
+
+      // Right Card Header Bar
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath();
+      ctx.moveTo(rightX + 16, cardY);
+      ctx.lineTo(rightX + cardW - 16, cardY);
+      ctx.arcTo(rightX + cardW, cardY, rightX + cardW, cardY + 16, 16);
+      ctx.lineTo(rightX + cardW, cardY + 44);
+      ctx.lineTo(rightX, cardY + 44);
+      ctx.lineTo(rightX, cardY + 16);
+      ctx.arcTo(rightX, cardY, rightX + 16, cardY, 16);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(198, 146, 20, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(rightX, cardY + 44);
+      ctx.lineTo(rightX + cardW, cardY + 44);
+      ctx.stroke();
+
+      ctx.textAlign = 'left';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillStyle = '#b8860b';
+      ctx.letterSpacing = '1.5px';
+      ctx.fillText('FINANCIAL ACCOUNT STATEMENT', rightX + 30, cardY + 28);
+
+      const rLabelX = rightX + 30;
+      const rValueX = rightX + cardW - 30;
+
+      // Right Card: Row 1 (Total Laddu Due)
+      ctx.textAlign = 'left';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillStyle = '#475569';
+      ctx.letterSpacing = '0px';
+      ctx.fillText('Total Laddu Auction Due:', rLabelX, cardY + 78);
+
+      ctx.textAlign = 'right';
+      ctx.font = 'bold 24px sans-serif';
+      ctx.fillStyle = '#0c1e54';
+      ctx.fillText(`₹${data.totalDue.toLocaleString('en-IN')}`, rValueX, cardY + 78);
+
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.8)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(rLabelX, cardY + 98);
+      ctx.lineTo(rValueX, cardY + 98);
+      ctx.stroke();
+
+      // Right Card: Row 2 (Amount Paid This Receipt)
+      ctx.textAlign = 'left';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillStyle = '#047857';
+      ctx.fillText('Amount Paid (This Receipt):', rLabelX, cardY + 134);
+
+      ctx.textAlign = 'right';
+      ctx.font = '900 32px sans-serif';
+      ctx.fillStyle = '#047857';
+      ctx.fillText(`+ ₹${data.amountPaid.toLocaleString('en-IN')}`, rValueX, cardY + 134);
+
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.8)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(rLabelX, cardY + 154);
+      ctx.lineTo(rValueX, cardY + 154);
+      ctx.stroke();
+
+      // Right Card: Row 3 (Cumulative Paid to Date)
+      ctx.textAlign = 'left';
+      ctx.font = 'bold 17px sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.fillText('Cumulative Paid to Date:', rLabelX, cardY + 188);
+
+      ctx.textAlign = 'right';
+      ctx.font = 'bold 22px sans-serif';
+      ctx.fillStyle = '#334155';
+      ctx.fillText(`₹${data.totalPaid.toLocaleString('en-IN')}`, rValueX, cardY + 188);
+
+      // Right Card: Row 4 Highlighted Remaining Balance Box
+      const pillBoxX = rightX + 20;
+      const pillBoxY = cardY + 214;
+      const pillBoxW = cardW - 40;
+      const pillBoxH = 58;
+
+      ctx.fillStyle = isFullyPaid ? '#ecfdf5' : '#fffbeb';
+      roundRect(ctx, pillBoxX, pillBoxY, pillBoxW, pillBoxH, 12);
+      ctx.fill();
+
+      ctx.strokeStyle = isFullyPaid ? '#10b981' : '#f59e0b';
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, pillBoxX, pillBoxY, pillBoxW, pillBoxH, 12);
+      ctx.stroke();
+
+      ctx.textAlign = 'left';
+      ctx.font = '900 22px sans-serif';
+      ctx.fillStyle = isFullyPaid ? '#047857' : '#b45309';
+      ctx.fillText('Remaining Balance Due:', pillBoxX + 20, pillBoxY + 37);
+
+      ctx.textAlign = 'right';
+      ctx.font = '900 32px sans-serif';
+      ctx.fillStyle = isFullyPaid ? '#047857' : '#d97706';
+      ctx.fillText(`₹${data.remainingBalance.toLocaleString('en-IN')}`, pillBoxX + pillBoxW - 20, pillBoxY + 37);
+
+      // 9. DYNAMIC STATUS STAMP BADGE (Centered Below Cards)
+      const badgeY = 812;
+      ctx.save();
+      if (isFullyPaid) {
+        // FULLY PAID GREEN BADGE
+        const badgeW = 460;
+        const badgeH = 54;
+        const bX = (width - badgeW) / 2;
+
+        ctx.fillStyle = '#ecfdf5';
+        roundRect(ctx, bX, badgeY, badgeW, badgeH, 27);
         ctx.fill();
-        ctx.strokeStyle = '#d97706';
-        ctx.lineWidth = 6;
+
+        ctx.strokeStyle = '#059669';
+        ctx.lineWidth = 3.5;
+        roundRect(ctx, bX, badgeY, badgeW, badgeH, 27);
         ctx.stroke();
 
         ctx.textAlign = 'center';
+        ctx.font = '900 24px sans-serif';
+        ctx.fillStyle = '#047857';
+        ctx.letterSpacing = '1.5px';
+        ctx.fillText('✓ FULLY PAID & SETTLED', width / 2, badgeY + 35);
+      } else {
+        // REMAINING BALANCE AMBER BADGE
+        const badgeW = 560;
+        const badgeH = 54;
+        const bX = (width - badgeW) / 2;
+
+        ctx.fillStyle = '#fffbeb';
+        roundRect(ctx, bX, badgeY, badgeW, badgeH, 27);
+        ctx.fill();
+
+        ctx.strokeStyle = '#d97706';
+        ctx.lineWidth = 3.5;
+        roundRect(ctx, bX, badgeY, badgeW, badgeH, 27);
+        ctx.stroke();
+
+        ctx.textAlign = 'center';
+        ctx.font = '900 23px sans-serif';
         ctx.fillStyle = '#b45309';
-        ctx.font = '900 34px "Arial", sans-serif';
-        ctx.fillText(`REMAINING: ₹${data.remainingBalance.toLocaleString('en-IN')}`, 0, 12);
+        ctx.letterSpacing = '1px';
+        ctx.fillText(`REMAINING BALANCE: ₹${data.remainingBalance.toLocaleString('en-IN')}`, width / 2, badgeY + 35);
       }
       ctx.restore();
 
-      // 9. OFFICIAL STAMP / SEAL (Right Side)
+      // 10. DEVOTIONAL BLESSING & OFFICIAL FOOTER
+      ctx.textAlign = 'center';
+      ctx.font = 'italic 20px Georgia, serif';
+      ctx.fillStyle = '#334155';
+      ctx.letterSpacing = '0px';
+      ctx.fillText(
+        '"May Lord Ganesha bestow divine health, joy, and prosperous abundance upon your family."',
+        width / 2,
+        902
+      );
+
+      ctx.font = 'bold 22px sans-serif';
+      ctx.fillStyle = '#0c1e54';
+      ctx.letterSpacing = '2px';
+      ctx.fillText('Ganpati Bappa Morya! 🙏 • BALA GANESH ASSOCIATION', width / 2, 944);
+
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillStyle = '#b8860b';
+      ctx.letterSpacing = '1.5px';
+      ctx.fillText('Bhavani Nagar, Shankarpally, Telangana', width / 2, 974);
+
+      // 11. OFFICIAL RED SEAL (Right Side Clearance)
       if (stampLoaded && stampImage.complete && stampImage.naturalWidth > 0) {
         ctx.save();
-        ctx.drawImage(stampImage, width - 360, height - 240, 180, 180);
+        const sealW = 190;
+        const sealH = 130;
+        ctx.drawImage(stampImage, width - 330, 820, sealW, sealH);
         ctx.restore();
       }
 
-      // 10. FOOTER NOTE
-      ctx.fillStyle = '#6b7280';
-      ctx.font = 'italic 22px "Arial", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('This is an official computer-generated receipt issued by Bala Ganesh Association. Ganpati Bappa Morya! 🙏', width / 2, height - 70);
+      // 12. AUDIT / VERIFICATION LINE
+      ctx.font = '13px monospace';
+      ctx.fillStyle = '#94a3b8';
+      ctx.letterSpacing = '0.5px';
+      ctx.fillText(
+        `Official Computer-Generated Receipt • Verification URL: ${receiptUrl}`,
+        width / 2,
+        1016
+      );
 
-      // Finish Canvas Render
+      // Export Canvas Data
       try {
         const dataUrl = canvas.toDataURL('image/png', 0.95);
         setImageUrl(dataUrl);
@@ -352,13 +643,34 @@ export default function LadduReceipt({
       }
     };
 
-    stampImage.onload = () => renderLayers(true);
-    stampImage.onerror = () => renderLayers(false);
+    let bgDone = bgImage.complete;
+    let stampDone = stampImage.complete;
 
-    if (stampImage.complete) {
-      renderLayers(true);
-    }
-  }, [data, isFullyPaid, onImageReady]);
+    const tryRender = () => {
+      renderLayers(bgDone, stampDone);
+    };
+
+    bgImage.onload = () => {
+      bgDone = true;
+      tryRender();
+    };
+    bgImage.onerror = () => {
+      bgDone = false;
+      tryRender();
+    };
+
+    stampImage.onload = () => {
+      stampDone = true;
+      tryRender();
+    };
+    stampImage.onerror = () => {
+      stampDone = false;
+      tryRender();
+    };
+
+    // Render immediately with base layers, re-render when assets load
+    tryRender();
+  }, [data, isFullyPaid, onImageReady, receiptUrl]);
 
   useEffect(() => {
     drawReceipt();
