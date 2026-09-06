@@ -6,6 +6,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import InvitationCardModal, { InvitationData } from '@/components/InvitationCardModal';
+import InvitationCardRenderer from '@/components/InvitationCardRenderer';
 import {
   FESTIVAL_CONFIG,
   buildWhatsAppInvitationMessage,
@@ -596,49 +597,49 @@ export default function InvitationsPage() {
             </form>
           </div>
 
-          {/* Right Column: Live WhatsApp Message Preview & 1-Click Dispatch (5 Cols) */}
+          {/* Right Column: Live Certificate-Themed Invitation Card Preview & WhatsApp Dispatch (5 Cols) */}
           <div className="lg:col-span-5 flex flex-col gap-4">
-            {/* Live WhatsApp Group Sender Box */}
-            <div className="rounded-3xl border-2 border-emerald-500/40 bg-gradient-to-br from-[#061c16] via-[#07241e] to-[#051322] p-5 shadow-xl space-y-4">
-              <div className="flex items-center justify-between border-b border-emerald-500/20 pb-3">
+            {/* Live Certificate Card Container */}
+            <div className="rounded-3xl border-2 border-devotional-gold-500/40 bg-[#071338] p-4 sm:p-5 shadow-2xl space-y-3.5">
+              <div className="flex items-center justify-between border-b border-devotional-gold-500/20 pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400">
-                    <Send className="w-4 h-4" />
+                  <div className="w-8 h-8 rounded-xl bg-devotional-gold-500/20 border border-devotional-gold-400/40 flex items-center justify-center text-devotional-gold-400">
+                    <Eye className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-black text-emerald-300">
-                      Bala Ganesh WhatsApp Dispatch
+                    <h3 className="text-sm font-black text-devotional-gold-300">
+                      Invitation Card Preview
                     </h3>
                     <p className="text-[10px] text-gray-300">
-                      Post directly to Bala Ganesh group
+                      Certificate White, Blue &amp; Gold Theme
                     </p>
                   </div>
                 </div>
 
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
-                  Official Group
+                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+                  Live Preview
                 </span>
               </div>
 
-              {/* Language Selection Toggle */}
-              <div className="space-y-1.5 pt-1">
+              {/* Language Selection Segmented Control */}
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-emerald-300 flex items-center gap-1.5">
-                    <Languages className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-[11px] font-bold text-devotional-gold-300 flex items-center gap-1.5">
+                    <Languages className="w-3.5 h-3.5 text-devotional-gold-400" />
                     <span>Select Language / భాష ఎంచుకోండి:</span>
                   </span>
-                  <span className="text-[10px] text-emerald-200/80 font-mono font-bold">
+                  <span className="text-[10px] text-devotional-gold-200/80 font-mono font-bold">
                     {language === 'TE' ? 'తెలుగు మాత్రమే' : language === 'EN' ? 'English Only' : 'ఉభయ భాషలు (Both)'}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-1.5 bg-devotional-blue-950 p-1.5 rounded-2xl border border-emerald-500/40 shadow-inner">
+                <div className="grid grid-cols-3 gap-1.5 bg-devotional-blue-950 p-1.5 rounded-2xl border border-devotional-gold-500/40 shadow-inner">
                   <button
                     type="button"
                     onClick={() => setLanguage('TE')}
                     className={`py-2 px-2 rounded-xl text-xs font-bold transition-all ${
                       language === 'TE'
-                        ? 'bg-emerald-500 text-devotional-blue-950 font-black shadow-sm'
+                        ? 'bg-gradient-to-r from-amber-500 to-devotional-gold-500 text-devotional-blue-950 font-black shadow-sm'
                         : 'text-gray-300 hover:text-white'
                     }`}
                   >
@@ -649,7 +650,7 @@ export default function InvitationsPage() {
                     onClick={() => setLanguage('EN')}
                     className={`py-2 px-2 rounded-xl text-xs font-bold transition-all ${
                       language === 'EN'
-                        ? 'bg-emerald-500 text-devotional-blue-950 font-black shadow-sm'
+                        ? 'bg-gradient-to-r from-amber-500 to-devotional-gold-500 text-devotional-blue-950 font-black shadow-sm'
                         : 'text-gray-300 hover:text-white'
                     }`}
                   >
@@ -660,13 +661,45 @@ export default function InvitationsPage() {
                     onClick={() => setLanguage('BOTH')}
                     className={`py-2 px-2 rounded-xl text-xs font-bold transition-all ${
                       language === 'BOTH'
-                        ? 'bg-emerald-500 text-devotional-blue-950 font-black shadow-sm'
+                        ? 'bg-gradient-to-r from-amber-500 to-devotional-gold-500 text-devotional-blue-950 font-black shadow-sm'
                         : 'text-gray-300 hover:text-white'
                     }`}
                   >
                     🌟 Both
                   </button>
                 </div>
+              </div>
+
+              {/* Live Rendered Certificate Card */}
+              <InvitationCardRenderer
+                invitation={currentInvitationData}
+                language={language}
+                onEnlarge={() => setActiveInvitationModal(currentInvitationData)}
+                showActions={true}
+                maxPreviewHeight="max-h-[460px]"
+              />
+            </div>
+
+            {/* Live WhatsApp Group Sender Box */}
+            <div className="rounded-3xl border-2 border-emerald-500/40 bg-gradient-to-br from-[#061c16] via-[#07241e] to-[#051322] p-4 sm:p-5 shadow-xl space-y-3.5">
+              <div className="flex items-center justify-between border-b border-emerald-500/20 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400">
+                    <Send className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-emerald-300">
+                      WhatsApp Broadcast Dispatch
+                    </h3>
+                    <p className="text-[10px] text-gray-300">
+                      Post invitation text to Bala Ganesh group
+                    </p>
+                  </div>
+                </div>
+
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+                  Group Dispatch
+                </span>
               </div>
 
               {/* Primary 1-Click Send to WhatsApp Group */}
@@ -719,28 +752,10 @@ export default function InvitationsPage() {
                 <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400">
                   Live Message Preview ({language === 'TE' ? 'Telugu' : language === 'EN' ? 'English' : 'Bilingual'}):
                 </span>
-                <div className="p-3.5 rounded-2xl bg-[#031310] border border-emerald-500/30 text-xs text-gray-200 font-mono whitespace-pre-wrap max-h-64 overflow-y-auto leading-relaxed shadow-inner">
+                <div className="p-3.5 rounded-2xl bg-[#031310] border border-emerald-500/30 text-xs text-gray-200 font-mono whitespace-pre-wrap max-h-48 overflow-y-auto leading-relaxed shadow-inner">
                   {buildWhatsAppInvitationMessage(currentInvitationData, language)}
                 </div>
               </div>
-            </div>
-
-            {/* Visual Card Quick Trigger */}
-            <div className="rounded-3xl border-2 border-devotional-gold-500/30 bg-[#071338]/80 p-4 text-center space-y-2">
-              <span className="text-xs font-bold text-devotional-gold-300 block">
-                Digital Invitation Card (PNG)
-              </span>
-              <p className="text-[11px] text-gray-300">
-                You can also generate and download the high-resolution photo card to share on your WhatsApp status or story!
-              </p>
-              <button
-                type="button"
-                onClick={() => setActiveInvitationModal(currentInvitationData)}
-                className="w-full py-2.5 px-4 rounded-xl bg-devotional-blue-900 hover:bg-devotional-blue-800 border border-devotional-gold-500/40 text-devotional-gold-300 hover:text-white font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-95"
-              >
-                <Download className="w-4 h-4 text-devotional-gold-400" />
-                <span>Open &amp; Download Card Image</span>
-              </button>
             </div>
           </div>
         </div>
@@ -796,33 +811,36 @@ export default function InvitationsPage() {
                 return (
                   <div
                     key={inv.id}
-                    className="p-4 rounded-2xl border border-devotional-gold-500/30 bg-[#071338]/90 flex flex-col justify-between gap-3 hover:border-devotional-gold-400/60 transition-all shadow-md"
+                    className="p-5 rounded-2xl border-2 border-[#0c1e54] bg-gradient-to-br from-white via-[#faf9f5] to-[#f4f1e8] shadow-xl flex flex-col justify-between gap-3.5 hover:shadow-2xl hover:border-[#122e80] transition-all relative overflow-hidden group text-slate-800"
                   >
-                    <div className="space-y-2">
+                    {/* Certificate Top Gold Ribbon Accent */}
+                    <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#c69214] via-[#f5d061] to-[#c69214]" />
+
+                    <div className="space-y-2.5 pt-1">
                       <div className="flex items-start justify-between gap-2">
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-devotional-gold-500/20 text-devotional-gold-300 font-bold border border-devotional-gold-500/30">
+                        <span className="text-xs px-2.5 py-1 rounded-full bg-[#0c1e54] text-[#fcd34d] font-bold shadow-sm border border-[#c69214]/50">
                           {dateString}
                         </span>
 
                         <button
                           type="button"
                           onClick={() => handleDeleteInvitation(inv.id, inv.title)}
-                          className="p-1 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-950/40 transition-colors"
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                           title="Delete Invitation"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
 
-                      <h3 className="text-sm font-black text-white line-clamp-2">
+                      <h3 className="text-sm font-black text-[#0c1e54] line-clamp-2">
                         {inv.title}
                       </h3>
 
-                      <div className="space-y-1 text-xs text-gray-300">
+                      <div className="space-y-1.5 text-xs text-slate-700 font-medium">
                         {(inv.husbandName || inv.wifeName) && (
-                          <div className="p-1.5 rounded-lg bg-amber-500/15 border border-amber-400/30 text-[11px] text-amber-200 font-semibold flex items-center gap-1.5">
+                          <div className="p-2 rounded-xl bg-amber-50 border border-amber-300/80 text-[11px] text-[#92400e] font-bold flex items-center gap-1.5 shadow-xs">
                             <span className="text-xs">🌸</span>
-                            <span>
+                            <span className="truncate">
                               {inv.husbandName && inv.wifeName
                                 ? `${inv.husbandName} & ${inv.wifeName}`
                                 : inv.husbandName || inv.wifeName}
@@ -830,27 +848,27 @@ export default function InvitationsPage() {
                           </div>
                         )}
 
-                        <div className="flex items-center gap-1.5 text-[11px] text-gray-300">
-                          <Users className="w-3.5 h-3.5 text-devotional-gold-400 shrink-0" />
-                          <span className="font-semibold text-devotional-gold-200 truncate">
+                        <div className="flex items-center gap-2 text-[11px] text-slate-700">
+                          <Users className="w-3.5 h-3.5 text-[#0c1e54] shrink-0" />
+                          <span className="font-bold text-[#0c1e54] truncate">
                             {inv.invitees}
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-1.5 text-[11px] text-gray-300">
-                          <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <div className="flex items-center gap-2 text-[11px] text-slate-600">
+                          <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                           <span>{inv.eventTime}</span>
                         </div>
 
-                        <div className="flex items-center gap-1.5 text-[11px] text-gray-300">
-                          <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                        <div className="flex items-center gap-2 text-[11px] text-slate-600">
+                          <MapPin className="w-3.5 h-3.5 text-rose-600 shrink-0" />
                           <span className="truncate">{inv.venue}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Card Actions */}
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-devotional-gold-500/20">
+                    <div className="grid grid-cols-2 gap-2 pt-2.5 border-t border-amber-200/80">
                       <button
                         type="button"
                         onClick={() => {
@@ -863,7 +881,7 @@ export default function InvitationsPage() {
                           const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
                           window.open(url, '_blank');
                         }}
-                        className="py-2 px-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                        className="py-2 px-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-colors"
                         title="Send directly to Bala Ganesh WhatsApp group"
                       >
                         <Send className="w-3.5 h-3.5" />
@@ -873,7 +891,7 @@ export default function InvitationsPage() {
                       <button
                         type="button"
                         onClick={() => setActiveInvitationModal(inv)}
-                        className="py-2 px-2.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/40 text-devotional-gold-300 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                        className="py-2 px-2.5 rounded-xl bg-[#0c1e54] hover:bg-[#132c78] border border-[#c69214] text-[#fcd34d] font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-colors"
                       >
                         <Eye className="w-3.5 h-3.5" />
                         <span>View Card</span>
