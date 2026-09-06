@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { FESTIVAL_CONFIG, buildWhatsAppExpenseVoucherShareUrl } from '@/config/festival.config';
+import { buildWhatsAppExpenseVoucherShareUrl } from '@/config/festival.config';
 import { Download, Printer, MessageCircle, X, Receipt, Image as ImageIcon } from 'lucide-react';
 
 export interface ExpenseVoucherData {
@@ -28,6 +28,27 @@ interface ExpenseVoucherModalProps {
   expense: ExpenseVoucherData;
   onClose: () => void;
   onViewVendorPhoto?: (url: string) => void;
+}
+
+function numberToIndianWords(num: number): string {
+  if (!num || isNaN(num) || num <= 0) return 'Zero Rupees Only';
+  const a = [
+    '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+    'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
+    'Seventeen', 'Eighteen', 'Nineteen'
+  ];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  function inWords(n: number): string {
+    if (n < 20) return a[n];
+    if (n < 100) return b[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + a[n % 10] : '');
+    if (n < 1000) return a[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' ' + inWords(n % 100) : '');
+    if (n < 100000) return inWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 !== 0 ? ' ' + inWords(n % 1000) : '');
+    if (n < 10000000) return inWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 !== 0 ? ' ' + inWords(n % 100000) : '');
+    return inWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 !== 0 ? ' ' + inWords(n % 10000000) : '');
+  }
+
+  return inWords(Math.floor(num)).trim() + ' Rupees Only';
 }
 
 function roundRect(
@@ -58,588 +79,556 @@ export default function ExpenseVoucherModal({
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(true);
 
-  const drawVoucher = useCallback(() => {
+  const drawReceipt = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // High resolution 16:9 canvas (1920 × 1080)
-    const width = 1920;
-    const height = 1080;
+    // Authentic Vertical Retail Shop Bill / Cash Memo format
+    const width = 1100;
+    const height = 1500;
     canvas.width = width;
     canvas.height = height;
 
-    const bgImage = new Image();
-    bgImage.src = '/images/ganesh-landscape-pandal.jpg';
-    bgImage.crossOrigin = 'anonymous';
+    const isAdv = Boolean(expense.isAdvance);
+    const totalCost = expense.totalCost || expense.amount;
+    const pending = expense.pendingBalance ?? (isAdv ? Math.max(0, totalCost - expense.amount) : 0);
 
-    const stampImage = new Image();
-    stampImage.src = FESTIVAL_CONFIG.officialStampRedImage || '/images/bala-ganesh-stamp-red.png';
-    stampImage.crossOrigin = 'anonymous';
+    const dateObj = new Date(expense.date);
+    const formattedDate = dateObj.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
 
-    const renderLayers = (bgLoaded: boolean, stampLoaded: boolean) => {
-      // 1. BASE: Premium Parchment Ivory Gradient Background
-      const bgGrad = ctx.createLinearGradient(0, 0, width, height);
-      bgGrad.addColorStop(0, '#ffffff');
-      bgGrad.addColorStop(0.4, '#fdfbf7');
-      bgGrad.addColorStop(1, '#f8f3e8');
-      ctx.fillStyle = bgGrad;
-      ctx.fillRect(0, 0, width, height);
+    // 1. PAPER BASE: Crisp White Printed Receipt Paper
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
 
-      // 2. SUBTLE WATERMARK: Pandal / Deity Watermark (7.5% Opacity)
-      if (bgLoaded && bgImage.complete && bgImage.naturalWidth > 0) {
-        ctx.save();
-        ctx.globalAlpha = 0.075;
-        ctx.drawImage(bgImage, 0, 0, width, height);
-        ctx.restore();
-      }
+    // 2. DOUBLE OUTER BORDER (Classic printed invoice book style)
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(30, 30, width - 60, height - 60);
 
-      // 3. ELEGANT ROYAL BLUE & METALLIC GOLD DUAL BORDERS
-      // Outer Deep Royal Blue Thick Border
-      ctx.strokeStyle = '#0c1e54';
-      ctx.lineWidth = 14;
-      ctx.strokeRect(32, 32, width - 64, height - 64);
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(36, 36, width - 72, height - 72);
 
-      // Middle Burnished Metallic Gold Border
-      ctx.strokeStyle = '#c69214';
-      ctx.lineWidth = 4;
-      ctx.strokeRect(48, 48, width - 96, height - 96);
+    // 3. TOP META STRIP (Serial book indicator)
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillStyle = '#64748b';
+    ctx.fillText('ESTIMATE / CASH MEMO', 50, 60);
 
-      // Inner Hairline Border
-      ctx.strokeStyle = 'rgba(12, 30, 84, 0.25)';
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillStyle = '#94a3b8';
+    ctx.letterSpacing = '2px';
+    ctx.fillText('|| SHREE GANESHAY NAMAH ||', width / 2, 60);
+
+    ctx.textAlign = 'right';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillStyle = '#64748b';
+    ctx.letterSpacing = '0px';
+    ctx.fillText('ORIGINAL CUSTOMER RECEIPT', width - 50, 60);
+
+    // Divider Line below top strip
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(50, 72);
+    ctx.lineTo(width - 50, 72);
+    ctx.stroke();
+
+    // 4. SHOP OWNER / VENDOR HEADER
+    ctx.textAlign = 'center';
+    ctx.font = '900 36px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#0f172a';
+    ctx.letterSpacing = '1px';
+    ctx.fillText(expense.shopName.toUpperCase(), width / 2, 118);
+
+    // Shop Specialty / Tagline
+    ctx.font = 'bold 14px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#475569';
+    ctx.letterSpacing = '1.5px';
+    ctx.fillText(`DEALERS IN: ${expense.category.toUpperCase()} & FESTIVAL EVENT SUPPLIES`, width / 2, 146);
+
+    // Shop Address & Contact
+    ctx.font = 'normal 13px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#64748b';
+    ctx.letterSpacing = '0.5px';
+    ctx.fillText('Main Road, Shankarpally, Ranga Reddy Dist., Telangana • Ph: +91 98480 12345', width / 2, 170);
+
+    // 5. MEMO TYPE BANNER
+    const bannerW = 620;
+    const bannerH = 34;
+    const bannerX = (width - bannerW) / 2;
+    const bannerY = 190;
+
+    if (isAdv) {
+      ctx.fillStyle = '#fef3c7'; // Amber tint for advance
+      roundRect(ctx, bannerX, bannerY, bannerW, bannerH, 6);
+      ctx.fill();
+      ctx.strokeStyle = '#d97706';
       ctx.lineWidth = 1.5;
-      ctx.strokeRect(58, 58, width - 116, height - 116);
-
-      // 4. CORNER ROSETTES & ORNAMENTS
-      const cornerInsets = [
-        [48, 48],
-        [width - 48, 48],
-        [48, height - 48],
-        [width - 48, height - 48],
-      ];
-
-      cornerInsets.forEach(([cx, cy]) => {
-        // Outer Gold Ring
-        ctx.strokeStyle = '#c69214';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(cx, cy, 22, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Inner Gold Rosette
-        ctx.fillStyle = '#dfb135';
-        ctx.beginPath();
-        ctx.arc(cx, cy, 14, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Royal Blue Center Jewel
-        ctx.fillStyle = '#0c1e54';
-        ctx.beginPath();
-        ctx.arc(cx, cy, 7, 0, Math.PI * 2);
-        ctx.fill();
-      });
-
-      // 5. SACRED INVOCATION & TOP HEADER
-      ctx.textAlign = 'center';
-
-      // Sacred Om
-      ctx.font = 'bold 30px Georgia, serif';
-      ctx.fillStyle = '#b8860b';
-      ctx.fillText('ॐ', width / 2, 94);
-
-      // Sanskrit Header
-      ctx.font = 'bold 16px Georgia, serif';
-      ctx.fillStyle = '#b8860b';
-      ctx.letterSpacing = '3px';
-      ctx.fillText('॥ श्री गणेशाय नमः ॥', width / 2, 122);
-
-      // Association Name
-      ctx.font = 'bold 44px sans-serif';
-      ctx.fillStyle = '#0c1e54';
-      ctx.letterSpacing = '4px';
-      ctx.fillText(FESTIVAL_CONFIG.associationName.toUpperCase(), width / 2, 172);
-
-      // Association Location Subtitle
-      ctx.font = 'bold 16px sans-serif';
-      ctx.fillStyle = '#64748b';
-      ctx.letterSpacing = '1.5px';
-      ctx.fillText('Bhavani Nagar, Shankarpally, Telangana • Ganesh Festival Annual Utsav', width / 2, 204);
-
-      // Title Ribbon: EXPENSE PAYMENT VOUCHER & BILL
-      const ribbonW = 820;
-      const ribbonH = 44;
-      const ribbonX = (width - ribbonW) / 2;
-      const ribbonY = 226;
-
-      const ribbonGrad = ctx.createLinearGradient(ribbonX, ribbonY, ribbonX + ribbonW, ribbonY + ribbonH);
-      ribbonGrad.addColorStop(0, '#0c1e54');
-      ribbonGrad.addColorStop(0.5, '#1e3a8a');
-      ribbonGrad.addColorStop(1, '#0c1e54');
-      ctx.fillStyle = ribbonGrad;
-      ctx.strokeStyle = '#c69214';
-      ctx.lineWidth = 2;
-      roundRect(ctx, ribbonX, ribbonY, ribbonW, ribbonH, 22);
-      ctx.fill();
-      ctx.stroke();
-
-      const isAdv = Boolean(expense.isAdvance);
-      const titleText = isAdv ? 'ADVANCE PAYMENT VOUCHER & BILL' : 'EXPENSE PAYMENT VOUCHER & BILL';
-      ctx.font = 'bold 20px sans-serif';
-      ctx.fillStyle = '#ffffff';
-      ctx.letterSpacing = '3px';
-      ctx.fillText(titleText, width / 2, ribbonY + 29);
-
-      // 6. RECEIPT META BAR (Voucher No, Category, Date)
-      const metaY = 304;
-
-      // Voucher Number (Left)
-      ctx.textAlign = 'left';
-      ctx.font = 'bold 18px monospace';
-      ctx.fillStyle = '#0c1e54';
-      ctx.fillText(`VOUCHER NO: ${expense.expenseNumber}`, 120, metaY);
-
-      // Category (Center)
-      ctx.textAlign = 'center';
-      ctx.font = 'bold 17px sans-serif';
-      ctx.fillStyle = '#b8860b';
-      ctx.letterSpacing = '1.5px';
-      ctx.fillText(`HEAD / CATEGORY: ${expense.category.toUpperCase()}`, width / 2, metaY);
-
-      // Formatted Date (Right)
-      const dateObj = new Date(expense.date);
-      const formattedDate = dateObj.toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      });
-      ctx.textAlign = 'right';
-      ctx.font = 'bold 17px sans-serif';
-      ctx.fillStyle = '#475569';
-      ctx.fillText(`EXPENSE DATE: ${formattedDate}`, width - 120, metaY);
-
-      // Divider Line Under Meta Bar
-      ctx.strokeStyle = '#c69214';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(120, 322);
-      ctx.lineTo(width - 120, 322);
-      ctx.stroke();
-
-      // 7. PAYEE / VENDOR & AMOUNT HERO
-      ctx.textAlign = 'center';
-      ctx.font = 'italic 19px Georgia, serif';
-      ctx.fillStyle = '#64748b';
-      ctx.letterSpacing = '0px';
-      ctx.fillText('Payment disbursed to vendor / beneficiary', width / 2, 354);
-
-      // Vendor Shop Name with Auto-Scaling Font
-      let vendorFontSize = 44;
-      ctx.font = `bold ${vendorFontSize}px Georgia, serif`;
-      const displayVendor = expense.shopName.toUpperCase();
-      while (ctx.measureText(displayVendor).width > 1200 && vendorFontSize > 28) {
-        vendorFontSize -= 2;
-        ctx.font = `bold ${vendorFontSize}px Georgia, serif`;
-      }
-      ctx.fillStyle = '#0c1e54';
-      ctx.letterSpacing = '1.5px';
-      ctx.fillText(displayVendor, width / 2, 404);
-
-      // Ornate Underline with Center Diamond
-      ctx.strokeStyle = '#c69214';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(width / 2 - 280, 420);
-      ctx.lineTo(width / 2 + 280, 420);
-      ctx.stroke();
-
-      // Center Diamond
-      ctx.fillStyle = '#0c1e54';
-      ctx.strokeStyle = '#c69214';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(width / 2, 413);
-      ctx.lineTo(width / 2 + 7, 420);
-      ctx.lineTo(width / 2, 427);
-      ctx.lineTo(width / 2 - 7, 420);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      // Sub-description line
-      const purposeText = expense.description || 'Ganesh Festival Official Expenditure';
-      ctx.font = 'bold 16px sans-serif';
-      ctx.fillStyle = '#475569';
-      ctx.letterSpacing = '0.5px';
-      ctx.fillText(purposeText, width / 2, 446);
-
-      // 8. TWO FLOATING PARTICULARS CARDS (Side-by-Side)
-      const cardY = 475;
-      const cardH = 290;
-      const cardW = 820;
-
-      // -------------------------------------------------------------
-      // LEFT CARD: Payment & Authorization Details
-      // -------------------------------------------------------------
-      const leftX = 120;
-      ctx.save();
-      ctx.shadowColor = 'rgba(12, 30, 84, 0.06)';
-      ctx.shadowBlur = 16;
-      ctx.shadowOffsetY = 4;
-      ctx.fillStyle = '#ffffff';
-      roundRect(ctx, leftX, cardY, cardW, cardH, 16);
-      ctx.fill();
-      ctx.restore();
-
-      ctx.strokeStyle = '#c69214';
-      ctx.lineWidth = 2;
-      roundRect(ctx, leftX, cardY, cardW, cardH, 16);
-      ctx.stroke();
-
-      // Left Card Header Bar
-      ctx.fillStyle = '#f8fafc';
-      ctx.beginPath();
-      ctx.moveTo(leftX + 16, cardY);
-      ctx.lineTo(leftX + cardW - 16, cardY);
-      ctx.arcTo(leftX + cardW, cardY, leftX + cardW, cardY + 16, 16);
-      ctx.lineTo(leftX + cardW, cardY + 44);
-      ctx.lineTo(leftX, cardY + 44);
-      ctx.lineTo(leftX, cardY + 16);
-      ctx.arcTo(leftX, cardY, leftX + 16, cardY, 16);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.strokeStyle = 'rgba(198, 146, 20, 0.3)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(leftX, cardY + 44);
-      ctx.lineTo(leftX + cardW, cardY + 44);
-      ctx.stroke();
-
-      ctx.textAlign = 'left';
-      ctx.font = 'bold 15px sans-serif';
-      ctx.fillStyle = '#b8860b';
-      ctx.letterSpacing = '1.5px';
-      ctx.fillText('DISBURSEMENT & VOUCHER PARTICULARS', leftX + 30, cardY + 28);
-
-      // Left Card: Row 1
-      const col1X = leftX + 30;
-      const col2X = leftX + 440;
-
-      ctx.font = 'bold 12px sans-serif';
-      ctx.fillStyle = '#64748b';
-      ctx.letterSpacing = '1px';
-      ctx.fillText('PAYMENT METHOD', col1X, cardY + 76);
-      ctx.fillText('BUDGET CATEGORY', col2X, cardY + 76);
-
-      ctx.font = 'bold 22px sans-serif';
-      ctx.fillStyle = expense.paymentMethod === 'ONLINE' ? '#1d4ed8' : '#047857';
-      ctx.fillText(expense.paymentMethod === 'ONLINE' ? 'ONLINE (UPI / BANK)' : 'CASH PAYMENT', col1X, cardY + 104);
-
-      ctx.fillStyle = '#b8860b';
-      ctx.fillText(expense.category, col2X, cardY + 104);
-
-      // Left Card: Row 1 Divider
-      ctx.strokeStyle = 'rgba(226, 232, 240, 0.8)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(col1X, cardY + 124);
-      ctx.lineTo(leftX + cardW - 30, cardY + 124);
-      ctx.stroke();
-
-      // Left Card: Row 2
-      ctx.font = 'bold 12px sans-serif';
-      ctx.fillStyle = '#64748b';
-      ctx.letterSpacing = '1px';
-      ctx.fillText('AUTHORIZATION STATUS', col1X, cardY + 152);
-      ctx.fillText('RECORDED & AUDITED BY', col2X, cardY + 152);
-
-      ctx.font = 'bold 20px sans-serif';
-      ctx.fillStyle = '#059669';
-      ctx.fillText('✓ COMMITTEE APPROVED', col1X, cardY + 180);
-
-      ctx.font = 'bold 20px sans-serif';
-      ctx.fillStyle = '#0c1e54';
-      ctx.fillText(expense.enteredBy || expense.addedByName || 'Committee Admin', col2X, cardY + 180);
-
-      // Left Card: Row 2 Divider
-      ctx.strokeStyle = 'rgba(226, 232, 240, 0.8)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(col1X, cardY + 202);
-      ctx.lineTo(leftX + cardW - 30, cardY + 202);
-      ctx.stroke();
-
-      // Left Card: Row 3
-      ctx.font = 'bold 12px sans-serif';
-      ctx.fillStyle = '#64748b';
-      ctx.letterSpacing = '1px';
-      ctx.fillText('ORGANIZATION', col1X, cardY + 230);
-      ctx.fillText('DOCUMENT PROOF ATTACHMENT', col2X, cardY + 230);
-
-      ctx.font = 'bold 19px sans-serif';
-      ctx.fillStyle = '#0c1e54';
-      ctx.fillText('Bala Ganesh Association', col1X, cardY + 258);
-
-      ctx.fillStyle = expense.billImage ? '#047857' : '#64748b';
-      ctx.fillText(expense.billImage ? '✓ Vendor Bill Photo Attached' : 'Official Committee Voucher', col2X, cardY + 258);
-
-      // -------------------------------------------------------------
-      // RIGHT CARD: Financial Statement & Amount
-      // -------------------------------------------------------------
-      const rightX = 980;
-      ctx.save();
-      ctx.shadowColor = 'rgba(12, 30, 84, 0.06)';
-      ctx.shadowBlur = 16;
-      ctx.shadowOffsetY = 4;
-      ctx.fillStyle = '#ffffff';
-      roundRect(ctx, rightX, cardY, cardW, cardH, 16);
-      ctx.fill();
-      ctx.restore();
-
-      ctx.strokeStyle = '#c69214';
-      ctx.lineWidth = 2;
-      roundRect(ctx, rightX, cardY, cardW, cardH, 16);
-      ctx.stroke();
-
-      // Right Card Header Bar
-      ctx.fillStyle = '#f8fafc';
-      ctx.beginPath();
-      ctx.moveTo(rightX + 16, cardY);
-      ctx.lineTo(rightX + cardW - 16, cardY);
-      ctx.arcTo(rightX + cardW, cardY, rightX + cardW, cardY + 16, 16);
-      ctx.lineTo(rightX + cardW, cardY + 44);
-      ctx.lineTo(rightX, cardY + 44);
-      ctx.lineTo(rightX, cardY + 16);
-      ctx.arcTo(rightX, cardY, rightX + 16, cardY, 16);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.strokeStyle = 'rgba(198, 146, 20, 0.3)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(rightX, cardY + 44);
-      ctx.lineTo(rightX + cardW, cardY + 44);
-      ctx.stroke();
-
-      ctx.textAlign = 'left';
-      ctx.font = 'bold 15px sans-serif';
-      ctx.fillStyle = '#b8860b';
-      ctx.letterSpacing = '1.5px';
-      ctx.fillText('PAYMENT AMOUNT & NOTES', rightX + 30, cardY + 28);
-
-      const rLabelX = rightX + 30;
-      const rValueX = rightX + cardW - 30;
-
-      // Right Card: Row 1 (Vendor Name)
-      ctx.textAlign = 'left';
-      ctx.font = 'bold 18px sans-serif';
-      ctx.fillStyle = '#475569';
-      ctx.letterSpacing = '0px';
-      ctx.fillText('Payee / Shop Name:', rLabelX, cardY + 78);
-
-      ctx.textAlign = 'right';
-      ctx.font = 'bold 22px sans-serif';
-      ctx.fillStyle = '#0c1e54';
-      ctx.fillText(expense.shopName, rValueX, cardY + 78);
-
-      ctx.strokeStyle = 'rgba(226, 232, 240, 0.8)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(rLabelX, cardY + 98);
-      ctx.lineTo(rValueX, cardY + 98);
-      ctx.stroke();
-
-      // Right Card: Row 2 (Purpose / Notes)
-      ctx.textAlign = 'left';
-      ctx.font = 'bold 17px sans-serif';
-      ctx.fillStyle = '#64748b';
-      ctx.fillText('Expense Note / Purpose:', rLabelX, cardY + 134);
-
-      ctx.textAlign = 'right';
-      ctx.font = 'italic 18px Georgia, serif';
-      ctx.fillStyle = '#334155';
-      const shortNotes = expense.notes || expense.description || 'Ganesh Festival Expense';
-      ctx.fillText(shortNotes.length > 32 ? shortNotes.slice(0, 30) + '...' : shortNotes, rValueX, cardY + 134);
-
-      ctx.strokeStyle = 'rgba(226, 232, 240, 0.8)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(rLabelX, cardY + 154);
-      ctx.lineTo(rValueX, cardY + 154);
-      ctx.stroke();
-
-      // Right Card: Row 3 (Disbursed Date)
-      ctx.textAlign = 'left';
-      ctx.font = 'bold 17px sans-serif';
-      ctx.fillStyle = '#64748b';
-      ctx.fillText('Entry Logged Date:', rLabelX, cardY + 188);
-
-      ctx.textAlign = 'right';
-      ctx.font = 'bold 20px sans-serif';
-      ctx.fillStyle = '#334155';
-      ctx.fillText(new Date(expense.createdAt).toLocaleDateString('en-IN'), rValueX, cardY + 188);
-
-      // Right Card: Row 4 Highlighted Net Amount Paid Box
-      const pillBoxX = rightX + 20;
-      const pillBoxY = cardY + 214;
-      const pillBoxW = cardW - 40;
-      const pillBoxH = 58;
-
-      if (isAdv) {
-        const totalCost = expense.totalCost || expense.amount;
-        const pending = expense.pendingBalance ?? Math.max(0, totalCost - expense.amount);
-
-        ctx.fillStyle = '#fffbeb'; // Soft amber
-        roundRect(ctx, pillBoxX, pillBoxY, pillBoxW, pillBoxH, 12);
-        ctx.fill();
-
-        ctx.strokeStyle = '#f59e0b';
-        ctx.lineWidth = 1.5;
-        roundRect(ctx, pillBoxX, pillBoxY, pillBoxW, pillBoxH, 12);
-        ctx.stroke();
-
-        ctx.textAlign = 'left';
-        ctx.font = '900 17px sans-serif';
-        ctx.fillStyle = '#92400e';
-        ctx.fillText(`Advance Paid (Cost: ₹${totalCost.toLocaleString('en-IN')} | Due: ₹${pending.toLocaleString('en-IN')}):`, pillBoxX + 16, pillBoxY + 36);
-
-        ctx.textAlign = 'right';
-        ctx.font = '900 32px sans-serif';
-        ctx.fillStyle = '#b45309';
-        ctx.fillText(`₹${expense.amount.toLocaleString('en-IN')}`, pillBoxX + pillBoxW - 16, pillBoxY + 38);
-      } else {
-        ctx.fillStyle = '#fff1f2'; // Soft rose background for expenses
-        roundRect(ctx, pillBoxX, pillBoxY, pillBoxW, pillBoxH, 12);
-        ctx.fill();
-
-        ctx.strokeStyle = '#f43f5e';
-        ctx.lineWidth = 1.5;
-        roundRect(ctx, pillBoxX, pillBoxY, pillBoxW, pillBoxH, 12);
-        ctx.stroke();
-
-        ctx.textAlign = 'left';
-        ctx.font = '900 22px sans-serif';
-        ctx.fillStyle = '#9f1239';
-        ctx.fillText('Total Amount Disbursed:', pillBoxX + 20, pillBoxY + 37);
-
-        ctx.textAlign = 'right';
-        ctx.font = '900 34px sans-serif';
-        ctx.fillStyle = '#e11d48';
-        ctx.fillText(`₹${expense.amount.toLocaleString('en-IN')}`, pillBoxX + pillBoxW - 20, pillBoxY + 37);
-      }
-
-      // 9. DYNAMIC STATUS STAMP BADGE (Centered Below Cards)
-      const badgeY = 812;
-      ctx.save();
-      const badgeW = isAdv ? 520 : 480;
-      const badgeH = 54;
-      const bX = (width - badgeW) / 2;
-
-      ctx.fillStyle = '#ecfdf5';
-      roundRect(ctx, bX, badgeY, badgeW, badgeH, 27);
-      ctx.fill();
-
-      ctx.strokeStyle = '#059669';
-      ctx.lineWidth = 3.5;
-      roundRect(ctx, bX, badgeY, badgeW, badgeH, 27);
+      roundRect(ctx, bannerX, bannerY, bannerW, bannerH, 6);
       ctx.stroke();
 
       ctx.textAlign = 'center';
-      ctx.font = '900 24px sans-serif';
-      ctx.fillStyle = '#047857';
-      ctx.letterSpacing = '1.5px';
-      ctx.fillText(isAdv ? '✓ ADVANCE PAYMENT VERIFIED & PAID' : '✓ EXPENSE VERIFIED & PAID', width / 2, badgeY + 35);
-      ctx.restore();
-
-      // 10. DEVOTIONAL BLESSING & OFFICIAL FOOTER
-      ctx.textAlign = 'center';
-      ctx.font = 'italic 20px Georgia, serif';
-      ctx.fillStyle = '#334155';
-      ctx.letterSpacing = '0px';
-      ctx.fillText(
-        '"May Lord Ganesha bestow divine health, joy, and prosperous abundance upon our community."',
-        width / 2,
-        902
-      );
-
-      ctx.font = 'bold 22px sans-serif';
-      ctx.fillStyle = '#0c1e54';
+      ctx.font = '900 15px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#92400e';
       ctx.letterSpacing = '2px';
-      ctx.fillText('Ganpati Bappa Morya! 🙏 • BALA GANESH ASSOCIATION', width / 2, 944);
+      ctx.fillText('★ ADVANCE PAYMENT CASH MEMO & RECEIPT ★', width / 2, bannerY + 23);
+    } else {
+      ctx.fillStyle = '#0f172a'; // Deep slate for full payment
+      roundRect(ctx, bannerX, bannerY, bannerW, bannerH, 6);
+      ctx.fill();
 
-      ctx.font = 'bold 16px sans-serif';
-      ctx.fillStyle = '#b8860b';
-      ctx.letterSpacing = '1.5px';
-      ctx.fillText('Bhavani Nagar, Shankarpally, Telangana', width / 2, 974);
+      ctx.textAlign = 'center';
+      ctx.font = '900 15px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.letterSpacing = '2px';
+      ctx.fillText('★ CASH MEMO & RETAIL PAYMENT RECEIPT ★', width / 2, bannerY + 23);
+    }
 
-      // 11. OFFICIAL RED SEAL (Right Side Clearance)
-      if (stampLoaded && stampImage.complete && stampImage.naturalWidth > 0) {
-        ctx.save();
-        const sealW = 190;
-        const sealH = 130;
-        ctx.drawImage(stampImage, width - 330, 820, sealW, sealH);
-        ctx.restore();
-      }
+    // 6. INVOICE META GRID (2 COLUMNS BOX)
+    const metaBoxX = 50;
+    const metaBoxY = 242;
+    const metaBoxW = width - 100;
+    const metaBoxH = 114;
 
-      // 12. AUDIT / VERIFICATION LINE
-      ctx.font = '13px monospace';
-      ctx.fillStyle = '#94a3b8';
-      ctx.letterSpacing = '0.5px';
-      ctx.fillText(
-        `Official Bala Ganesh Association Expense Bill & Payment Voucher • ${expense.expenseNumber}`,
-        width / 2,
-        1016
-      );
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(metaBoxX, metaBoxY, metaBoxW, metaBoxH);
 
-      // Export Canvas Data
-      try {
-        const dataUrl = canvas.toDataURL('image/png', 0.95);
-        setImageUrl(dataUrl);
-      } catch (err) {
-        console.error('Expense canvas export error:', err);
-      } finally {
-        setIsGenerating(false);
-      }
-    };
+    // Vertical divider in Meta Box
+    const midX = metaBoxX + 540;
+    ctx.beginPath();
+    ctx.moveTo(midX, metaBoxY);
+    ctx.lineTo(midX, metaBoxY + metaBoxH);
+    ctx.stroke();
 
-    let bgDone = bgImage.complete;
-    let stampDone = stampImage.complete;
+    // Column 1: Billed To / Customer
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 11px monospace';
+    ctx.fillStyle = '#64748b';
+    ctx.fillText('BILLED TO (CUSTOMER):', metaBoxX + 16, metaBoxY + 22);
 
-    const tryRender = () => {
-      renderLayers(bgDone, stampDone);
-    };
+    ctx.font = '900 17px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#0f172a';
+    ctx.fillText('BALA GANESH ASSOCIATION', metaBoxX + 16, metaBoxY + 46);
 
-    bgImage.onload = () => {
-      bgDone = true;
-      tryRender();
-    };
-    bgImage.onerror = () => {
-      bgDone = false;
-      tryRender();
-    };
+    ctx.font = 'bold 12px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#475569';
+    ctx.fillText('Bhavani Nagar, Shankarpally, Telangana', metaBoxX + 16, metaBoxY + 68);
 
-    stampImage.onload = () => {
-      stampDone = true;
-      tryRender();
-    };
-    stampImage.onerror = () => {
-      stampDone = false;
-      tryRender();
-    };
+    ctx.font = 'normal 12px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#64748b';
+    ctx.fillText(`Representative: ${expense.enteredBy || expense.addedByName || 'Committee Representative'}`, metaBoxX + 16, metaBoxY + 92);
 
-    tryRender();
+    // Column 2: Bill Particulars
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillStyle = '#64748b';
+    ctx.fillText('BILL NO     :', midX + 16, metaBoxY + 24);
+    ctx.fillText('DATE        :', midX + 16, metaBoxY + 48);
+    ctx.fillText('PAY METHOD  :', midX + 16, metaBoxY + 72);
+    ctx.fillText('BILL TYPE   :', midX + 16, metaBoxY + 96);
+
+    ctx.font = 'bold 13px monospace';
+    ctx.fillStyle = '#0f172a';
+    ctx.fillText(expense.expenseNumber, midX + 125, metaBoxY + 24);
+    ctx.fillText(formattedDate, midX + 125, metaBoxY + 48);
+
+    ctx.fillStyle = expense.paymentMethod === 'ONLINE' ? '#1d4ed8' : '#047857';
+    ctx.fillText(`${expense.paymentMethod} (RECEIVED)`, midX + 125, metaBoxY + 72);
+
+    ctx.fillStyle = isAdv ? '#b45309' : '#047857';
+    ctx.fillText(isAdv ? 'ADVANCE PAYMENT' : 'FULL PAYMENT', midX + 125, metaBoxY + 96);
+
+    // 7. ITEMIZED TABLE (Realistic Printed Invoice Grid)
+    const tableX = 50;
+    const tableY = 376;
+    const tableW = width - 100;
+    const tableH = 430;
+
+    // Table Outer Border
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(tableX, tableY, tableW, tableH);
+
+    // Header Background
+    ctx.fillStyle = '#f1f5f9';
+    ctx.fillRect(tableX, tableY, tableW, 40);
+
+    // Table Header Border Bottom
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(tableX, tableY + 40);
+    ctx.lineTo(tableX + tableW, tableY + 40);
+    ctx.stroke();
+
+    // Column Coordinates
+    const colSnoX = tableX + 55;
+    const colDescX = tableX + 580;
+    const colCatX = tableX + 800;
+    const colAmtX = tableX + tableW;
+
+    // Vertical Grid Lines
+    [colSnoX, colDescX, colCatX].forEach((xLine) => {
+      ctx.beginPath();
+      ctx.moveTo(xLine, tableY);
+      ctx.lineTo(xLine, tableY + tableH);
+      ctx.stroke();
+    });
+
+    // Column Headers Text
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 12px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#1e293b';
+    ctx.fillText('S.NO', tableX + 27, tableY + 25);
+
+    ctx.textAlign = 'left';
+    ctx.fillText('DESCRIPTION / PARTICULARS OF ITEMS & SERVICES', tableX + 70, tableY + 25);
+    ctx.fillText('HEAD / CATEGORY', colDescX + 16, tableY + 25);
+
+    ctx.textAlign = 'right';
+    ctx.fillText('AMOUNT (INR)', colAmtX - 20, tableY + 25);
+
+    // Row 1 Data
+    const row1Y = tableY + 75;
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 14px monospace';
+    ctx.fillStyle = '#334155';
+    ctx.fillText('1', tableX + 27, row1Y);
+
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 15px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#0f172a';
+    const mainDesc = expense.description || expense.notes || `${expense.category} supplied for Ganesh Pandal`;
+    ctx.fillText(mainDesc.length > 55 ? mainDesc.slice(0, 52) + '...' : mainDesc, tableX + 70, row1Y);
+
+    ctx.font = 'normal 12px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#64748b';
+    ctx.fillText(`Shop: ${expense.shopName} • Ganesh Festival Utsav`, tableX + 70, row1Y + 22);
+
+    ctx.font = 'bold 13px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#0f172a';
+    ctx.fillText(expense.category, colDescX + 16, row1Y + 8);
+
+    ctx.textAlign = 'right';
+    ctx.font = '900 17px monospace';
+    ctx.fillStyle = '#0f172a';
+    const firstRowAmount = isAdv ? totalCost : expense.amount;
+    ctx.fillText(`₹${firstRowAmount.toLocaleString('en-IN')}.00`, colAmtX - 20, row1Y + 8);
+
+    // Row 1 Divider
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(tableX, row1Y + 36);
+    ctx.lineTo(tableX + tableW, row1Y + 36);
+    ctx.stroke();
+
+    // Row 2 Data (If Advance Payment)
+    if (isAdv) {
+      const row2Y = row1Y + 70;
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 14px monospace';
+      ctx.fillStyle = '#334155';
+      ctx.fillText('2', tableX + 27, row2Y);
+
+      ctx.textAlign = 'left';
+      ctx.font = 'bold 14px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#b45309';
+      ctx.fillText('Less: Advance Amount Paid Today (Receipt Amount)', tableX + 70, row2Y);
+
+      ctx.font = 'normal 12px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.fillText(`Paid via ${expense.paymentMethod} • Handed over to vendor`, tableX + 70, row2Y + 20);
+
+      ctx.font = 'bold 13px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#b45309';
+      ctx.fillText('Advance Paid', colDescX + 16, row2Y + 6);
+
+      ctx.textAlign = 'right';
+      ctx.font = '900 16px monospace';
+      ctx.fillStyle = '#b45309';
+      ctx.fillText(`(-) ₹${expense.amount.toLocaleString('en-IN')}.00`, colAmtX - 20, row2Y + 6);
+
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(tableX, row2Y + 36);
+      ctx.lineTo(tableX + tableW, row2Y + 36);
+      ctx.stroke();
+    }
+
+    // Faint printed guidelines for blank rows (giving classic invoice pad look)
+    const startBlankY = isAdv ? row1Y + 115 : row1Y + 45;
+    for (let yPos = startBlankY; yPos < tableY + tableH - 20; yPos += 45) {
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.6)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(tableX, yPos);
+      ctx.lineTo(tableX + tableW, yPos);
+      ctx.stroke();
+    }
+
+    // 8. FINANCIAL TOTALS BLOCK (Bottom-Right of Table)
+    const totalsY = tableY + tableH + 16;
+    const totalsW = 480;
+    const totalsX = width - 50 - totalsW;
+
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(totalsX, totalsY, totalsW, isAdv ? 136 : 100);
+
+    const tRow1 = totalsY + 30;
+    const tRow2 = totalsY + 62;
+    const tRow3 = totalsY + 104;
+
+    if (isAdv) {
+      // Total Agreed Contract
+      ctx.textAlign = 'left';
+      ctx.font = 'bold 13px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#475569';
+      ctx.fillText('TOTAL AGREED CONTRACT COST:', totalsX + 16, tRow1);
+
+      ctx.textAlign = 'right';
+      ctx.font = 'bold 15px monospace';
+      ctx.fillStyle = '#0f172a';
+      ctx.fillText(`₹${totalCost.toLocaleString('en-IN')}.00`, totalsX + totalsW - 16, tRow1);
+
+      // Advance Paid Today
+      ctx.textAlign = 'left';
+      ctx.font = '900 13px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#047857';
+      ctx.fillText('ADVANCE AMOUNT PAID TODAY:', totalsX + 16, tRow2);
+
+      ctx.textAlign = 'right';
+      ctx.font = '900 16px monospace';
+      ctx.fillStyle = '#047857';
+      ctx.fillText(`₹${expense.amount.toLocaleString('en-IN')}.00`, totalsX + totalsW - 16, tRow2);
+
+      // Divider
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(totalsX, tRow2 + 12);
+      ctx.lineTo(totalsX + totalsW, tRow2 + 12);
+      ctx.stroke();
+
+      // Pending Vendor Due Box
+      ctx.fillStyle = '#fef2f2';
+      ctx.fillRect(totalsX + 1, tRow2 + 13, totalsW - 2, 48);
+
+      ctx.textAlign = 'left';
+      ctx.font = '900 14px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#991b1b';
+      ctx.fillText('PENDING BALANCE DUE TO SHOP:', totalsX + 16, tRow3 + 12);
+
+      ctx.textAlign = 'right';
+      ctx.font = '900 22px monospace';
+      ctx.fillStyle = '#b91c1c';
+      ctx.fillText(`₹${pending.toLocaleString('en-IN')}.00`, totalsX + totalsW - 16, tRow3 + 12);
+    } else {
+      // Subtotal
+      ctx.textAlign = 'left';
+      ctx.font = 'bold 13px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#475569';
+      ctx.fillText('SUBTOTAL:', totalsX + 16, tRow1);
+
+      ctx.textAlign = 'right';
+      ctx.font = 'bold 15px monospace';
+      ctx.fillStyle = '#0f172a';
+      ctx.fillText(`₹${expense.amount.toLocaleString('en-IN')}.00`, totalsX + totalsW - 16, tRow1);
+
+      // Taxes
+      ctx.textAlign = 'left';
+      ctx.font = 'bold 12px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.fillText('TAX / GST (IF APPLICABLE):', totalsX + 16, tRow2);
+
+      ctx.textAlign = 'right';
+      ctx.font = 'normal 13px monospace';
+      ctx.fillStyle = '#64748b';
+      ctx.fillText('NIL / COMPOSITE', totalsX + totalsW - 16, tRow2);
+
+      // Divider
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(totalsX, tRow2 + 12);
+      ctx.lineTo(totalsX + totalsW, tRow2 + 12);
+      ctx.stroke();
+
+      // Net Amount Paid Box
+      ctx.fillStyle = '#f0fdf4';
+      ctx.fillRect(totalsX + 1, tRow2 + 13, totalsW - 2, 44);
+
+      ctx.textAlign = 'left';
+      ctx.font = '900 15px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#166534';
+      ctx.fillText('TOTAL AMOUNT PAID (INR):', totalsX + 16, tRow3 + 6);
+
+      ctx.textAlign = 'right';
+      ctx.font = '900 24px monospace';
+      ctx.fillStyle = '#15803d';
+      ctx.fillText(`₹${expense.amount.toLocaleString('en-IN')}.00`, totalsX + totalsW - 16, tRow3 + 6);
+    }
+
+    // 9. AMOUNT IN WORDS BOX (Left side of Totals)
+    const wordsX = 50;
+    const wordsY = totalsY;
+    const wordsW = width - 100 - totalsW - 20;
+    const wordsH = isAdv ? 136 : 100;
+
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1;
+    ctx.fillStyle = '#f8fafc';
+    roundRect(ctx, wordsX, wordsY, wordsW, wordsH, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 11px monospace';
+    ctx.fillStyle = '#64748b';
+    ctx.fillText('AMOUNT IN WORDS:', wordsX + 14, wordsY + 22);
+
+    ctx.font = 'italic bold 14px Georgia, serif';
+    ctx.fillStyle = '#0f172a';
+    const wordsText = numberToIndianWords(expense.amount);
+    ctx.fillText(wordsText, wordsX + 14, wordsY + 48, wordsW - 28);
+
+    if (expense.notes) {
+      ctx.font = 'normal 11px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#475569';
+      ctx.fillText(`Remarks: ${expense.notes}`, wordsX + 14, wordsY + 76, wordsW - 28);
+    }
+
+    // 10. AUTHENTIC PHYSICAL RUBBER STAMP (Tilted Paid Stamp)
+    ctx.save();
+    // Position stamp over lower center
+    ctx.translate(330, 1140);
+    ctx.rotate(-0.1); // -5.7 degrees tilt like a manual hand stamp
+
+    const stampW = 260;
+    const stampH = 88;
+
+    // Outer stamp border
+    ctx.strokeStyle = isAdv ? '#b45309' : '#b91c1c';
+    ctx.lineWidth = 3.5;
+    roundRect(ctx, -stampW / 2, -stampH / 2, stampW, stampH, 10);
+    ctx.stroke();
+
+    // Inner thin border
+    ctx.strokeStyle = isAdv ? 'rgba(180, 83, 9, 0.4)' : 'rgba(185, 28, 28, 0.4)';
+    ctx.lineWidth = 1;
+    roundRect(ctx, -stampW / 2 + 5, -stampH / 2 + 5, stampW - 10, stampH - 10, 6);
+    ctx.stroke();
+
+    // Stamp text
+    ctx.textAlign = 'center';
+    ctx.fillStyle = isAdv ? '#b45309' : '#b91c1c';
+
+    ctx.font = '900 24px Arial, sans-serif';
+    ctx.letterSpacing = '3px';
+    ctx.fillText(isAdv ? '★ ADVANCE PAID ★' : '★ PAID IN FULL ★', 0, -8);
+
+    ctx.font = 'bold 12px monospace';
+    ctx.letterSpacing = '1px';
+    ctx.fillText(`DATE: ${formattedDate}`, 0, 14);
+
+    ctx.font = 'bold 11px Arial, sans-serif';
+    ctx.letterSpacing = '0.5px';
+    ctx.fillText(`VIA ${expense.paymentMethod} • BALA GANESH`, 0, 30);
+
+    ctx.restore();
+
+    // 11. SIGNATURE BLOCK (Shop Owner Sign & Customer Sign)
+    const signY = 1260;
+
+    // Customer Signature (Left)
+    ctx.textAlign = 'left';
+    ctx.font = 'normal 13px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#64748b';
+    ctx.fillText('Received with thanks from:', 80, signY - 20);
+
+    ctx.font = 'bold 14px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#0f172a';
+    ctx.fillText('Bala Ganesh Association', 80, signY);
+
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(80, signY + 60);
+    ctx.lineTo(340, signY + 60);
+    ctx.stroke();
+
+    ctx.font = 'normal 12px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#64748b';
+    ctx.fillText('Customer / Representative Signature', 80, signY + 80);
+
+    // Shop Owner Signature (Right)
+    ctx.textAlign = 'right';
+    ctx.font = 'bold 14px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#0f172a';
+    ctx.fillText(`For ${expense.shopName.toUpperCase()}`, width - 80, signY);
+
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(width - 340, signY + 60);
+    ctx.lineTo(width - 80, signY + 60);
+    ctx.stroke();
+
+    ctx.font = 'normal 12px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#64748b';
+    ctx.fillText('Authorized Signatory / Shopkeeper', width - 80, signY + 80);
+
+    // 12. BOTTOM RECEIPT FOOTER & TERMS
+    const footY = 1420;
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(50, footY - 24);
+    ctx.lineTo(width - 50, footY - 24);
+    ctx.stroke();
+
+    ctx.textAlign = 'left';
+    ctx.font = 'normal 11px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#64748b';
+    ctx.fillText('• Goods once sold will not be taken back or exchanged. E. & O.E.', 50, footY);
+    ctx.fillText('• This is an authentic retail receipt recorded for Bala Ganesh Association accounting.', 50, footY + 18);
+
+    ctx.textAlign = 'right';
+    ctx.font = 'bold 13px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#0f172a';
+    ctx.fillText('Thank You! Visit Again 🙏', width - 50, footY);
+
+    // Export to Data URL
+    try {
+      const dataUrl = canvas.toDataURL('image/png');
+      setImageUrl(dataUrl);
+    } catch (err) {
+      console.error('Bill canvas export error:', err);
+    } finally {
+      setIsGenerating(false);
+    }
   }, [expense]);
 
   useEffect(() => {
-    drawVoucher();
-  }, [drawVoucher]);
+    drawReceipt();
+  }, [drawReceipt]);
 
   const handleDownload = () => {
     if (!imageUrl) return;
     const link = document.createElement('a');
     const safeShop = expense.shopName.replace(/[^a-zA-Z0-9_-]/g, '_');
-    link.download = `Expense_Bill_${expense.expenseNumber}_${safeShop}.png`;
+    link.download = `Bill_Receipt_${expense.expenseNumber}_${safeShop}.png`;
     link.href = imageUrl;
     link.click();
   };
@@ -652,18 +641,18 @@ export default function ExpenseVoucherModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto animate-fadeIn">
-      <div className="w-full max-w-4xl bg-[#071338] border-2 border-devotional-gold-500/50 rounded-3xl p-5 shadow-2xl space-y-4 my-auto text-white">
+      <div className="w-full max-w-2xl bg-[#071338] border-2 border-devotional-gold-500/50 rounded-3xl p-4 sm:p-5 shadow-2xl space-y-4 my-auto text-white">
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-devotional-gold-500/20 pb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-full bg-devotional-gold-500/20 border border-devotional-gold-400 flex items-center justify-center text-devotional-gold-400">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 shadow-sm">
               <Receipt className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-base font-black text-devotional-gold-300">
-                Official Expense Bill & Voucher
+                Shop Bill & Payment Receipt
               </h3>
-              <p className="text-xs text-gray-400 font-mono">
+              <p className="text-xs text-gray-300 font-mono">
                 {expense.expenseNumber} • {expense.shopName} (₹{expense.amount.toLocaleString('en-IN')})
               </p>
             </div>
@@ -680,18 +669,18 @@ export default function ExpenseVoucherModal({
         {/* Hidden processing canvas */}
         <canvas ref={canvasRef} className="hidden" />
 
-        {/* Rendered Preview Container */}
-        <div className="relative rounded-2xl overflow-hidden shadow-2xl border-2 border-devotional-gold-500/40 bg-[#050c24]">
+        {/* Rendered Preview Container (Clean Paper Bill View) */}
+        <div className="relative rounded-2xl overflow-hidden shadow-2xl border-2 border-devotional-gold-500/30 bg-white max-h-[68vh] overflow-y-auto">
           {imageUrl ? (
             <img
               src={imageUrl}
-              alt={`Expense Bill ${expense.expenseNumber}`}
-              className="w-full h-auto object-contain block"
+              alt={`Shop Bill ${expense.expenseNumber}`}
+              className="w-full h-auto object-contain block mx-auto"
             />
           ) : (
-            <div className="aspect-[16/9] w-full flex flex-col items-center justify-center gap-3 bg-[#0a1845] text-devotional-gold-300">
+            <div className="aspect-[3/4] w-full flex flex-col items-center justify-center gap-3 bg-[#0a1845] text-devotional-gold-300 py-16">
               <div className="w-10 h-10 border-3 border-devotional-gold-400 border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm font-bold">Generating Official Expense Bill...</p>
+              <p className="text-sm font-bold">Generating Shop Owner Cash Memo Bill...</p>
             </div>
           )}
         </div>
@@ -706,7 +695,7 @@ export default function ExpenseVoucherModal({
               className="flex-1 sm:flex-none min-w-[140px] py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-devotional-gold-500 text-devotional-blue-950 font-black text-xs flex items-center justify-center gap-2 shadow-gold-sm hover:brightness-110 active:scale-95 transition-all"
             >
               <Download className="w-4 h-4 text-devotional-blue-950" />
-              <span>Download Bill PNG</span>
+              <span>Download Bill</span>
             </button>
 
             {/* Share on WhatsApp */}
@@ -727,7 +716,7 @@ export default function ExpenseVoucherModal({
               className="py-2.5 px-4 rounded-xl bg-devotional-blue-900/90 border border-devotional-gold-500/40 text-devotional-gold-200 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
             >
               <Printer className="w-4 h-4 text-devotional-gold-400" />
-              <span>Print</span>
+              <span>Print Bill</span>
             </button>
 
             {/* View Attached Vendor Paper Bill (if exists) */}
@@ -738,7 +727,7 @@ export default function ExpenseVoucherModal({
                 className="py-2.5 px-4 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/40 text-devotional-gold-300 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
               >
                 <ImageIcon className="w-4 h-4 text-devotional-gold-400" />
-                <span>View Vendor Bill Photo</span>
+                <span>Original Bill Photo</span>
               </button>
             )}
           </div>
