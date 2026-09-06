@@ -163,6 +163,10 @@ export const createExpenseSchema = z.object({
     .trim()
     .min(2, 'Please enter who is recording this expense.')
     .max(100),
+  isAdvance: z.boolean().optional(),
+  totalCost: z.coerce.number().int().positive().optional().nullable(),
+  advanceAmount: z.coerce.number().int().positive().optional().nullable(),
+  pendingBalance: z.coerce.number().int().nonnegative().optional().nullable(),
 });
 
 // Expense Editing Schema
@@ -176,6 +180,10 @@ export const editExpenseSchema = z.object({
   notes: z.string().trim().max(400).optional().or(z.literal('')),
   billImage: z.string().optional().nullable(),
   enteredBy: z.string().trim().min(2).max(100).optional(),
+  isAdvance: z.boolean().optional(),
+  totalCost: z.coerce.number().int().positive().optional().nullable(),
+  advanceAmount: z.coerce.number().int().positive().optional().nullable(),
+  pendingBalance: z.coerce.number().int().nonnegative().optional().nullable(),
 });
 
 // Volunteer Creation Schema (Admin only)

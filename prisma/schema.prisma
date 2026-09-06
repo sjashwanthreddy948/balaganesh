@@ -150,6 +150,12 @@ model Expense {
   billImage     String?  // URL of optional receipt / bill image
   enteredBy     String   @default("Admin") // Name of the person who entered this expense
 
+  // Advance Payment Tracking
+  isAdvance         Boolean  @default(false)
+  totalCost         Int?     // Total agreed contract / bill amount
+  advanceAmount     Int?     // Advance paid (equals amount)
+  pendingBalance    Int?     // Remaining balance due to vendor (totalCost - amount)
+
   createdById   String
   createdBy     User     @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
 
@@ -162,4 +168,5 @@ model Expense {
   @@index([createdById])
   @@index([expenseNumber])
   @@index([enteredBy])
+  @@index([isAdvance])
 }

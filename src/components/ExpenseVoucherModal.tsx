@@ -17,6 +17,10 @@ export interface ExpenseVoucherData {
   billImage?: string | null;
   enteredBy: string;
   addedByName?: string;
+  isAdvance?: boolean;
+  totalCost?: number | null;
+  advanceAmount?: number | null;
+  pendingBalance?: number | null;
   createdAt: string;
 }
 
@@ -179,10 +183,12 @@ export default function ExpenseVoucherModal({
       ctx.fill();
       ctx.stroke();
 
+      const isAdv = Boolean(expense.isAdvance);
+      const titleText = isAdv ? 'ADVANCE PAYMENT VOUCHER & BILL' : 'EXPENSE PAYMENT VOUCHER & BILL';
       ctx.font = 'bold 20px sans-serif';
       ctx.fillStyle = '#ffffff';
-      ctx.letterSpacing = '3.5px';
-      ctx.fillText('EXPENSE PAYMENT VOUCHER & BILL', width / 2, ribbonY + 29);
+      ctx.letterSpacing = '3px';
+      ctx.fillText(titleText, width / 2, ribbonY + 29);
 
       // 6. RECEIPT META BAR (Voucher No, Category, Date)
       const metaY = 304;
@@ -480,29 +486,53 @@ export default function ExpenseVoucherModal({
       const pillBoxW = cardW - 40;
       const pillBoxH = 58;
 
-      ctx.fillStyle = '#fff1f2'; // Soft rose background for expenses
-      roundRect(ctx, pillBoxX, pillBoxY, pillBoxW, pillBoxH, 12);
-      ctx.fill();
+      if (isAdv) {
+        const totalCost = expense.totalCost || expense.amount;
+        const pending = expense.pendingBalance ?? Math.max(0, totalCost - expense.amount);
 
-      ctx.strokeStyle = '#f43f5e';
-      ctx.lineWidth = 1.5;
-      roundRect(ctx, pillBoxX, pillBoxY, pillBoxW, pillBoxH, 12);
-      ctx.stroke();
+        ctx.fillStyle = '#fffbeb'; // Soft amber
+        roundRect(ctx, pillBoxX, pillBoxY, pillBoxW, pillBoxH, 12);
+        ctx.fill();
 
-      ctx.textAlign = 'left';
-      ctx.font = '900 22px sans-serif';
-      ctx.fillStyle = '#9f1239';
-      ctx.fillText('Total Amount Disbursed:', pillBoxX + 20, pillBoxY + 37);
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 1.5;
+        roundRect(ctx, pillBoxX, pillBoxY, pillBoxW, pillBoxH, 12);
+        ctx.stroke();
 
-      ctx.textAlign = 'right';
-      ctx.font = '900 34px sans-serif';
-      ctx.fillStyle = '#e11d48';
-      ctx.fillText(`₹${expense.amount.toLocaleString('en-IN')}`, pillBoxX + pillBoxW - 20, pillBoxY + 37);
+        ctx.textAlign = 'left';
+        ctx.font = '900 17px sans-serif';
+        ctx.fillStyle = '#92400e';
+        ctx.fillText(`Advance Paid (Cost: ₹${totalCost.toLocaleString('en-IN')} | Due: ₹${pending.toLocaleString('en-IN')}):`, pillBoxX + 16, pillBoxY + 36);
+
+        ctx.textAlign = 'right';
+        ctx.font = '900 32px sans-serif';
+        ctx.fillStyle = '#b45309';
+        ctx.fillText(`₹${expense.amount.toLocaleString('en-IN')}`, pillBoxX + pillBoxW - 16, pillBoxY + 38);
+      } else {
+        ctx.fillStyle = '#fff1f2'; // Soft rose background for expenses
+        roundRect(ctx, pillBoxX, pillBoxY, pillBoxW, pillBoxH, 12);
+        ctx.fill();
+
+        ctx.strokeStyle = '#f43f5e';
+        ctx.lineWidth = 1.5;
+        roundRect(ctx, pillBoxX, pillBoxY, pillBoxW, pillBoxH, 12);
+        ctx.stroke();
+
+        ctx.textAlign = 'left';
+        ctx.font = '900 22px sans-serif';
+        ctx.fillStyle = '#9f1239';
+        ctx.fillText('Total Amount Disbursed:', pillBoxX + 20, pillBoxY + 37);
+
+        ctx.textAlign = 'right';
+        ctx.font = '900 34px sans-serif';
+        ctx.fillStyle = '#e11d48';
+        ctx.fillText(`₹${expense.amount.toLocaleString('en-IN')}`, pillBoxX + pillBoxW - 20, pillBoxY + 37);
+      }
 
       // 9. DYNAMIC STATUS STAMP BADGE (Centered Below Cards)
       const badgeY = 812;
       ctx.save();
-      const badgeW = 480;
+      const badgeW = isAdv ? 520 : 480;
       const badgeH = 54;
       const bX = (width - badgeW) / 2;
 
@@ -519,7 +549,7 @@ export default function ExpenseVoucherModal({
       ctx.font = '900 24px sans-serif';
       ctx.fillStyle = '#047857';
       ctx.letterSpacing = '1.5px';
-      ctx.fillText('✓ EXPENSE VERIFIED & PAID', width / 2, badgeY + 35);
+      ctx.fillText(isAdv ? '✓ ADVANCE PAYMENT VERIFIED & PAID' : '✓ EXPENSE VERIFIED & PAID', width / 2, badgeY + 35);
       ctx.restore();
 
       // 10. DEVOTIONAL BLESSING & OFFICIAL FOOTER

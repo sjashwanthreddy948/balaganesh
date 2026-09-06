@@ -61,6 +61,11 @@ export async function PUT(
 
     const data = validation.data;
 
+    const isAdvance = Boolean(data.isAdvance);
+    const totalCost = isAdvance ? (data.totalCost || data.amount) : (data.totalCost || data.amount);
+    const advanceAmount = isAdvance ? data.amount : null;
+    const pendingBalance = isAdvance ? Math.max(0, totalCost - data.amount) : 0;
+
     const updated = await prisma.expense.update({
       where: { id: params.id },
       data: {
@@ -73,6 +78,10 @@ export async function PUT(
         notes: data.notes?.trim() || null,
         billImage: data.billImage || undefined,
         ...(data.enteredBy ? { enteredBy: data.enteredBy.trim() } : {}),
+        isAdvance,
+        totalCost,
+        advanceAmount,
+        pendingBalance,
       },
       include: {
         createdBy: {

@@ -225,6 +225,9 @@ export function buildWhatsAppExpenseVoucherMessage(expense: {
   date: string | Date;
   description?: string | null;
   enteredBy?: string;
+  isAdvance?: boolean;
+  totalCost?: number | null;
+  pendingBalance?: number | null;
 }): string {
   const formattedDate = new Date(expense.date).toLocaleDateString('en-IN', {
     day: '2-digit',
@@ -232,14 +235,18 @@ export function buildWhatsAppExpenseVoucherMessage(expense: {
     year: 'numeric',
   });
 
+  const isAdv = Boolean(expense.isAdvance);
+  const totalCost = expense.totalCost || expense.amount;
+  const pending = expense.pendingBalance ?? (isAdv ? Math.max(0, totalCost - expense.amount) : 0);
+
   return `*BALA GANESH ASSOCIATION* 🙏
-*OFFICIAL EXPENSE VOUCHER & BILL*
+*OFFICIAL EXPENSE ${isAdv ? 'ADVANCE ' : ''}VOUCHER & BILL*
 ────────────────────────
 *Voucher No:* ${expense.expenseNumber}
-*Paid To (Vendor):* ${expense.shopName}
+*Vendor:* ${expense.shopName}
 *Category:* ${expense.category}
-*Amount Paid:* ₹${expense.amount.toLocaleString('en-IN')}
-*Payment Method:* ${expense.paymentMethod}
+*Payment Nature:* ${isAdv ? '⚡ ADVANCE PAYMENT' : '✓ FULL PAYMENT'}
+${isAdv ? `*Total Contract Cost:* ₹${totalCost.toLocaleString('en-IN')}\n*Advance Paid:* ₹${expense.amount.toLocaleString('en-IN')}\n*Pending Due to Vendor:* ₹${pending.toLocaleString('en-IN')}\n` : `*Amount Paid:* ₹${expense.amount.toLocaleString('en-IN')}\n`}*Payment Method:* ${expense.paymentMethod}
 *Date:* ${formattedDate}
 ${expense.description ? `*Purpose:* ${expense.description}\n` : ''}*Authorized By:* ${expense.enteredBy || 'Association Committee'}
 ────────────────────────
@@ -259,6 +266,9 @@ export function buildWhatsAppExpenseVoucherShareUrl(expense: {
   date: string | Date;
   description?: string | null;
   enteredBy?: string;
+  isAdvance?: boolean;
+  totalCost?: number | null;
+  pendingBalance?: number | null;
 }): string {
   const message = buildWhatsAppExpenseVoucherMessage(expense);
   return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;

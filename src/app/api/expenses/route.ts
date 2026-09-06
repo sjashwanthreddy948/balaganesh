@@ -25,6 +25,11 @@ export async function POST(req: NextRequest) {
     const data = validation.data;
     const expenseNumber = await generateNextExpenseNumber();
 
+    const isAdvance = Boolean(data.isAdvance);
+    const totalCost = isAdvance ? (data.totalCost || data.amount) : (data.totalCost || data.amount);
+    const advanceAmount = isAdvance ? data.amount : null;
+    const pendingBalance = isAdvance ? Math.max(0, totalCost - data.amount) : 0;
+
     const expense = await prisma.expense.create({
       data: {
         expenseNumber,
@@ -37,6 +42,10 @@ export async function POST(req: NextRequest) {
         notes: data.notes?.trim() || null,
         billImage: data.billImage || null,
         enteredBy: data.enteredBy.trim(),
+        isAdvance,
+        totalCost,
+        advanceAmount,
+        pendingBalance,
         createdById: session.id,
       },
       include: {
@@ -62,6 +71,10 @@ export async function POST(req: NextRequest) {
         billImage: expense.billImage,
         enteredBy: expense.enteredBy,
         addedByName: expense.enteredBy || expense.createdBy.name,
+        isAdvance: expense.isAdvance,
+        totalCost: expense.totalCost,
+        advanceAmount: expense.advanceAmount,
+        pendingBalance: expense.pendingBalance,
         createdAt: expense.createdAt.toISOString(),
       },
     });
@@ -81,6 +94,7 @@ export async function GET(req: NextRequest) {
     const category = searchParams.get('category')?.trim();
     const method = searchParams.get('method')?.trim();
     const dateRange = searchParams.get('dateRange')?.trim();
+    const paymentType = searchParams.get('type')?.trim().toUpperCase();
     const all = searchParams.get('all') === 'true';
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const limit = all ? 1000 : Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '25', 10)));
@@ -94,6 +108,12 @@ export async function GET(req: NextRequest) {
 
     if (method && (method === 'CASH' || method === 'ONLINE')) {
       where.paymentMethod = method;
+    }
+
+    if (paymentType === 'ADVANCE') {
+      where.isAdvance = true;
+    } else if (paymentType === 'FULL') {
+      where.isAdvance = false;
     }
 
     if (dateRange && dateRange !== 'all') {
@@ -148,6 +168,10 @@ export async function GET(req: NextRequest) {
       billImage: e.billImage,
       enteredBy: e.enteredBy || e.createdBy.name,
       addedByName: e.enteredBy || e.createdBy.name,
+      isAdvance: Boolean(e.isAdvance),
+      totalCost: e.totalCost ?? e.amount,
+      advanceAmount: e.advanceAmount ?? (e.isAdvance ? e.amount : null),
+      pendingBalance: e.pendingBalance ?? 0,
       createdAt: e.createdAt.toISOString(),
     }));
 

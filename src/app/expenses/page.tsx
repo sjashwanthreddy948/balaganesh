@@ -43,6 +43,10 @@ interface ExpenseItem {
   billImage?: string | null;
   enteredBy: string;
   addedByName: string;
+  isAdvance?: boolean;
+  totalCost?: number | null;
+  advanceAmount?: number | null;
+  pendingBalance?: number | null;
   createdAt: string;
 }
 
@@ -67,6 +71,12 @@ interface FinancialSummaryData {
     cashExpenses: number;
     onlineExpenses: number;
     totalExpenseCount: number;
+    totalCommittedCost?: number;
+    totalAdvancePaid?: number;
+    totalPendingVendorBalance?: number;
+    advanceExpenseCount?: number;
+    fullExpenseCount?: number;
+    fullPaidAmount?: number;
   };
   balance: {
     remainingBalance: number;
@@ -98,6 +108,7 @@ export default function ExpensesPage() {
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [methodFilter, setMethodFilter] = useState<'ALL' | 'CASH' | 'ONLINE'>('ALL');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
+  const [typeFilter, setTypeFilter] = useState<'ALL' | 'ADVANCE' | 'FULL'>('ALL');
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
@@ -118,6 +129,8 @@ export default function ExpensesPage() {
   const [notes, setNotes] = useState('');
   const [billFile, setBillFile] = useState<File | null>(null);
   const [billPreview, setBillPreview] = useState<string | null>(null);
+  const [isAdvanceInput, setIsAdvanceInput] = useState(false);
+  const [totalCostInput, setTotalCostInput] = useState('');
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -152,6 +165,7 @@ export default function ExpensesPage() {
       if (categoryFilter !== 'ALL') params.append('category', categoryFilter);
       if (methodFilter !== 'ALL') params.append('method', methodFilter);
       if (dateFilter !== 'all') params.append('dateRange', dateFilter);
+      if (typeFilter !== 'ALL') params.append('type', typeFilter);
 
       const res = await fetch(`/api/expenses?${params.toString()}`);
       if (res.ok) {
@@ -163,7 +177,7 @@ export default function ExpensesPage() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, categoryFilter, methodFilter, dateFilter, router]);
+  }, [searchQuery, categoryFilter, methodFilter, dateFilter, typeFilter, router]);
 
   useEffect(() => {
     fetchExpensesAndSummary();
@@ -222,6 +236,13 @@ export default function ExpensesPage() {
         }
       }
 
+      const parsedTotalCost = isAdvanceInput ? (parseInt(totalCostInput, 10) || parsedAmount) : parsedAmount;
+      if (isAdvanceInput && parsedTotalCost < parsedAmount) {
+        setFormError('Total agreed cost cannot be less than the advance paid amount.');
+        setFormSubmitting(false);
+        return;
+      }
+
       const res = await fetch('/api/expenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -235,6 +256,8 @@ export default function ExpensesPage() {
           notes: notes || undefined,
           billImage: uploadedBillUrl,
           enteredBy: enteredBy.trim(),
+          isAdvance: isAdvanceInput,
+          totalCost: parsedTotalCost,
         }),
       });
 
@@ -254,6 +277,8 @@ export default function ExpensesPage() {
       setNotes('');
       setBillFile(null);
       setBillPreview(null);
+      setIsAdvanceInput(false);
+      setTotalCostInput('');
       fetchExpensesAndSummary();
     } catch {
       setFormError('Server error while saving expense.');
@@ -280,6 +305,8 @@ export default function ExpensesPage() {
           date: editingExpense.date,
           notes: editingExpense.notes || undefined,
           enteredBy: editingExpense.enteredBy || undefined,
+          isAdvance: editingExpense.isAdvance,
+          totalCost: editingExpense.totalCost,
         }),
       });
 
@@ -486,6 +513,121 @@ export default function ExpensesPage() {
         );
       })()}
 
+        {/* TOTAL & ADVANCE SECTION */}
+        {financialSummary && (
+          <div className="rounded-3xl border-2 border-amber-500/40 bg-gradient-to-br from-[#121c42] via-[#091538] to-[#060c20] p-4 sm:p-5 shadow-xl space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-500/20 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 font-black text-base shadow-sm">
+                  ⚡
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                    <span>TOTAL & ADVANCE SUMMARY</span>
+                  </h3>
+                  <p className="text-[11px] text-gray-300">
+                    Vendor contract commitments, advance amounts paid, and pending balances
+                  </p>
+                </div>
+              </div>
+
+              {/* Quick Filter Switch */}
+              <div className="flex items-center gap-1 bg-devotional-blue-950/90 p-1 rounded-xl border border-devotional-gold-500/30 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setTypeFilter('ALL')}
+                  className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all ${
+                    typeFilter === 'ALL'
+                      ? 'bg-devotional-gold-500 text-devotional-blue-950 shadow-sm font-black'
+                      : 'text-gray-300 hover:text-white'
+                  }`}
+                >
+                  All ({financialSummary.expenses.totalExpenseCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTypeFilter('ADVANCE')}
+                  className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all flex items-center gap-1.5 ${
+                    typeFilter === 'ADVANCE'
+                      ? 'bg-amber-500 text-devotional-blue-950 shadow-sm font-black'
+                      : 'text-amber-300 hover:text-white'
+                  }`}
+                >
+                  <span>⚡ Advances</span>
+                  <span className="text-[10px] opacity-80 font-mono">
+                    ({financialSummary.expenses.advanceExpenseCount ?? 0})
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTypeFilter('FULL')}
+                  className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all flex items-center gap-1.5 ${
+                    typeFilter === 'FULL'
+                      ? 'bg-emerald-600 text-white shadow-sm font-black'
+                      : 'text-emerald-300 hover:text-white'
+                  }`}
+                >
+                  <span>✓ Full Paid</span>
+                  <span className="text-[10px] opacity-80 font-mono">
+                    ({financialSummary.expenses.fullExpenseCount ?? 0})
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* 4 Metrics Breakdown Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+              {/* 1. Total Committed Vendor Budget */}
+              <div className="bg-devotional-blue-950/90 p-3 rounded-2xl border border-devotional-gold-500/30 space-y-1">
+                <span className="text-gray-400 block text-[11px] font-semibold">Total Agreed Cost</span>
+                <span className="text-lg sm:text-xl font-black text-devotional-gold-300 block">
+                  ₹{(financialSummary.expenses.totalCommittedCost ?? financialSummary.expenses.totalExpenses).toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] text-gray-400 block">
+                  Total contract value across vendors
+                </span>
+              </div>
+
+              {/* 2. Total Advances Paid */}
+              <div className="bg-devotional-blue-950/90 p-3 rounded-2xl border border-amber-500/40 space-y-1">
+                <span className="text-amber-300 block text-[11px] font-bold flex items-center gap-1">
+                  <span>⚡ Advance Paid</span>
+                </span>
+                <span className="text-lg sm:text-xl font-black text-amber-300 block">
+                  ₹{(financialSummary.expenses.totalAdvancePaid ?? 0).toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] text-gray-400 block">
+                  Disbursed across {financialSummary.expenses.advanceExpenseCount ?? 0} advance deals
+                </span>
+              </div>
+
+              {/* 3. Pending Vendor Balance Due */}
+              <div className="bg-devotional-blue-950/90 p-3 rounded-2xl border border-rose-500/40 space-y-1">
+                <span className="text-rose-300 block text-[11px] font-bold flex items-center gap-1">
+                  <span>Pending Due to Vendors</span>
+                </span>
+                <span className="text-lg sm:text-xl font-black text-rose-300 block">
+                  ₹{(financialSummary.expenses.totalPendingVendorBalance ?? 0).toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] text-gray-400 block">
+                  Remaining to pay after festival
+                </span>
+              </div>
+
+              {/* 4. Full Cleared Bills */}
+              <div className="bg-devotional-blue-950/90 p-3 rounded-2xl border border-emerald-500/30 space-y-1">
+                <span className="text-emerald-300 block text-[11px] font-semibold">Full Bills Paid</span>
+                <span className="text-lg sm:text-xl font-black text-emerald-300 block">
+                  ₹{(financialSummary.expenses.fullPaidAmount ?? (financialSummary.expenses.totalExpenses - (financialSummary.expenses.totalAdvancePaid ?? 0))).toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] text-gray-400 block">
+                  {financialSummary.expenses.fullExpenseCount ?? 0} bills cleared in full
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* PRIMARY CTA: [ + ADD EXPENSE ] */}
         <button
           onClick={() => {
@@ -611,24 +753,38 @@ export default function ExpensesPage() {
                           )}
                         </div>
                         <div className="text-right shrink-0">
-                          <span className="text-lg font-black text-rose-300 block">
+                          <span className={`text-lg font-black block ${e.isAdvance ? 'text-amber-300' : 'text-rose-300'}`}>
                             ₹{e.amount.toLocaleString('en-IN')}
                           </span>
-                          <span className="text-[10px] text-gray-400 font-mono">
+                          <span className="text-[10px] text-gray-400 font-mono block">
                             {new Date(e.date).toLocaleDateString('en-IN', {
                               day: '2-digit',
                               month: 'short',
                             })}
                           </span>
+                          {e.isAdvance && (
+                            <span className="text-[9px] font-black text-amber-400 uppercase tracking-wide">
+                              Advance
+                            </span>
+                          )}
                         </div>
                       </div>
 
-                      {/* Badges: Category, Method & Expense Number */}
+                      {/* Badges: Category, Advance vs Full, Method & Expense Number */}
                       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-200">
                             {e.category}
                           </span>
+                          {e.isAdvance ? (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-950 text-amber-300 border border-amber-500/40 flex items-center gap-0.5">
+                              <span>⚡ ADVANCE</span>
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/30">
+                              ✓ FULL
+                            </span>
+                          )}
                           <span
                             className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
                               isCash
@@ -644,6 +800,24 @@ export default function ExpensesPage() {
                           {e.expenseNumber}
                         </span>
                       </div>
+
+                      {/* If Advance Payment, show 3-part financial breakdown */}
+                      {e.isAdvance && (
+                        <div className="grid grid-cols-3 gap-1.5 p-2 rounded-xl bg-devotional-blue-950/90 border border-amber-500/30 text-[11px]">
+                          <div>
+                            <span className="text-gray-400 block text-[9px] uppercase font-bold">Total Cost</span>
+                            <span className="font-black text-white">₹{(e.totalCost || e.amount).toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="text-center">
+                            <span className="text-amber-400 block text-[9px] uppercase font-bold">Advance Paid</span>
+                            <span className="font-black text-amber-300">₹{e.amount.toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-rose-400 block text-[9px] uppercase font-bold">Pending Due</span>
+                            <span className="font-black text-rose-300">₹{(e.pendingBalance ?? Math.max(0, (e.totalCost || e.amount) - e.amount)).toLocaleString('en-IN')}</span>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Notes if present */}
                       {e.notes && (
@@ -741,12 +915,32 @@ export default function ExpensesPage() {
                             )}
                           </td>
                           <td className="py-3 px-3 sm:px-4">
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-200">
-                              {e.category}
-                            </span>
+                            <div className="flex flex-col gap-1 items-start">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-200">
+                                {e.category}
+                              </span>
+                              {e.isAdvance ? (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-950 text-amber-300 border border-amber-500/40">
+                                  ⚡ ADVANCE
+                                </span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-950/60 text-emerald-400 border border-emerald-500/20">
+                                  ✓ FULL
+                                </span>
+                              )}
+                            </div>
                           </td>
-                          <td className="py-3 px-3 sm:px-4 font-black text-rose-300 text-sm whitespace-nowrap">
-                            ₹{e.amount.toLocaleString('en-IN')}
+                          <td className="py-3 px-3 sm:px-4 whitespace-nowrap">
+                            <div className="flex flex-col">
+                              <span className={`font-black text-sm ${e.isAdvance ? 'text-amber-300' : 'text-rose-300'}`}>
+                                ₹{e.amount.toLocaleString('en-IN')}
+                              </span>
+                              {e.isAdvance && (
+                                <span className="text-[10px] text-gray-400 font-medium">
+                                  Cost: ₹{(e.totalCost || e.amount).toLocaleString('en-IN')} | Due: <b className="text-rose-300">₹{(e.pendingBalance ?? 0).toLocaleString('en-IN')}</b>
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="py-3 px-3 sm:px-4">
                             <span
@@ -914,42 +1108,129 @@ export default function ExpensesPage() {
                   )}
                 </div>
 
-                {/* Amount & Date in 2 columns */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-devotional-gold-200 font-semibold mb-1">
-                      Amount (₹) <span className="text-amber-400 font-bold">*</span>
-                    </label>
-                    <div className="relative flex items-center">
-                      <span className="absolute left-3 text-sm font-black text-devotional-gold-400 select-none">
-                        ₹
+                {/* Payment Nature: Full vs Advance */}
+                <div className="space-y-1.5">
+                  <label className="block text-devotional-gold-200 font-semibold">
+                    Payment Nature <span className="text-amber-400 font-bold">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsAdvanceInput(false)}
+                      className={`py-2 px-3 rounded-xl font-bold text-xs border transition-all flex items-center justify-center gap-1.5 ${
+                        !isAdvanceInput
+                          ? 'bg-emerald-600 text-white border-emerald-400 shadow-md font-black'
+                          : 'bg-devotional-blue-900 text-gray-300 border-devotional-gold-500/30'
+                      }`}
+                    >
+                      <span>✓ Full Payment</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsAdvanceInput(true)}
+                      className={`py-2 px-3 rounded-xl font-bold text-xs border transition-all flex items-center justify-center gap-1.5 ${
+                        isAdvanceInput
+                          ? 'bg-amber-500 text-devotional-blue-950 border-amber-300 shadow-md font-black'
+                          : 'bg-devotional-blue-900 text-amber-300 border-amber-500/30'
+                      }`}
+                    >
+                      <span>⚡ Advance Payment</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Amount & Date */}
+                {isAdvanceInput ? (
+                  <div className="p-3 rounded-2xl bg-amber-950/30 border border-amber-500/40 space-y-3">
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="block text-amber-300 font-bold mb-1 text-[11px]">
+                          Total Agreed Cost (₹) <span className="text-rose-400">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          required
+                          placeholder="e.g. 50000"
+                          value={totalCostInput}
+                          onChange={(e) => setTotalCostInput(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-devotional-blue-950 border border-amber-500/40 text-white font-bold text-sm focus:outline-none focus:border-amber-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-amber-300 font-bold mb-1 text-[11px]">
+                          Advance Paid Now (₹) <span className="text-rose-400">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          required
+                          placeholder="e.g. 15000"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-devotional-blue-950 border border-amber-500/40 text-white font-black text-sm focus:outline-none focus:border-amber-400"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Auto Computed Pending Due */}
+                    <div className="flex items-center justify-between p-2 rounded-xl bg-devotional-blue-950/80 border border-amber-500/20 text-xs">
+                      <span className="text-gray-300">Remaining Due to Vendor:</span>
+                      <span className="font-black text-rose-300 text-sm">
+                        ₹{Math.max(0, (parseInt(totalCostInput || '0', 10) - parseInt(amount || '0', 10))).toLocaleString('en-IN')}
                       </span>
+                    </div>
+
+                    <div>
+                      <label className="block text-devotional-gold-200 font-semibold mb-1 text-[11px]">
+                        Payment Date <span className="text-amber-400 font-bold">*</span>
+                      </label>
                       <input
-                        type="number"
-                        inputMode="numeric"
+                        type="date"
                         required
-                        min={1}
-                        placeholder="e.g. 2500"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        className="w-full pl-8 pr-3 py-2.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white font-black text-base focus:outline-none focus:border-devotional-gold-400"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-devotional-blue-950 border border-devotional-gold-500/30 text-white font-medium focus:outline-none focus:border-devotional-gold-400"
                       />
                     </div>
                   </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-devotional-gold-200 font-semibold mb-1">
+                        Amount (₹) <span className="text-amber-400 font-bold">*</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <span className="absolute left-3 text-sm font-black text-devotional-gold-400 select-none">
+                          ₹
+                        </span>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          required
+                          min={1}
+                          placeholder="e.g. 2500"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          className="w-full pl-8 pr-3 py-2.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white font-black text-base focus:outline-none focus:border-devotional-gold-400"
+                        />
+                      </div>
+                    </div>
 
-                  <div>
-                    <label className="block text-devotional-gold-200 font-semibold mb-1">
-                      Date <span className="text-amber-400 font-bold">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={date}
-                      onChange={(e) => setDate(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white font-medium focus:outline-none focus:border-devotional-gold-400"
-                    />
+                    <div>
+                      <label className="block text-devotional-gold-200 font-semibold mb-1">
+                        Date <span className="text-amber-400 font-bold">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-white font-medium focus:outline-none focus:border-devotional-gold-400"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Payment Method Toggle (CASH vs ONLINE) */}
                 <div>
@@ -1167,6 +1448,55 @@ export default function ExpensesPage() {
                     ))}
                   </select>
                 </div>
+
+                {/* Advance Toggle in Edit Modal */}
+                <div className="space-y-1">
+                  <label className="block text-gray-300 font-semibold">Payment Type</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingExpense({ ...editingExpense, isAdvance: false, totalCost: editingExpense.amount, pendingBalance: 0 })}
+                      className={`py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                        !editingExpense.isAdvance
+                          ? 'bg-emerald-600 text-white border-emerald-400'
+                          : 'bg-devotional-blue-900 text-gray-300 border-devotional-gold-500/20'
+                      }`}
+                    >
+                      ✓ Full Payment
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingExpense({ ...editingExpense, isAdvance: true, totalCost: editingExpense.totalCost || editingExpense.amount })}
+                      className={`py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                        editingExpense.isAdvance
+                          ? 'bg-amber-500 text-devotional-blue-950 border-amber-300 font-black'
+                          : 'bg-devotional-blue-900 text-amber-300 border-amber-500/20'
+                      }`}
+                    >
+                      ⚡ Advance
+                    </button>
+                  </div>
+                </div>
+
+                {editingExpense.isAdvance && (
+                  <div>
+                    <label className="block text-amber-300 mb-1 font-bold">Total Agreed Cost (₹) *</label>
+                    <input
+                      type="number"
+                      required
+                      min={editingExpense.amount || 1}
+                      value={editingExpense.totalCost || editingExpense.amount}
+                      onChange={(e) =>
+                        setEditingExpense({
+                          ...editingExpense,
+                          totalCost: Number(e.target.value),
+                          pendingBalance: Math.max(0, Number(e.target.value) - editingExpense.amount),
+                        })
+                      }
+                      className="w-full px-3 py-2 rounded-xl bg-devotional-blue-900 border border-amber-500/40 text-white font-bold"
+                    />
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>

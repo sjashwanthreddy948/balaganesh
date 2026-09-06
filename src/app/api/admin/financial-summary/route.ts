@@ -50,16 +50,38 @@ export async function GET(req: NextRequest) {
         amount: true,
         paymentMethod: true,
         category: true,
+        isAdvance: true,
+        totalCost: true,
+        advanceAmount: true,
+        pendingBalance: true,
       },
     });
 
-    let totalExpenses = 0;
+    let totalExpenses = 0; // Actual amount spent so far
     let cashExpenses = 0;
     let onlineExpenses = 0;
+    let totalCommittedCost = 0; // Total agreed vendor cost / budget
+    let totalAdvancePaid = 0;
+    let totalPendingVendorBalance = 0;
+    let advanceExpenseCount = 0;
+    let fullExpenseCount = 0;
+    let fullPaidAmount = 0;
     const categoryTotals: Record<string, { totalAmount: number; count: number }> = {};
 
     for (const e of expenses) {
       totalExpenses += e.amount;
+      const committed = e.isAdvance ? (e.totalCost || e.amount) : (e.totalCost || e.amount);
+      totalCommittedCost += committed;
+
+      if (e.isAdvance) {
+        totalAdvancePaid += e.amount;
+        totalPendingVendorBalance += (e.pendingBalance ?? Math.max(0, committed - e.amount));
+        advanceExpenseCount += 1;
+      } else {
+        fullExpenseCount += 1;
+        fullPaidAmount += e.amount;
+      }
+
       if (e.paymentMethod === 'CASH') {
         cashExpenses += e.amount;
       } else {
@@ -145,6 +167,12 @@ export async function GET(req: NextRequest) {
           cashExpenses,
           onlineExpenses,
           totalExpenseCount: expenses.length,
+          totalCommittedCost,
+          totalAdvancePaid,
+          totalPendingVendorBalance,
+          advanceExpenseCount,
+          fullExpenseCount,
+          fullPaidAmount,
         },
         balance: {
           remainingBalance, // Chanda Net Balance (backward compatible)
