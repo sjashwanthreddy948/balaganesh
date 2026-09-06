@@ -25,6 +25,7 @@ model User {
   createdExpenses       Expense[]       @relation("ExpenseCreatedBy")
   createdLadduBalances  LadduBalance[]  @relation("LadduBalanceCreatedBy")
   createdLadduPayments  LadduPayment[]  @relation("LadduPaymentCreatedBy")
+  createdInvitations    Invitation[]    @relation("InvitationCreatedBy")
 
   @@index([username])
 }
@@ -169,4 +170,26 @@ model Expense {
   @@index([expenseNumber])
   @@index([enteredBy])
   @@index([isAdvance])
+}
+
+model Invitation {
+  id          String   @id @default(cuid())
+  title       String   // e.g. "Sri Ganesh Chaturthi Sthapana & Pooja", "Maha Annadanam", "Laddu Auction"
+  invitees    String   // e.g. "All Devotees & Families", or specific person name
+  eventDate   DateTime // Event date
+  eventTime   String   // e.g. "07:00 PM onwards"
+  venue       String   // e.g. "Bhavani Nagar, Shankarpally"
+  description String?  // Details / schedule / shloka
+  contactInfo String?  // Optional contact person or phone
+  year        Int      @default(2026)
+
+  createdById String
+  createdBy   User     @relation("InvitationCreatedBy", fields: [createdById], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([eventDate])
+  @@index([createdById])
+  @@index([createdAt])
 }

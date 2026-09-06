@@ -205,9 +205,22 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required.'),
 });
 
+// Invitation Creation Schema
+export const createInvitationSchema = z.object({
+  title: z.string().trim().min(2, 'Event / Invitation title is required.').max(150),
+  invitees: z.string().trim().min(2, 'Invitee name(s) is required.').max(200),
+  eventDate: z.string().trim().min(1, 'Please select event date.'),
+  eventTime: z.string().trim().min(1, 'Please specify event time (e.g. 7:00 PM).').max(80),
+  venue: z.string().trim().min(2, 'Venue is required.').max(250),
+  description: z.string().trim().max(1000).optional().or(z.literal('')),
+  contactInfo: z.string().trim().max(100).optional().or(z.literal('')),
+  mobileNumber: z.string().trim().optional().or(z.literal('')),
+});
+
 export type CreateContributionInput = z.infer<typeof createContributionSchema>;
 export type EditContributionInput = z.infer<typeof editContributionSchema>;
 export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
 export type EditExpenseInput = z.infer<typeof editExpenseSchema>;
 export type CreateVolunteerInput = z.infer<typeof createVolunteerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type CreateInvitationInput = z.infer<typeof createInvitationSchema>;

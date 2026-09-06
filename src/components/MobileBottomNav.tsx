@@ -15,6 +15,7 @@ import {
   PieChart,
   Shield,
   Coins,
+  Mail,
 } from 'lucide-react';
 
 interface MobileBottomNavProps {
@@ -236,6 +237,15 @@ export default function MobileBottomNav({
               >
                 <PlusCircle className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>+ Add Chanda</span>
+              </Link>
+
+              <Link
+                href="/invitations"
+                onClick={() => setShowMoreMenu(false)}
+                className="p-3.5 rounded-2xl bg-devotional-blue-900/60 border border-emerald-500/30 flex items-center gap-3 text-xs font-bold text-white hover:bg-devotional-blue-800 transition-colors"
+              >
+                <Mail className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Invitations Studio</span>
               </Link>
 
               <a

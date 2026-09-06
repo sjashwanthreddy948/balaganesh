@@ -43,6 +43,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Coins,
+  Mail,
 } from 'lucide-react';
 
 interface UserProfile {
@@ -387,6 +388,15 @@ export default function DashboardPage() {
               <span>Expenses & Balance →</span>
             </button>
 
+            {/* Link to Invitations Studio */}
+            <button
+              onClick={() => router.push('/invitations')}
+              className="px-3 py-2 rounded-xl bg-devotional-blue-900 hover:bg-devotional-blue-800 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+            >
+              <Mail className="w-4 h-4 text-emerald-400" />
+              <span>Invitations Studio →</span>
+            </button>
+
             {isAdmin && (
               <>
                 <button
@@ -422,15 +432,27 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* PRIMARY ACTION: [ + ADD CONTRIBUTION ] */}
-        <div>
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="w-full py-4 px-6 rounded-2xl btn-gold text-devotional-blue-950 font-black text-lg sm:text-xl tracking-wide shadow-gold-md flex items-center justify-center gap-3 transition-transform active:scale-[0.99]"
-          >
-            <PlusCircle className="w-6 h-6 text-devotional-blue-950" />
-            <span>+ ADD CONTRIBUTION</span>
-          </button>
+        {/* PRIMARY ACTIONS: [ + ADD CONTRIBUTION ] & [ 📩 SEND INVITATIONS ] */}
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+          <div className="sm:col-span-8">
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="w-full py-4 px-6 rounded-2xl btn-gold text-devotional-blue-950 font-black text-lg sm:text-xl tracking-wide shadow-gold-md flex items-center justify-center gap-3 transition-transform active:scale-[0.99] h-full"
+            >
+              <PlusCircle className="w-6 h-6 text-devotional-blue-950" />
+              <span>+ ADD CONTRIBUTION</span>
+            </button>
+          </div>
+
+          <div className="sm:col-span-4">
+            <button
+              onClick={() => router.push('/invitations')}
+              className="w-full py-4 px-4 rounded-2xl bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 border-2 border-emerald-400/50 text-white font-black text-sm sm:text-base tracking-wide shadow-lg flex items-center justify-center gap-2.5 transition-all active:scale-[0.99] h-full"
+            >
+              <Mail className="w-5 h-5 text-emerald-300" />
+              <span>Send Invitations →</span>
+            </button>
+          </div>
         </div>
 
         {/* ============================================================ */}

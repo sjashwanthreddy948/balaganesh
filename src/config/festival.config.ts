@@ -274,5 +274,84 @@ export function buildWhatsAppExpenseVoucherShareUrl(expense: {
   return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
 }
 
+/**
+ * Builds standard WhatsApp Festival Invitation Message
+ */
+export function buildWhatsAppInvitationMessage(invitation: {
+  title: string;
+  invitees: string;
+  eventDate: string | Date;
+  eventTime: string;
+  venue: string;
+  description?: string | null;
+  contactInfo?: string | null;
+}): string {
+  const dateObj = new Date(invitation.eventDate);
+  const formattedDate = isNaN(dateObj.getTime())
+    ? String(invitation.eventDate)
+    : dateObj.toLocaleDateString('en-IN', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+
+  const detailsBlock = invitation.description?.trim()
+    ? `\n✨ *కార్యక్రమ వివరాలు / Program Details:*\n${invitation.description.trim()}\n`
+    : '';
+
+  const contactBlock = invitation.contactInfo?.trim()
+    ? `📞 *సంప్రదించండి / Contact:* ${invitation.contactInfo.trim()}\n`
+    : `📞 *Contact:* ${FESTIVAL_CONFIG.contactNumber}\n`;
+
+  return `🕉️ *శ్రీ వినాయక చవితి మహోత్సవ ఆహ్వానం* 🕉️
+*${FESTIVAL_CONFIG.associationName}*
+*${FESTIVAL_CONFIG.associationAddress}*
+━━━━━━━━━━━━━━━━━━━━━━━
+🌸 *CORDIAL INVITATION / సాదర ఆహ్వానం* 🌸
+
+గౌరవనీయులైన / Dear *${invitation.invitees}*,
+
+మేము మిమ్మల్ని మరియు మీ కుటుంబ సభ్యులను, స్నేహితులను మా గణేష్ ఉత్సవాల్లో పాల్గొనవలసిందిగా సాదరంగా ఆహ్వానిస్తున్నాము.
+
+We cordially invite you and your family to grace the auspicious occasion of:
+
+🪔 *${invitation.title.toUpperCase()}* 🪔
+━━━━━━━━━━━━━━━━━━━━━━━
+📅 *తేదీ / Date:* ${formattedDate}
+⏰ *సమయం / Time:* ${invitation.eventTime}
+📍 *వేదిక / Venue:* ${invitation.venue}
+${detailsBlock}
+🙏 *మీ రాకయే మాకు శుభప్రదం! Lord Ganesha blessings to you and your family.*
+
+👥 *Join Our Official Bala Ganesh WhatsApp Group:*
+${FESTIVAL_CONFIG.whatsappGroupLink}
+
+━━━━━━━━━━━━━━━━━━━━━━━
+— *Bala Ganesh Association Committee & Youth Members*
+${contactBlock}
+🙏 *Ganpati Bappa Morya!* 🙏`;
+}
+
+/**
+ * Builds WhatsApp Share URL for Invitation (Defaults to open picker for Bala Ganesh Group)
+ */
+export function buildWhatsAppInvitationShareUrl(invitation: {
+  title: string;
+  invitees: string;
+  eventDate: string | Date;
+  eventTime: string;
+  venue: string;
+  description?: string | null;
+  contactInfo?: string | null;
+  mobileNumber?: string | null;
+}): string {
+  const message = buildWhatsAppInvitationMessage(invitation);
+  const normalized = normalizeIndianMobileForWhatsApp(invitation.mobileNumber);
+  const phoneParam = normalized ? `phone=${normalized.whatsappPhone}&` : '';
+  return `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(message)}`;
+}
+
+
 
 

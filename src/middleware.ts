@@ -10,7 +10,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Protected application routes
-  const protectedPrefixes = ['/dashboard', '/expenses', '/contribute', '/admin'];
+  const protectedPrefixes = ['/dashboard', '/expenses', '/laddu', '/invitations', '/contribute', '/admin'];
   const isProtected = protectedPrefixes.some((p) => pathname === p || pathname.startsWith(p + '/'));
 
   if (isProtected) {
@@ -34,5 +34,12 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/expenses/:path*', '/contribute/:path*', '/admin/:path*'],
+  matcher: [
+    '/dashboard/:path*',
+    '/expenses/:path*',
+    '/laddu/:path*',
+    '/invitations/:path*',
+    '/contribute/:path*',
+    '/admin/:path*',
+  ],
 };
