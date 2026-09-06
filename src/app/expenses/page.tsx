@@ -5,6 +5,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ImageLightboxModal from '@/components/ImageLightboxModal';
 import MobileBottomNav from '@/components/MobileBottomNav';
+import ExpenseVoucherModal from '@/components/ExpenseVoucherModal';
 import { EXPENSE_CATEGORIES } from '@/lib/validation';
 import { useRouter } from 'next/navigation';
 import {
@@ -26,6 +27,7 @@ import {
   FileSpreadsheet,
   Scale,
   User,
+  Coins,
 } from 'lucide-react';
 
 interface ExpenseItem {
@@ -51,6 +53,15 @@ interface FinancialSummaryData {
     onlineChanda: number;
     totalContributors: number;
   };
+  laddu?: {
+    totalLadduDue: number;
+    totalLadduCollected: number;
+    cashLaddu: number;
+    onlineLaddu: number;
+    outstandingLadduBalance: number;
+    fullyPaidCount: number;
+    pendingCount: number;
+  };
   expenses: {
     totalExpenses: number;
     cashExpenses: number;
@@ -61,6 +72,9 @@ interface FinancialSummaryData {
     remainingBalance: number;
     estimatedCashBalance: number;
     onlineBalance: number;
+    netTotalFestivalBalance?: number;
+    netFestivalCashOnHand?: number;
+    netFestivalOnlineBank?: number;
   };
   categoryBreakdown: {
     category: string;
@@ -88,6 +102,7 @@ export default function ExpensesPage() {
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
+  const [viewingExpenseBill, setViewingExpenseBill] = useState<ExpenseItem | null>(null);
   const [viewingBillUrl, setViewingBillUrl] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -337,78 +352,107 @@ export default function ExpensesPage() {
         </div>
 
         {/* PROMINENT REMAINING AMOUNT HERO CARD */}
-        {financialSummary && (
-          <div className="rounded-3xl border-2 border-devotional-gold-500/50 bg-gradient-to-br from-[#0c1e54] via-[#071338] to-[#050b1d] p-5 sm:p-6 shadow-2xl space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-devotional-gold-500/20 pb-3">
-              <div>
-                <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-devotional-gold-400 flex items-center gap-1.5">
-                  <Scale className="w-4 h-4 text-devotional-gold-400" />
-                  <span>Net Festival Liquidity</span>
-                </span>
-                <h2 className="text-2xl sm:text-3xl font-black text-white mt-1">
-                  REMAINING AMOUNT:{' '}
-                  <span
-                    className={
-                      financialSummary.balance.remainingBalance >= 0
-                        ? 'text-emerald-300'
-                        : 'text-rose-400'
-                    }
-                  >
-                    ₹{financialSummary.balance.remainingBalance.toLocaleString('en-IN')}
+        {financialSummary && (() => {
+          const totalChanda = financialSummary.income.totalChanda || 0;
+          const totalLaddu = financialSummary.laddu?.totalLadduCollected || 0;
+          const totalCombinedIncome = totalChanda + totalLaddu;
+          const totalExpenses = financialSummary.expenses.totalExpenses || 0;
+          const netAvailableBalance =
+            financialSummary.balance.netTotalFestivalBalance ?? (totalCombinedIncome - totalExpenses);
+          const cashBalance =
+            financialSummary.balance.netFestivalCashOnHand ??
+            (financialSummary.income.cashChanda + (financialSummary.laddu?.cashLaddu || 0) - financialSummary.expenses.cashExpenses);
+          const onlineBalance =
+            financialSummary.balance.netFestivalOnlineBank ??
+            (financialSummary.income.onlineChanda + (financialSummary.laddu?.onlineLaddu || 0) - financialSummary.expenses.onlineExpenses);
+
+          return (
+            <div className="rounded-3xl border-2 border-devotional-gold-500/50 bg-gradient-to-br from-[#0c1e54] via-[#071338] to-[#050b1d] p-5 sm:p-6 shadow-2xl space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-devotional-gold-500/20 pb-3">
+                <div>
+                  <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-devotional-gold-400 flex items-center gap-1.5">
+                    <Scale className="w-4 h-4 text-devotional-gold-400" />
+                    <span>Net Festival Liquidity (Chanda + Laddu − Expenses)</span>
                   </span>
-                </h2>
-                <p className="text-xs text-gray-300 mt-1">
-                  Total Chanda (₹{financialSummary.income.totalChanda.toLocaleString('en-IN')}) − Total Expenses (₹{financialSummary.expenses.totalExpenses.toLocaleString('en-IN')})
-                </p>
+                  <h2 className="text-2xl sm:text-3xl font-black text-white mt-1">
+                    TOTAL REMAINING AMOUNT:{' '}
+                    <span
+                      className={
+                        netAvailableBalance >= 0
+                          ? 'text-emerald-300'
+                          : 'text-rose-400'
+                      }
+                    >
+                      ₹{netAvailableBalance.toLocaleString('en-IN')}
+                    </span>
+                  </h2>
+                  <p className="text-xs text-gray-300 mt-1">
+                    Total Funds Collected: <b className="text-devotional-gold-300">₹{totalCombinedIncome.toLocaleString('en-IN')}</b>{' '}
+                    (Chanda: ₹{totalChanda.toLocaleString('en-IN')} + Laddu: ₹{totalLaddu.toLocaleString('en-IN')}) − Total Expenses: <b className="text-rose-300">₹{totalExpenses.toLocaleString('en-IN')}</b>
+                  </p>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-[11px] text-gray-400 block">Total Bills Recorded</span>
+                  <span className="text-xl font-black text-devotional-gold-300">
+                    {financialSummary.expenses.totalExpenseCount}
+                  </span>
+                </div>
               </div>
 
-              <div className="text-right">
-                <span className="text-[11px] text-gray-400 block">Total Bills Recorded</span>
-                <span className="text-xl font-black text-devotional-gold-300">
-                  {financialSummary.expenses.totalExpenseCount}
-                </span>
-              </div>
-            </div>
+              {/* 5 Prominent Balance & Metric Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 text-xs">
+                <div className="bg-devotional-blue-950/80 p-3 rounded-2xl border border-rose-500/30 space-y-1">
+                  <span className="text-gray-400 block text-[11px]">Total Expenses Paid</span>
+                  <span className="text-base sm:text-lg font-black text-rose-300 block">
+                    ₹{totalExpenses.toLocaleString('en-IN')}
+                  </span>
+                  <span className="text-[10px] text-gray-400 block">All vendor expenditures</span>
+                </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-              <div className="bg-devotional-blue-950/80 p-3.5 rounded-2xl border border-rose-500/30 space-y-1">
-                <span className="text-gray-400 block text-[11px]">Total Expenses Paid</span>
-                <span className="text-lg sm:text-xl font-black text-rose-300">
-                  ₹{financialSummary.expenses.totalExpenses.toLocaleString('en-IN')}
-                </span>
-                <span className="text-[10px] text-gray-400 block">All vendor expenditures</span>
-              </div>
+                <div className="bg-devotional-blue-950/80 p-3 rounded-2xl border border-devotional-gold-500/30 space-y-1">
+                  <span className="text-gray-400 block text-[11px]">Chanda Collection</span>
+                  <span className="text-base sm:text-lg font-black text-white block">
+                    ₹{totalChanda.toLocaleString('en-IN')}
+                  </span>
+                  <span className="text-[10px] text-gray-400 block">
+                    {financialSummary.income.totalContributors} verified donors
+                  </span>
+                </div>
 
-              <div className="bg-devotional-blue-950/80 p-3.5 rounded-2xl border border-emerald-500/30 space-y-1">
-                <span className="text-gray-400 block text-[11px]">Cash in Hand</span>
-                <span className="text-lg sm:text-xl font-black text-emerald-300">
-                  ₹{financialSummary.balance.estimatedCashBalance.toLocaleString('en-IN')}
-                </span>
-                <span className="text-[10px] text-gray-400 block">
-                  Cash Chanda − Cash Expenses
-                </span>
-              </div>
+                <div className="bg-devotional-blue-950/80 p-3 rounded-2xl border border-amber-500/30 space-y-1">
+                  <span className="text-gray-400 block text-[11px] flex items-center gap-1">
+                    <Coins className="w-3 h-3 text-amber-400" />
+                    <span>Laddu Collection</span>
+                  </span>
+                  <span className="text-base sm:text-lg font-black text-amber-300 block">
+                    ₹{totalLaddu.toLocaleString('en-IN')}
+                  </span>
+                  <span className="text-[10px] text-gray-400 block">
+                    Last year balances
+                  </span>
+                </div>
 
-              <div className="bg-devotional-blue-950/80 p-3.5 rounded-2xl border border-devotional-gold-500/30 space-y-1">
-                <span className="text-gray-400 block text-[11px]">Online Bank Balance</span>
-                <span className="text-lg sm:text-xl font-black text-devotional-gold-300">
-                  ₹{financialSummary.balance.onlineBalance.toLocaleString('en-IN')}
-                </span>
-                <span className="text-[10px] text-gray-400 block">
-                  Verified Online − Online Exp.
-                </span>
-              </div>
+                <div className="bg-devotional-blue-950/80 p-3 rounded-2xl border border-emerald-500/30 space-y-1">
+                  <span className="text-gray-400 block text-[11px]">Net Cash in Hand</span>
+                  <span className="text-base sm:text-lg font-black text-emerald-300 block">
+                    ₹{cashBalance.toLocaleString('en-IN')}
+                  </span>
+                  <span className="text-[10px] text-gray-400 block">
+                    Cash in − Cash expenses
+                  </span>
+                </div>
 
-              <div className="bg-devotional-blue-950/80 p-3.5 rounded-2xl border border-devotional-gold-500/30 space-y-1">
-                <span className="text-gray-400 block text-[11px]">Total Chanda Collected</span>
-                <span className="text-lg sm:text-xl font-black text-white">
-                  ₹{financialSummary.income.totalChanda.toLocaleString('en-IN')}
-                </span>
-                <span className="text-[10px] text-gray-400 block">
-                  {financialSummary.income.totalContributors} verified donors
-                </span>
+                <div className="bg-devotional-blue-950/80 p-3 rounded-2xl border border-blue-500/30 space-y-1 col-span-2 sm:col-span-1">
+                  <span className="text-gray-400 block text-[11px]">Online Bank Balance</span>
+                  <span className="text-base sm:text-lg font-black text-blue-300 block">
+                    ₹{onlineBalance.toLocaleString('en-IN')}
+                  </span>
+                  <span className="text-[10px] text-gray-400 block">
+                    Online in − Online expenses
+                  </span>
+                </div>
               </div>
-            </div>
 
             {/* Category Breakdown Bars */}
             {financialSummary.categoryBreakdown.length > 0 && (
@@ -439,7 +483,8 @@ export default function ExpensesPage() {
               </div>
             )}
           </div>
-        )}
+        );
+      })()}
 
         {/* PRIMARY CTA: [ + ADD EXPENSE ] */}
         <button
@@ -609,20 +654,27 @@ export default function ExpensesPage() {
 
                       {/* Action Buttons Row */}
                       <div className="flex items-center gap-2 pt-1 border-t border-devotional-gold-500/15">
-                        {/* View Bill Button */}
-                        {e.billImage ? (
+                        {/* Official Bill Voucher */}
+                        <button
+                          type="button"
+                          onClick={() => setViewingExpenseBill(e)}
+                          className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-devotional-gold-500/20 to-amber-500/30 border border-devotional-gold-500/50 text-devotional-gold-200 font-black text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all hover:bg-devotional-gold-500/40"
+                          title="Generate Official Expense Bill & Voucher"
+                        >
+                          <Receipt className="w-3.5 h-3.5 text-devotional-gold-300" />
+                          <span>Generate Bill</span>
+                        </button>
+
+                        {/* View Paper Bill Photo (if uploaded) */}
+                        {e.billImage && (
                           <button
                             type="button"
                             onClick={() => setViewingBillUrl(e.billImage || null)}
-                            className="flex-1 py-2 px-3 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/40 text-devotional-gold-200 font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+                            className="p-2 rounded-xl bg-devotional-blue-900 border border-emerald-500/40 text-emerald-300 hover:text-white text-xs active:scale-95 transition-all"
+                            title="View Vendor Paper Bill Photo"
                           >
-                            <Receipt className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>View Bill</span>
+                            <Eye className="w-3.5 h-3.5" />
                           </button>
-                        ) : (
-                          <span className="flex-1 py-2 px-3 rounded-xl bg-devotional-blue-950/40 border border-white/5 text-gray-500 font-semibold text-xs flex items-center justify-center gap-1.5 cursor-not-allowed">
-                            <span>No Bill</span>
-                          </span>
                         )}
 
                         {/* Admin Edit */}
@@ -714,19 +766,25 @@ export default function ExpensesPage() {
                             {e.enteredBy || e.addedByName}
                           </td>
                           <td className="py-3 px-3 sm:px-4 text-right space-x-1.5 whitespace-nowrap">
-                            {/* View Bill Button */}
-                            {e.billImage ? (
+                            {/* Official Bill Voucher Button */}
+                            <button
+                              onClick={() => setViewingExpenseBill(e)}
+                              className="p-1.5 px-2.5 rounded-lg bg-devotional-blue-950 border border-devotional-gold-500/50 text-devotional-gold-300 hover:bg-devotional-gold-500/20 text-xs font-bold inline-flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
+                              title="Generate Official Expense Bill Voucher"
+                            >
+                              <Receipt className="w-3.5 h-3.5 text-devotional-gold-300" />
+                              <span>Bill</span>
+                            </button>
+
+                            {/* View Paper Bill Button (if uploaded) */}
+                            {e.billImage && (
                               <button
                                 onClick={() => setViewingBillUrl(e.billImage || null)}
-                                className="p-1.5 rounded-lg bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white"
-                                title="View Bill / Receipt"
+                                className="p-1.5 rounded-lg bg-devotional-blue-950 border border-emerald-500/40 text-emerald-300 hover:text-white active:scale-95 transition-all"
+                                title="View Vendor Paper Bill Photo"
                               >
                                 <Eye className="w-3.5 h-3.5 text-emerald-400" />
                               </button>
-                            ) : (
-                              <span className="p-1.5 inline-block text-gray-600" title="No Bill Attached">
-                                <Eye className="w-3.5 h-3.5 opacity-30" />
-                              </span>
                             )}
 
                             {/* Admin Edit */}
@@ -1210,6 +1268,15 @@ export default function ExpensesPage() {
           imageUrl={viewingBillUrl}
           title="Expense Bill / Receipt"
         />
+
+        {/* MODAL: OFFICIAL EXPENSE PAYMENT VOUCHER & BILL GENERATOR */}
+        {viewingExpenseBill && (
+          <ExpenseVoucherModal
+            expense={viewingExpenseBill}
+            onClose={() => setViewingExpenseBill(null)}
+            onViewVendorPhoto={(url) => setViewingBillUrl(url)}
+          />
+        )}
 
         {/* MODAL: DELETE EXPENSE CONFIRMATION */}
         {deletingId && (

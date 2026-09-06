@@ -213,4 +213,56 @@ export function buildWhatsAppLadduReceiptShareUrl(laddu: {
   return `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(message)}`;
 }
 
+/**
+ * Builds standard WhatsApp Expense Voucher Message
+ */
+export function buildWhatsAppExpenseVoucherMessage(expense: {
+  expenseNumber: string;
+  shopName: string;
+  category: string;
+  amount: number;
+  paymentMethod: string;
+  date: string | Date;
+  description?: string | null;
+  enteredBy?: string;
+}): string {
+  const formattedDate = new Date(expense.date).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+
+  return `*BALA GANESH ASSOCIATION* 🙏
+*OFFICIAL EXPENSE VOUCHER & BILL*
+────────────────────────
+*Voucher No:* ${expense.expenseNumber}
+*Paid To (Vendor):* ${expense.shopName}
+*Category:* ${expense.category}
+*Amount Paid:* ₹${expense.amount.toLocaleString('en-IN')}
+*Payment Method:* ${expense.paymentMethod}
+*Date:* ${formattedDate}
+${expense.description ? `*Purpose:* ${expense.description}\n` : ''}*Authorized By:* ${expense.enteredBy || 'Association Committee'}
+────────────────────────
+Ganpati Bappa Morya! 🙏
+— Bala Ganesh Association, Bhavani Nagar, Shankarpally`;
+}
+
+/**
+ * Builds WhatsApp Share URL for Expense Voucher
+ */
+export function buildWhatsAppExpenseVoucherShareUrl(expense: {
+  expenseNumber: string;
+  shopName: string;
+  category: string;
+  amount: number;
+  paymentMethod: string;
+  date: string | Date;
+  description?: string | null;
+  enteredBy?: string;
+}): string {
+  const message = buildWhatsAppExpenseVoucherMessage(expense);
+  return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+}
+
+
 
