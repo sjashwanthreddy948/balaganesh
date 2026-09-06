@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -19,11 +20,28 @@ model User {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  createdContributions Contribution[] @relation("CreatedBy")
-  verifiedContributions Contribution[] @relation("VerifiedBy")
-  createdExpenses      Expense[]      @relation("ExpenseCreatedBy")
+  createdContributions  Contribution[]  @relation("CreatedBy")
+  verifiedContributions Contribution[]  @relation("VerifiedBy")
+  createdExpenses       Expense[]       @relation("ExpenseCreatedBy")
+  createdLadduBalances  LadduBalance[]  @relation("LadduBalanceCreatedBy")
+  createdLadduPayments  LadduPayment[]  @relation("LadduPaymentCreatedBy")
 
   @@index([username])
+}
+
+model Contributor {
+  id            String         @id @default(cuid())
+  fullName      String
+  mobileNumber  String         @unique
+  address       String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  contributions Contribution[]
+  ladduBalances LadduBalance[]
+
+  @@index([mobileNumber])
+  @@index([fullName])
 }
 
 model Contribution {
@@ -38,6 +56,10 @@ model Contribution {
   utr               String?  // Optional UTR for online payments
   paymentScreenshot String?  // Optional uploaded payment screenshot
   notes             String?
+  year              Int      @default(2026)
+
+  contributorId     String?
+  contributor       Contributor? @relation(fields: [contributorId], references: [id])
 
   createdById       String
   createdBy         User     @relation("CreatedBy", fields: [createdById], references: [id])
@@ -53,6 +75,64 @@ model Contribution {
   @@index([certificateNumber])
   @@index([paymentMethod])
   @@index([paymentStatus])
+  @@index([createdById])
+  @@index([createdAt])
+  @@index([fullName])
+  @@index([contributorId])
+}
+
+model LadduBalance {
+  id               String         @id @default(cuid())
+  personName       String
+  mobileNumber     String?
+  address          String?
+  ladduYear        Int            @default(2025)
+  totalDue         Int            // Total amount due for Laddu
+  totalPaid        Int            @default(0)   // Total accumulated payments
+  remainingBalance Int            // totalDue - totalPaid
+  status           String         @default("UNPAID") // UNPAID, PARTIALLY_PAID, PAID
+  notes            String?
+
+  contributorId    String?
+  contributor      Contributor?   @relation(fields: [contributorId], references: [id])
+
+  createdById      String
+  createdBy        User           @relation("LadduBalanceCreatedBy", fields: [createdById], references: [id])
+
+  payments         LadduPayment[]
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([personName])
+  @@index([mobileNumber])
+  @@index([ladduYear])
+  @@index([status])
+  @@index([createdById])
+  @@index([createdAt])
+  @@index([contributorId])
+}
+
+model LadduPayment {
+  id                String        @id @default(cuid())
+  receiptNumber     String        @unique // e.g. LDR2026-000001
+  ladduBalanceId    String
+  ladduBalance      LadduBalance  @relation(fields: [ladduBalanceId], references: [id], onDelete: Cascade)
+  amount            Int           // Amount paid in this installment
+  paymentMethod     String        // CASH, ONLINE
+  utr               String?       // UTR for ONLINE payments
+  paymentScreenshot String?       // Optional uploaded payment screenshot
+  notes             String?
+
+  createdById       String
+  createdBy         User          @relation("LadduPaymentCreatedBy", fields: [createdById], references: [id])
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([receiptNumber])
+  @@index([ladduBalanceId])
+  @@index([paymentMethod])
   @@index([createdById])
   @@index([createdAt])
 }

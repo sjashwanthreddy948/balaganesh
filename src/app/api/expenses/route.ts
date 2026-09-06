@@ -81,6 +81,10 @@ export async function GET(req: NextRequest) {
     const category = searchParams.get('category')?.trim();
     const method = searchParams.get('method')?.trim();
     const dateRange = searchParams.get('dateRange')?.trim();
+    const all = searchParams.get('all') === 'true';
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const limit = all ? 1000 : Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '25', 10)));
+    const skip = all ? 0 : (page - 1) * limit;
 
     const where: any = {};
 
@@ -108,23 +112,28 @@ export async function GET(req: NextRequest) {
 
     if (search) {
       where.OR = [
-        { shopName: { contains: search } },
-        { expenseNumber: { contains: search } },
-        { description: { contains: search } },
-        { enteredBy: { contains: search } },
-        { notes: { contains: search } },
+        { shopName: { contains: search, mode: 'insensitive' } },
+        { expenseNumber: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { enteredBy: { contains: search, mode: 'insensitive' } },
+        { notes: { contains: search, mode: 'insensitive' } },
       ];
     }
 
-    const expenses = await prisma.expense.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        createdBy: {
-          select: { name: true, username: true, role: true },
+    const [total, expenses] = await Promise.all([
+      prisma.expense.count({ where }),
+      prisma.expense.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          createdBy: {
+            select: { name: true, username: true, role: true },
+          },
         },
-      },
-    });
+      }),
+    ]);
 
     const formatted = expenses.map((e) => ({
       id: e.id,
@@ -142,7 +151,16 @@ export async function GET(req: NextRequest) {
       createdAt: e.createdAt.toISOString(),
     }));
 
-    return NextResponse.json({ success: true, data: formatted });
+    return NextResponse.json({
+      success: true,
+      data: formatted,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     console.error('Error fetching expenses:', error);
     return NextResponse.json(

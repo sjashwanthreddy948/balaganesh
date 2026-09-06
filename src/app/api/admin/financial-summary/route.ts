@@ -83,10 +83,41 @@ export async function GET(req: NextRequest) {
       }))
       .sort((a, b) => b.totalAmount - a.totalAmount);
 
+    // 3. Fetch Laddu Balances & Payments (Kept strictly separated from Chanda)
+    const [ladduTotals, ladduCash, ladduOnline, ladduPaidCount, ladduPendingCount] = await Promise.all([
+      prisma.ladduBalance.aggregate({
+        _sum: {
+          totalDue: true,
+          totalPaid: true,
+          remainingBalance: true,
+        },
+      }),
+      prisma.ladduPayment.aggregate({
+        where: { paymentMethod: 'CASH' },
+        _sum: { amount: true },
+      }),
+      prisma.ladduPayment.aggregate({
+        where: { paymentMethod: 'ONLINE' },
+        _sum: { amount: true },
+      }),
+      prisma.ladduBalance.count({ where: { status: 'PAID' } }),
+      prisma.ladduBalance.count({ where: { status: { not: 'PAID' } } }),
+    ]);
+
+    const totalLadduDue = ladduTotals._sum.totalDue || 0;
+    const totalLadduCollected = ladduTotals._sum.totalPaid || 0;
+    const cashLaddu = ladduCash._sum.amount || 0;
+    const onlineLaddu = ladduOnline._sum.amount || 0;
+    const outstandingLadduBalance = ladduTotals._sum.remainingBalance || 0;
+
     // 4. Balances
     const remainingBalance = totalChanda - totalExpenses;
     const estimatedCashBalance = cashChanda - cashExpenses;
     const onlineBalance = onlineChanda - onlineExpenses;
+
+    const netTotalFestivalBalance = (totalChanda + totalLadduCollected) - totalExpenses;
+    const netFestivalCashOnHand = (cashChanda + cashLaddu) - cashExpenses;
+    const netFestivalOnlineBank = (onlineChanda + onlineLaddu) - onlineExpenses;
 
     return NextResponse.json({
       success: true,
@@ -100,6 +131,15 @@ export async function GET(req: NextRequest) {
           payLaterCount,
           totalContributors: verifiedContributors,
         },
+        laddu: {
+          totalLadduDue,
+          totalLadduCollected,
+          cashLaddu,
+          onlineLaddu,
+          outstandingLadduBalance,
+          fullyPaidCount: ladduPaidCount,
+          pendingCount: ladduPendingCount,
+        },
         expenses: {
           totalExpenses,
           cashExpenses,
@@ -107,9 +147,12 @@ export async function GET(req: NextRequest) {
           totalExpenseCount: expenses.length,
         },
         balance: {
-          remainingBalance,
+          remainingBalance, // Chanda Net Balance (backward compatible)
           estimatedCashBalance,
           onlineBalance,
+          netTotalFestivalBalance, // Grand Net including Laddu collections
+          netFestivalCashOnHand,
+          netFestivalOnlineBank,
         },
         categoryBreakdown,
       },

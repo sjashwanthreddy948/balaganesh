@@ -55,6 +55,26 @@ export async function POST(req: NextRequest) {
     // Generate next sequential certificate number
     const certificateNumber = await generateNextCertificateNumber();
 
+    // Link or create Contributor profile if mobile number is provided
+    let contributorId: string | null = null;
+    if (cleanMobile) {
+      const existingContributor = await prisma.contributor.findUnique({
+        where: { mobileNumber: cleanMobile },
+      });
+      if (existingContributor) {
+        contributorId = existingContributor.id;
+      } else {
+        const newContributor = await prisma.contributor.create({
+          data: {
+            fullName: data.fullName.trim(),
+            mobileNumber: cleanMobile,
+            address: data.address?.trim() || null,
+          },
+        });
+        contributorId = newContributor.id;
+      }
+    }
+
     // Create database record
     const contribution = await prisma.contribution.create({
       data: {
@@ -69,6 +89,7 @@ export async function POST(req: NextRequest) {
         paymentScreenshot: data.paymentScreenshot || null,
         notes: data.notes?.trim() || null,
         createdById: creatorId,
+        contributorId,
       },
       include: {
         createdBy: {
@@ -127,6 +148,10 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get('status')?.trim().toUpperCase();
   const volunteerId = searchParams.get('volunteerId')?.trim();
   const dateRange = searchParams.get('dateRange')?.trim();
+  const all = searchParams.get('all') === 'true';
+  const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+  const limit = all ? 1000 : Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '25', 10)));
+  const skip = all ? 0 : (page - 1) * limit;
 
   try {
     const whereClause: any = {};
@@ -160,26 +185,30 @@ export async function GET(req: NextRequest) {
 
     if (search && search.length > 0) {
       whereClause.OR = [
-        { fullName: { contains: search } },
+        { fullName: { contains: search, mode: 'insensitive' } },
         { mobileNumber: { contains: search } },
-        { certificateNumber: { contains: search } },
-        { utr: { contains: search } },
+        { certificateNumber: { contains: search, mode: 'insensitive' } },
+        { utr: { contains: search, mode: 'insensitive' } },
       ];
     }
 
-    const contributions = await prisma.contribution.findMany({
-      where: whereClause,
-      orderBy: { createdAt: 'desc' },
-      take: 200,
-      include: {
-        createdBy: {
-          select: { name: true, username: true },
+    const [total, contributions] = await Promise.all([
+      prisma.contribution.count({ where: whereClause }),
+      prisma.contribution.findMany({
+        where: whereClause,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          createdBy: {
+            select: { name: true, username: true },
+          },
+          verifiedBy: {
+            select: { name: true },
+          },
         },
-        verifiedBy: {
-          select: { name: true },
-        },
-      },
-    });
+      }),
+    ]);
 
     return NextResponse.json({
       success: true,
@@ -188,6 +217,12 @@ export async function GET(req: NextRequest) {
         volunteerName: c.createdBy.name,
         verifiedByName: c.verifiedBy?.name || null,
       })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     console.error('Error fetching contributions:', error);

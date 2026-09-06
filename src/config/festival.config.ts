@@ -148,3 +148,69 @@ export function buildWhatsAppPayLaterReminderShareUrl(contribution: {
   return `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(message)}`;
 }
 
+/**
+ * Builds standard WhatsApp Laddu Payment Receipt Message
+ */
+export function buildWhatsAppLadduReceiptMessage(laddu: {
+  personName: string;
+  ladduYear: number;
+  amountPaid: number;
+  totalPaid: number;
+  totalDue: number;
+  remainingBalance: number;
+  status: string;
+  receiptNumber: string;
+  receiptUrl?: string;
+}): string {
+  const receiptUrl =
+    laddu.receiptUrl ||
+    (typeof window !== 'undefined'
+      ? `${window.location.origin}/laddu/receipt/${laddu.receiptNumber}`
+      : `https://balaganesh.vercel.app/laddu/receipt/${laddu.receiptNumber}`);
+
+  const statusText =
+    laddu.remainingBalance <= 0 || laddu.status === 'PAID'
+      ? '✓ FULLY PAID'
+      : `REMAINING BALANCE: ₹${laddu.remainingBalance.toLocaleString('en-IN')}`;
+
+  return `Namaste ${laddu.personName} 🙏
+
+Thank you for your payment of ₹${laddu.amountPaid.toLocaleString('en-IN')} towards Bala Ganesh Association Laddu (${laddu.ladduYear}).
+
+Receipt No: ${laddu.receiptNumber}
+Laddu Year: ${laddu.ladduYear}
+Amount Paid Now: ₹${laddu.amountPaid.toLocaleString('en-IN')}
+Total Paid: ₹${laddu.totalPaid.toLocaleString('en-IN')} / ₹${laddu.totalDue.toLocaleString('en-IN')}
+Status: ${statusText}
+
+Your Official Laddu Payment Receipt:
+${receiptUrl}
+
+Ganpati Bappa Morya! 🙏
+
+— ${FESTIVAL_CONFIG.associationName}`;
+}
+
+/**
+ * Builds WhatsApp Share URL for Laddu Payment Receipt
+ */
+export function buildWhatsAppLadduReceiptShareUrl(laddu: {
+  personName: string;
+  ladduYear: number;
+  amountPaid: number;
+  totalPaid: number;
+  totalDue: number;
+  remainingBalance: number;
+  status: string;
+  receiptNumber: string;
+  mobileNumber?: string | null;
+  receiptUrl?: string;
+}): string {
+  const message = buildWhatsAppLadduReceiptMessage(laddu);
+  const normalized = normalizeIndianMobileForWhatsApp(laddu.mobileNumber);
+  const phoneParam = normalized ? `phone=${normalized.whatsappPhone}&` : '';
+
+  return `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(message)}`;
+}
+
+

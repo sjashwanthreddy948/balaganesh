@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { FESTIVAL_CONFIG } from '@/config/festival.config';
-import { LogIn, LayoutDashboard, Receipt } from 'lucide-react';
+import { LogIn, LayoutDashboard, Receipt, Coins } from 'lucide-react';
 
 export default function Header() {
   const pathname = usePathname();
@@ -49,7 +49,15 @@ export default function Header() {
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/40 text-devotional-gold-300 hover:text-white text-xs font-bold transition-all shadow-sm"
                 >
                   <LayoutDashboard className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Chanda Dashboard</span>
+                  <span className="hidden sm:inline">Chanda</span>
+                </Link>
+
+                <Link
+                  href="/laddu"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-devotional-blue-900 border border-amber-500/40 text-amber-300 hover:text-white text-xs font-bold transition-all shadow-sm"
+                >
+                  <Coins className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden sm:inline">Laddu</span>
                 </Link>
 
                 <Link

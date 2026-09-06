@@ -8,6 +8,7 @@ import FastContributionForm from '@/components/FastContributionForm';
 import LandscapeCertificate, { CertificateData } from '@/components/LandscapeCertificate';
 import ImageLightboxModal from '@/components/ImageLightboxModal';
 import MobileBottomNav from '@/components/MobileBottomNav';
+import ContributorProfileModal from '@/components/ContributorProfileModal';
 import {
   FESTIVAL_CONFIG,
   buildWhatsAppCertificateMessage,
@@ -39,6 +40,9 @@ import {
   Shield,
   Copy,
   Bell,
+  ChevronLeft,
+  ChevronRight,
+  Coins,
 } from 'lucide-react';
 
 interface UserProfile {
@@ -60,6 +64,7 @@ interface ContributionItem {
   utr?: string | null;
   paymentScreenshot?: string | null;
   volunteerName?: string;
+  contributorId?: string | null;
   createdAt: string;
 }
 
@@ -71,6 +76,12 @@ export default function DashboardPage() {
   const [financialSummary, setFinancialSummary] = useState<any>(null);
   const [contributions, setContributions] = useState<ContributionItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Pagination states
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [selectedContributorId, setSelectedContributorId] = useState<string | null>(null);
 
   // View state
   const [showAddForm, setShowAddForm] = useState(false);
@@ -169,8 +180,10 @@ export default function DashboardPage() {
         console.error('Financial summary load error:', finErr);
       }
 
-      // 4. Fetch contributions with filters
+      // 4. Fetch contributions with filters & pagination
       const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('limit', '25');
       if (searchQuery) params.append('search', searchQuery);
       if (methodFilter !== 'ALL') params.append('method', methodFilter);
       if (statusFilter !== 'ALL') params.append('status', statusFilter);
@@ -179,14 +192,19 @@ export default function DashboardPage() {
       const listRes = await fetch(`/api/contributions?${params.toString()}`);
       if (listRes.ok) {
         const listJson = await listRes.json();
-        setContributions(listJson.data);
+        setContributions(listJson.data || []);
+        if (listJson.pagination) {
+          setPage(listJson.pagination.page);
+          setTotalPages(listJson.pagination.totalPages || 1);
+          setTotalCount(listJson.pagination.total || 0);
+        }
       }
     } catch (err) {
       console.error('Failed to load dashboard:', err);
     } finally {
       setLoading(false);
     }
-  }, [router, searchQuery, methodFilter, statusFilter, dateFilter]);
+  }, [router, page, searchQuery, methodFilter, statusFilter, dateFilter]);
 
   useEffect(() => {
     loadDashboardData();
@@ -649,9 +667,16 @@ export default function DashboardPage() {
                         {/* Donor Name & Amount */}
                         <div className="flex items-start justify-between gap-2 border-b border-devotional-gold-500/15 pb-2.5">
                           <div className="min-w-0 flex-1">
-                            <h4 className="font-extrabold text-base text-white truncate">
+                            <button
+                              type="button"
+                              onClick={() => c.contributorId && setSelectedContributorId(c.contributorId)}
+                              className={`font-extrabold text-base text-left truncate block ${
+                                c.contributorId ? 'text-white hover:text-devotional-gold-300' : 'text-white'
+                              }`}
+                              title={c.contributorId ? 'View Contributor Profile' : undefined}
+                            >
                               {c.fullName}
-                            </h4>
+                            </button>
                             {c.mobileNumber && (
                               <p className="text-xs text-gray-300 font-mono mt-0.5">
                                 📱 +91 {c.mobileNumber}
@@ -679,7 +704,6 @@ export default function DashboardPage() {
                         {/* Badges: Payment Method, Status & Cert Number */}
                         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            {/* Method */}
                             <span
                               className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase ${
                                 isPayLater
@@ -692,7 +716,6 @@ export default function DashboardPage() {
                               {c.paymentMethod === 'PAY_LATER' ? '⏱ PAY LATER' : c.paymentMethod}
                             </span>
 
-                            {/* Status */}
                             <span
                               className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase ${
                                 c.paymentStatus === 'PAY_LATER'
@@ -716,7 +739,6 @@ export default function DashboardPage() {
                             </span>
                           </div>
 
-                          {/* Cert Number */}
                           <span className="font-mono text-[11px] text-devotional-gold-400 font-bold bg-devotional-blue-950 px-2 py-0.5 rounded-md border border-devotional-gold-500/20">
                             {c.certificateNumber}
                           </span>
@@ -730,35 +752,61 @@ export default function DashboardPage() {
                           </div>
                         )}
 
-                        {/* Action Buttons */}
-                        <div className="space-y-2 pt-2 border-t border-devotional-gold-500/15">
-                          {/* 🖼 VIEW PAYMENT SCREENSHOT (ONLINE ONLY with screenshot) */}
-                          {!isCash && !isPayLater && c.paymentScreenshot && (
+                        {/* Compact Action Buttons in One Row */}
+                        <div className="pt-2 border-t border-devotional-gold-500/15">
+                          <div className="flex items-center gap-1.5 overflow-x-auto">
                             <button
                               type="button"
-                              onClick={() => {
-                                setViewingScreenshotUrl(c.paymentScreenshot!);
-                                setViewingScreenshotTitle(`Payment Screenshot: ${c.fullName} (₹${c.amount})`);
-                              }}
-                              className="w-full py-2.5 px-3 rounded-xl bg-devotional-blue-900/90 hover:bg-devotional-blue-800 border border-devotional-gold-400/50 text-devotional-gold-200 font-extrabold text-xs flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all"
+                              onClick={() => handleDashboardWhatsAppShare(c)}
+                              className={`flex-1 min-w-[90px] py-2 px-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-1 shadow-sm active:scale-95 transition-all whitespace-nowrap ${
+                                isPayLater
+                                  ? 'bg-amber-600 hover:bg-amber-500 text-white'
+                                  : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                              }`}
+                              title={isPayLater ? 'Send Reminder via WhatsApp' : 'Send Certificate via WhatsApp'}
                             >
-                              <ImageIcon className="w-4 h-4 text-devotional-gold-400" />
-                              <span>🖼 VIEW PAYMENT SCREENSHOT</span>
+                              {isPayLater ? <Bell className="w-3.5 h-3.5" /> : <Smartphone className="w-3.5 h-3.5" />}
+                              <span>{isPayLater ? 'Reminder' : 'WhatsApp'}</span>
                             </button>
-                          )}
 
-                          {/* 📱 SEND VIA WHATSAPP (for CASH / ONLINE) vs 🔔 SEND REMINDER & MARK PAID (for PAY LATER) */}
-                          {isPayLater ? (
-                            <div className="space-y-2">
+                            {!isCash && !isPayLater && c.paymentScreenshot && (
                               <button
                                 type="button"
-                                onClick={() => handleDashboardWhatsAppShare(c)}
-                                className="w-full py-2.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all"
+                                onClick={() => {
+                                  setViewingScreenshotUrl(c.paymentScreenshot!);
+                                  setViewingScreenshotTitle(`Payment Screenshot: ${c.fullName} (₹${c.amount})`);
+                                }}
+                                className="flex-1 min-w-[85px] py-2 px-2 rounded-xl bg-devotional-blue-900/90 hover:bg-devotional-blue-800 border border-devotional-gold-400/50 text-devotional-gold-200 font-bold text-xs flex items-center justify-center gap-1 shadow-sm active:scale-95 transition-all whitespace-nowrap"
+                                title="View Payment Screenshot"
                               >
-                                <Bell className="w-4 h-4" />
-                                <span>🔔 SEND REMINDER VIA WHATSAPP</span>
+                                <ImageIcon className="w-3.5 h-3.5 text-devotional-gold-400" />
+                                <span>Payment</span>
                               </button>
+                            )}
 
+                            {!isPayLater ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setViewingCertificate({
+                                    certificateNumber: c.certificateNumber,
+                                    fullName: c.fullName,
+                                    mobileNumber: c.mobileNumber,
+                                    amount: c.amount,
+                                    paymentMethod: c.paymentMethod,
+                                    paymentStatus: c.paymentStatus,
+                                    createdAt: c.createdAt,
+                                    volunteerName: c.volunteerName,
+                                    paymentScreenshot: c.paymentScreenshot,
+                                  })
+                                }
+                                className="flex-1 min-w-[95px] py-2 px-2.5 rounded-xl bg-devotional-blue-950 border border-devotional-gold-500/40 text-devotional-gold-300 hover:text-white font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition-all whitespace-nowrap"
+                                title="View Certificate"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-devotional-gold-400" />
+                                <span>Certificate</span>
+                              </button>
+                            ) : (
                               <button
                                 type="button"
                                 onClick={async () => {
@@ -777,85 +825,12 @@ export default function DashboardPage() {
                                     });
                                   }
                                 }}
-                                className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all"
-                              >
-                                <Check className="w-4 h-4" />
-                                <span>✓ MARK AS PAID (GENERATE CERTIFICATE)</span>
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleDashboardWhatsAppShare(c)}
-                              className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all"
-                            >
-                              <Smartphone className="w-4 h-4" />
-                              <span>📱 SEND VIA WHATSAPP</span>
-                            </button>
-                          )}
-
-                          {/* Secondary Row: Certificate & Admin Controls */}
-                          <div className="flex items-center gap-2 flex-wrap pt-0.5">
-                            {/* Certificate (Available once paid) */}
-                            {!isPayLater ? (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setViewingCertificate({
-                                    certificateNumber: c.certificateNumber,
-                                    fullName: c.fullName,
-                                    mobileNumber: c.mobileNumber,
-                                    amount: c.amount,
-                                    paymentMethod: c.paymentMethod,
-                                    paymentStatus: c.paymentStatus,
-                                    createdAt: c.createdAt,
-                                    volunteerName: c.volunteerName,
-                                    paymentScreenshot: c.paymentScreenshot,
-                                  })
-                                }
-                                className="flex-1 min-w-[90px] py-2 px-2.5 rounded-xl bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                              >
-                                <Eye className="w-3.5 h-3.5 text-devotional-gold-400" />
-                                <span>Certificate</span>
-                              </button>
-                            ) : (
-                              <div className="flex-1 min-w-[90px] py-1.5 px-2 rounded-xl bg-amber-950/40 border border-amber-500/20 text-amber-400 text-[11px] font-semibold flex items-center justify-center gap-1.5">
-                                <Clock className="w-3 h-3 text-amber-400" />
-                                <span>Certificate unlocks after payment</span>
-                              </div>
-                            )}
-
-                            {/* Admin Pay Later Collected Cash inline */}
-                            {isAdmin && isPayLater && (
-                              <button
-                                type="button"
-                                onClick={() => handleStatusUpdate(c.id, 'CASH_RECEIVED')}
-                                className="px-2.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 shadow-sm"
-                                title="Devotee paid cash - Mark Cash Received"
+                                className="flex-1 min-w-[90px] py-2 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center justify-center gap-1 active:scale-95 transition-all whitespace-nowrap"
+                                title="Mark Paid & Issue Certificate"
                               >
                                 <Check className="w-3.5 h-3.5" />
-                                <span>Paid Cash</span>
+                                <span>Paid</span>
                               </button>
-                            )}
-
-                            {/* Admin Verify/Reject inline */}
-                            {isAdmin && !isCash && !isPayLater && isPending && (
-                              <div className="flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleStatusUpdate(c.id, 'VERIFIED')}
-                                  className="px-2.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs"
-                                >
-                                  Verify
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleStatusUpdate(c.id, 'REJECTED')}
-                                  className="px-2.5 py-2 rounded-xl bg-red-950 border border-red-500/40 text-red-400 hover:bg-red-900 font-bold text-xs"
-                                >
-                                  Reject
-                                </button>
-                              </div>
                             )}
 
                             {/* Admin Edit */}
@@ -924,9 +899,18 @@ export default function DashboardPage() {
                               {c.certificateNumber}
                             </td>
                             <td className="py-3 px-4">
-                              <p className="font-bold text-white">{c.fullName}</p>
+                              <button
+                                type="button"
+                                onClick={() => c.contributorId && setSelectedContributorId(c.contributorId)}
+                                className={`font-bold text-left block transition-colors ${
+                                  c.contributorId ? 'text-white hover:text-devotional-gold-300 hover:underline cursor-pointer' : 'text-white'
+                                }`}
+                                title={c.contributorId ? 'View Contributor Lifetime Profile' : undefined}
+                              >
+                                {c.fullName}
+                              </button>
                               {c.mobileNumber && (
-                                <p className="text-[11px] text-gray-400">{c.mobileNumber}</p>
+                                <p className="text-[11px] text-gray-400 font-mono">{c.mobileNumber}</p>
                               )}
                             </td>
                             <td className="py-3 px-4 font-black text-devotional-gold-300 text-sm whitespace-nowrap">
@@ -972,141 +956,141 @@ export default function DashboardPage() {
                                 </span>
                               )}
                             </td>
-                            <td className="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
-                              {/* WhatsApp Reminder (Pay Later) vs WhatsApp Certificate (Cash/Online) */}
-                              {isPayLater ? (
+                            <td className="py-3 px-4 text-right whitespace-nowrap">
+                              <div className="inline-flex items-center gap-1.5 justify-end">
+                                {/* 1. WhatsApp Button */}
                                 <button
                                   type="button"
                                   onClick={() => handleDashboardWhatsAppShare(c)}
-                                  className="px-2 py-1 rounded-lg bg-amber-950 border border-amber-500/40 text-amber-300 hover:text-white inline-flex items-center gap-1 font-bold text-[10px]"
-                                  title="Send Payment Reminder via WhatsApp"
+                                  className={`px-2.5 py-1 rounded-lg font-bold text-xs inline-flex items-center gap-1 shadow-sm active:scale-95 transition-all ${
+                                    isPayLater
+                                      ? 'bg-amber-600 hover:bg-amber-500 text-white'
+                                      : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                  }`}
+                                  title={isPayLater ? 'Send Payment Reminder via WhatsApp' : 'Send Certificate via WhatsApp'}
                                 >
-                                  <Bell className="w-3.5 h-3.5 text-amber-400" />
-                                  <span>Reminder</span>
+                                  {isPayLater ? <Bell className="w-3.5 h-3.5" /> : <Smartphone className="w-3.5 h-3.5" />}
+                                  <span>{isPayLater ? 'Reminder' : 'WhatsApp'}</span>
                                 </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => handleDashboardWhatsAppShare(c)}
-                                  className="p-1.5 rounded-lg bg-emerald-950 border border-emerald-500/30 text-emerald-300 hover:text-white inline-flex items-center"
-                                  title="Share on WhatsApp"
-                                >
-                                  <Smartphone className="w-3.5 h-3.5" />
-                                </button>
-                              )}
 
-                              {/* View Certificate (Only available when paid) */}
-                              {!isPayLater && (
-                                <button
-                                  onClick={() =>
-                                    setViewingCertificate({
-                                      certificateNumber: c.certificateNumber,
-                                      fullName: c.fullName,
-                                      mobileNumber: c.mobileNumber,
-                                      amount: c.amount,
-                                      paymentMethod: c.paymentMethod,
-                                      paymentStatus: c.paymentStatus,
-                                      createdAt: c.createdAt,
-                                      volunteerName: c.volunteerName,
-                                      paymentScreenshot: c.paymentScreenshot,
-                                    })
-                                  }
-                                  className="p-1.5 rounded-lg bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white inline-flex items-center"
-                                  title="View White & Gold Certificate"
-                                >
-                                  <Eye className="w-3.5 h-3.5" />
-                                </button>
-                              )}
+                                {/* 2. Payment Button (ONLINE ONLY with uploaded screenshot) */}
+                                {!isCash && !isPayLater && c.paymentScreenshot && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setViewingScreenshotUrl(c.paymentScreenshot!);
+                                      setViewingScreenshotTitle(`Payment Screenshot: ${c.fullName} (₹${c.amount})`);
+                                    }}
+                                    className="px-2.5 py-1 rounded-lg bg-devotional-blue-900/90 hover:bg-devotional-blue-800 border border-devotional-gold-400/50 text-devotional-gold-200 font-bold text-xs inline-flex items-center gap-1 shadow-sm active:scale-95 transition-all"
+                                    title="View Payment Screenshot"
+                                  >
+                                    <ImageIcon className="w-3.5 h-3.5 text-devotional-gold-400" />
+                                    <span>Payment</span>
+                                  </button>
+                                )}
 
-                              {/* Screenshot Lightbox (ONLINE ONLY with screenshot) */}
-                              {!isCash && !isPayLater && c.paymentScreenshot && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setViewingScreenshotUrl(c.paymentScreenshot!);
-                                    setViewingScreenshotTitle(`Payment Screenshot: ${c.fullName} (₹${c.amount})`);
-                                  }}
-                                  className="p-1.5 rounded-lg bg-devotional-blue-950 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white inline-flex items-center"
-                                  title="View Payment Screenshot"
-                                >
-                                  <ImageIcon className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-
-                              {/* Pay Later: Click Paid -> Updates as paid & Generates Certificate */}
-                              {isPayLater && (
-                                <button
-                                  onClick={async () => {
-                                    if (confirm(`Mark ₹${c.amount} from "${c.fullName}" as Paid? This will generate their official Certificate.`)) {
-                                      await handleStatusUpdate(c.id, 'CASH_RECEIVED');
+                                {/* 3. Certificate Button (or Paid button for Pay Later) */}
+                                {!isPayLater ? (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
                                       setViewingCertificate({
                                         certificateNumber: c.certificateNumber,
                                         fullName: c.fullName,
                                         mobileNumber: c.mobileNumber,
                                         amount: c.amount,
-                                        paymentMethod: 'CASH',
-                                        paymentStatus: 'CASH_RECEIVED',
+                                        paymentMethod: c.paymentMethod,
+                                        paymentStatus: c.paymentStatus,
                                         createdAt: c.createdAt,
                                         volunteerName: c.volunteerName,
                                         paymentScreenshot: c.paymentScreenshot,
-                                      });
+                                      })
                                     }
-                                  }}
-                                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] inline-flex items-center gap-1 shadow-sm"
-                                  title="Mark Paid & Generate Certificate"
-                                >
-                                  <Check className="w-3 h-3" />
-                                  <span>Paid</span>
-                                </button>
-                              )}
-
-                              {/* Admin Verify / Reject */}
-                              {isAdmin && !isCash && !isPayLater && isPending && (
-                                <>
-                                  <button
-                                    onClick={() => handleStatusUpdate(c.id, 'VERIFIED')}
-                                    className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px]"
+                                    className="px-2.5 py-1 rounded-lg bg-devotional-blue-950 hover:bg-devotional-blue-900 border border-devotional-gold-500/40 text-devotional-gold-300 hover:text-white font-bold text-xs inline-flex items-center gap-1 active:scale-95 transition-all"
+                                    title="View Certificate"
                                   >
-                                    Verify
+                                    <Eye className="w-3.5 h-3.5 text-devotional-gold-400" />
+                                    <span>Certificate</span>
                                   </button>
+                                ) : (
                                   <button
-                                    onClick={() => handleStatusUpdate(c.id, 'REJECTED')}
-                                    className="px-2.5 py-1 rounded-lg bg-red-950 border border-red-500/40 text-red-400 hover:bg-red-900 font-bold text-[10px]"
+                                    type="button"
+                                    onClick={async () => {
+                                      if (confirm(`Mark ₹${c.amount} from "${c.fullName}" as Paid? This will generate their official Certificate.`)) {
+                                        await handleStatusUpdate(c.id, 'CASH_RECEIVED');
+                                        setViewingCertificate({
+                                          certificateNumber: c.certificateNumber,
+                                          fullName: c.fullName,
+                                          mobileNumber: c.mobileNumber,
+                                          amount: c.amount,
+                                          paymentMethod: 'CASH',
+                                          paymentStatus: 'CASH_RECEIVED',
+                                          createdAt: c.createdAt,
+                                          volunteerName: c.volunteerName,
+                                          paymentScreenshot: c.paymentScreenshot,
+                                        });
+                                      }
+                                    }}
+                                    className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs inline-flex items-center gap-1 shadow-sm active:scale-95 transition-all"
+                                    title="Mark Paid & Issue Certificate"
                                   >
-                                    Reject
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>Paid</span>
                                   </button>
-                                </>
-                              )}
+                                )}
 
-                              {/* Admin Edit */}
-                              {isAdmin && (
-                                <button
-                                  onClick={() => {
-                                    setEditingContribution(c);
-                                    setEditName(c.fullName);
-                                    setEditMobile(c.mobileNumber || '');
-                                    setEditAddress(c.address || '');
-                                    setEditAmount(c.amount);
-                                    setEditMethod(c.paymentMethod);
-                                    setEditStatus(c.paymentStatus);
-                                  }}
-                                  className="p-1.5 rounded-lg bg-devotional-blue-950 border border-devotional-gold-500/20 text-gray-300 hover:text-white inline-flex items-center"
-                                  title="Edit Contribution"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                              )}
+                                {/* Admin Verify / Reject */}
+                                {isAdmin && !isCash && !isPayLater && isPending && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleStatusUpdate(c.id, 'VERIFIED')}
+                                      className="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px]"
+                                    >
+                                      Verify
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleStatusUpdate(c.id, 'REJECTED')}
+                                      className="px-2 py-1 rounded-lg bg-red-950 border border-red-500/40 text-red-400 hover:bg-red-900 font-bold text-[10px]"
+                                    >
+                                      Reject
+                                    </button>
+                                  </>
+                                )}
 
-                              {/* Admin Delete */}
-                              {isAdmin && (
-                                <button
-                                  onClick={() => handleDeleteContribution(c.id, c.fullName)}
-                                  className="p-1.5 rounded-lg bg-red-950/70 border border-red-500/40 text-red-300 hover:text-white inline-flex items-center"
-                                  title="Delete Contribution"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              )}
+                                {/* Admin Edit */}
+                                {isAdmin && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingContribution(c);
+                                      setEditName(c.fullName);
+                                      setEditMobile(c.mobileNumber || '');
+                                      setEditAddress(c.address || '');
+                                      setEditAmount(c.amount);
+                                      setEditMethod(c.paymentMethod);
+                                      setEditStatus(c.paymentStatus);
+                                    }}
+                                    className="p-1.5 rounded-lg bg-devotional-blue-900 border border-devotional-gold-500/30 text-devotional-gold-300 hover:text-white text-xs active:scale-95 transition-all"
+                                    title="Edit Contribution"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+
+                                {/* Admin Delete */}
+                                {isAdmin && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteContribution(c.id, c.fullName)}
+                                    className="p-1.5 rounded-lg bg-red-950/70 border border-red-500/40 text-red-300 hover:text-white text-xs active:scale-95 transition-all"
+                                    title="Delete Contribution"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -1114,6 +1098,42 @@ export default function DashboardPage() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-devotional-gold-500/20 bg-devotional-blue-950/60 rounded-b-2xl">
+                    <p className="text-xs text-gray-300">
+                      Showing <span className="font-bold text-devotional-gold-300">{(page - 1) * 25 + 1}</span> to{' '}
+                      <span className="font-bold text-devotional-gold-300">
+                        {Math.min(page * 25, totalCount)}
+                      </span>{' '}
+                      of <span className="font-bold text-devotional-gold-300">{totalCount}</span> entries
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={page <= 1}
+                        className="px-3 py-1.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-xs font-bold text-devotional-gold-200 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-all"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                        <span>Previous</span>
+                      </button>
+                      <span className="text-xs font-mono font-bold text-devotional-gold-300 px-2">
+                        {page} / {totalPages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={page >= totalPages}
+                        className="px-3 py-1.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-xs font-bold text-devotional-gold-200 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-all"
+                      >
+                        <span>Next</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1411,6 +1431,14 @@ export default function DashboardPage() {
           imageUrl={viewingScreenshotUrl}
           title={viewingScreenshotTitle}
         />
+
+        {/* MODAL: CONTRIBUTOR PROFILE */}
+        {selectedContributorId && (
+          <ContributorProfileModal
+            contributorId={selectedContributorId}
+            onClose={() => setSelectedContributorId(null)}
+          />
+        )}
       </main>
 
       <Footer />

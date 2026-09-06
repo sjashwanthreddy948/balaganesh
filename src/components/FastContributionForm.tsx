@@ -81,6 +81,35 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
     certNo: string;
   } | null>(null);
 
+  const [existingDonor, setExistingDonor] = useState<{ name: string; address?: string } | null>(null);
+
+  // Debounced duplicate phone lookup & profile linking
+  useEffect(() => {
+    const clean = cleanIndianMobile(mobileNumber);
+    if (clean && clean.length === 10) {
+      const timer = setTimeout(() => {
+        fetch(`/api/contributors?mobile=${clean}`)
+          .then((r) => r.json())
+          .then((d) => {
+            if (d.success && d.contributor) {
+              setExistingDonor({
+                name: d.contributor.fullName,
+                address: d.contributor.address,
+              });
+              setFullName((prev) => (!prev ? d.contributor.fullName : prev));
+              setAddress((prev) => (!prev && d.contributor.address ? d.contributor.address : prev));
+            } else {
+              setExistingDonor(null);
+            }
+          })
+          .catch(() => setExistingDonor(null));
+      }, 300);
+      return () => clearTimeout(timer);
+    } else {
+      setExistingDonor(null);
+    }
+  }, [mobileNumber]);
+
   const effectiveAmount = isCustomAmount ? Number(customAmountInput) || 0 : selectedAmount;
 
   // Generate QR for online drawer
@@ -665,6 +694,14 @@ export default function FastContributionForm({ onSuccess, onCancel }: FastContri
                   className="w-full pl-12 pr-4 py-3 rounded-xl bg-devotional-blue-950 border border-devotional-gold-500/30 text-white placeholder-gray-500 focus:outline-none focus:border-devotional-gold-400 text-base font-medium"
                 />
               </div>
+              {existingDonor && (
+                <div className="mt-2 p-2 rounded-xl bg-emerald-950/70 border border-emerald-500/40 text-[11px] text-emerald-300 flex items-center gap-2 animate-fadeIn">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>
+                    Existing donor: <b>{existingDonor.name}</b>. This contribution will be linked to their donor profile.
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Address */}
