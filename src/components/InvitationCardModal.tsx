@@ -1,7 +1,11 @@
 'use client';
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { FESTIVAL_CONFIG, buildWhatsAppInvitationMessage } from '@/config/festival.config';
+import {
+  FESTIVAL_CONFIG,
+  buildWhatsAppInvitationMessage,
+  buildWhatsAppInvitationShareUrl,
+} from '@/config/festival.config';
 import { normalizeIndianMobileForWhatsApp } from '@/lib/validation';
 import {
   Download,
@@ -17,6 +21,7 @@ import {
   Calendar,
   Clock,
   MapPin,
+  Languages,
 } from 'lucide-react';
 
 export interface InvitationData {
@@ -37,15 +42,32 @@ export interface InvitationData {
 interface InvitationCardModalProps {
   invitation: InvitationData;
   onClose: () => void;
+  initialLanguage?: 'TE' | 'EN' | 'BOTH';
 }
 
-export default function InvitationCardModal({ invitation, onClose }: InvitationCardModalProps) {
+function drawRoundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+) {
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, r);
+}
+
+export default function InvitationCardModal({
+  invitation,
+  onClose,
+  initialLanguage = 'BOTH',
+}: InvitationCardModalProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(true);
   const [copiedText, setCopiedText] = useState(false);
-  const [copiedGroupLink, setCopiedGroupLink] = useState(false);
   const [individualMobile, setIndividualMobile] = useState('');
+  const [language, setLanguage] = useState<'TE' | 'EN' | 'BOTH'>(initialLanguage);
 
   const formattedDate = (() => {
     const d = new Date(invitation.eventDate);
@@ -67,349 +89,357 @@ export default function InvitationCardModal({ invitation, onClose }: InvitationC
 
     setIsGenerating(true);
 
-    // High-resolution portrait canvas (1200 x 1500)
+    // High-resolution portrait canvas (1200 x 1650) with ample vertical breathing room
     const width = 1200;
-    const height = 1500;
+    const height = 1650;
     canvas.width = width;
     canvas.height = height;
 
-    // 1. Rich Devotional Background Gradient
-    const bgGrad = ctx.createLinearGradient(0, 0, width, height);
-    bgGrad.addColorStop(0, '#040b20');
-    bgGrad.addColorStop(0.35, '#07153d');
-    bgGrad.addColorStop(0.7, '#0b1d4d');
-    bgGrad.addColorStop(1, '#050c24');
-    ctx.fillStyle = bgGrad;
+    // 1. BASE BACKGROUND: Pure Luxury Ivory / White Paper Stock (Certificate Style)
+    const paperGradient = ctx.createLinearGradient(0, 0, width, height);
+    paperGradient.addColorStop(0, '#ffffff');
+    paperGradient.addColorStop(0.4, '#fcfbf8');
+    paperGradient.addColorStop(0.8, '#f7f6ef');
+    paperGradient.addColorStop(1, '#f3f1e7');
+    ctx.fillStyle = paperGradient;
     ctx.fillRect(0, 0, width, height);
 
-    // Subtle Radial Glow behind Lord Ganesha & Header
-    const radialGlow = ctx.createRadialGradient(width / 2, 280, 50, width / 2, 280, 550);
-    radialGlow.addColorStop(0, 'rgba(234, 179, 8, 0.15)');
-    radialGlow.addColorStop(0.6, 'rgba(217, 119, 6, 0.05)');
-    radialGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = radialGlow;
-    ctx.fillRect(0, 0, width, height);
+    // 2. ELEGANT GOLD & ROYAL BLUE DUAL BORDERS (Exact Certificate Theme)
+    // Outer Deep Royal Blue Thick Border
+    ctx.strokeStyle = '#0c1e54';
+    ctx.lineWidth = 14;
+    ctx.strokeRect(32, 32, width - 64, height - 64);
 
-    // 2. Triple Sacred Golden Borders & Corner Rosettes
-    // Outer Border
-    ctx.strokeStyle = '#d97706';
+    // Middle Burnished Metallic Gold Border
+    ctx.strokeStyle = '#c69214';
     ctx.lineWidth = 4;
-    ctx.strokeRect(35, 35, width - 70, height - 70);
+    ctx.strokeRect(50, 50, width - 100, height - 100);
 
-    // Inner Delicate Gold Border
-    ctx.strokeStyle = '#fef08a';
+    // Inner Royal Blue Hairline Border
+    ctx.strokeStyle = 'rgba(12, 30, 84, 0.4)';
     ctx.lineWidth = 1.5;
-    ctx.strokeRect(48, 48, width - 96, height - 96);
+    ctx.strokeRect(62, 62, width - 124, height - 124);
 
-    // Inset Dotted Border
-    ctx.strokeStyle = 'rgba(250, 204, 21, 0.35)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([6, 6]);
-    ctx.strokeRect(58, 58, width - 116, height - 116);
-    ctx.setLineDash([]);
-
-    // Corner Ornaments (Traditional Corner Accents)
-    const corners = [
-      [58, 58],
-      [width - 58, 58],
-      [58, height - 58],
-      [width - 58, height - 58],
+    // 3. CORNER ROSETTES (Metallic Gold with Royal Blue Center Jewel)
+    const cornerInsets = [
+      [50, 50],
+      [width - 50, 50],
+      [50, height - 50],
+      [width - 50, height - 50],
     ];
-    corners.forEach(([cx, cy]) => {
-      ctx.fillStyle = '#facc15';
+
+    cornerInsets.forEach(([cx, cy]) => {
+      // Outer Gold Ring
+      ctx.strokeStyle = '#c69214';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 22, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Inner Gold Rosette
+      ctx.fillStyle = '#dfb135';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Royal Blue Center Jewel
+      ctx.fillStyle = '#0c1e54';
       ctx.beginPath();
       ctx.arc(cx, cy, 7, 0, Math.PI * 2);
       ctx.fill();
-
-      ctx.strokeStyle = '#d97706';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(cx, cy, 14, 0, Math.PI * 2);
-      ctx.stroke();
     });
 
-    // 3. Sacred Top Invocation
+    // Cursor for guaranteed sequential vertical flow (NO OVERLAPPING)
+    let currentY = 110;
+
+    // 4. SACRED INVOCATION
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#fef08a';
-    ctx.font = 'bold 36px "Segoe UI", Arial, sans-serif';
-    ctx.fillText('🕉️   శ్రీ వినాయక చవితి మహోత్సవం   🕉️', width / 2, 110);
 
-    ctx.font = 'italic 17px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = '#fde047';
-    ctx.fillText(FESTIVAL_CONFIG.sanskritMantra, width / 2, 145);
+    // Sacred Om
+    ctx.font = 'bold 38px Georgia, serif';
+    ctx.fillStyle = '#b8860b';
+    ctx.fillText('ॐ', width / 2, currentY);
+    currentY += 34;
 
-    // Thin separator line
-    ctx.strokeStyle = 'rgba(250, 204, 21, 0.4)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(180, 165);
-    ctx.lineTo(width - 180, 165);
-    ctx.stroke();
+    // Sanskrit Shloka
+    ctx.font = 'bold 18px Georgia, serif';
+    ctx.fillStyle = '#b8860b';
+    ctx.letterSpacing = '3px';
+    ctx.fillText('॥ श्री गणेशాయ नमः ॥ • ॐ गं गणपतये नमः', width / 2, currentY);
+    ctx.letterSpacing = '0px';
+    currentY += 45;
 
-    // 4. Association Name & Branding
-    ctx.font = '900 48px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = '#facc15';
+    // 5. ASSOCIATION NAME (Deep Royal Blue Display with Gold Accent)
+    ctx.font = '900 44px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#0c1e54';
+    ctx.letterSpacing = '3px';
+    ctx.fillText(FESTIVAL_CONFIG.associationName, width / 2, currentY);
+    ctx.letterSpacing = '0px';
+    currentY += 34;
+
+    ctx.font = 'bold 18px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#b8860b';
     ctx.letterSpacing = '2px';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-    ctx.shadowBlur = 12;
-    ctx.shadowOffsetY = 3;
-    ctx.fillText(FESTIVAL_CONFIG.associationName, width / 2, 225);
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
-    ctx.letterSpacing = '0px';
-
-    ctx.font = 'bold 19px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = '#e2e8f0';
     ctx.fillText(
-      `${FESTIVAL_CONFIG.associationAddress} • Ganesh Festival ${FESTIVAL_CONFIG.festivalYear}`,
+      `${FESTIVAL_CONFIG.associationAddress.toUpperCase()} • UTSAV ${FESTIVAL_CONFIG.festivalYear}`,
       width / 2,
-      262
+      currentY
     );
+    ctx.letterSpacing = '0px';
+    currentY += 36;
 
-    // 5. Decorative "CORDIAL INVITATION / ఆహ్వాన పత్రిక" Ribbon Banner
-    const bannerY = 300;
-    const bannerWidth = 720;
-    const bannerHeight = 54;
-    const bannerX = (width - bannerWidth) / 2;
+    // 6. TITLE RIBBON: ROYAL BLUE WITH METALLIC GOLD BORDER
+    const ribbonW = 760;
+    const ribbonH = 50;
+    const ribbonX = (width - ribbonW) / 2;
+    const ribbonY = currentY;
 
-    const bannerGrad = ctx.createLinearGradient(bannerX, 0, bannerX + bannerWidth, 0);
-    bannerGrad.addColorStop(0, '#991b1b');
-    bannerGrad.addColorStop(0.5, '#dc2626');
-    bannerGrad.addColorStop(1, '#991b1b');
+    const ribbonGrad = ctx.createLinearGradient(ribbonX, ribbonY, ribbonX + ribbonW, ribbonY + ribbonH);
+    ribbonGrad.addColorStop(0, '#0c1e54');
+    ribbonGrad.addColorStop(0.5, '#16358c');
+    ribbonGrad.addColorStop(1, '#0c1e54');
 
-    ctx.fillStyle = bannerGrad;
-    ctx.beginPath();
-    ctx.roundRect(bannerX, bannerY, bannerWidth, bannerHeight, 27);
+    ctx.fillStyle = ribbonGrad;
+    ctx.strokeStyle = '#c69214';
+    ctx.lineWidth = 3;
+    drawRoundRect(ctx, ribbonX, ribbonY, ribbonW, ribbonH, 25);
     ctx.fill();
-
-    ctx.strokeStyle = '#fef08a';
-    ctx.lineWidth = 2.5;
     ctx.stroke();
 
-    ctx.font = '900 24px "Segoe UI", Arial, sans-serif';
+    ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.letterSpacing = '1.5px';
-    ctx.fillText('★ CORDIAL INVITATION / సాదర ఆహ్వానం ★', width / 2, bannerY + 36);
+    ctx.letterSpacing = '2px';
+    const ribbonText =
+      language === 'TE'
+        ? '★ విశేష పూజా ఆహ్వాన పత్రిక ★'
+        : language === 'EN'
+        ? '★ CORDIAL POOJA INVITATION ★'
+        : '★ CORDIAL INVITATION / సాదర ఆహ్వానం ★';
+    ctx.fillText(ribbonText, width / 2, ribbonY + 34);
     ctx.letterSpacing = '0px';
+    currentY = ribbonY + ribbonH + 32;
 
+    // 7. POOJA HOST COUPLE SECTION (If Husband / Wife Names Provided)
     const hName = invitation.husbandName?.trim();
     const wName = invitation.wifeName?.trim();
     const hasCouple = Boolean(hName || wName);
 
-    let nextY = 380;
-
     if (hasCouple) {
-      // 6A. POOJA HOST COUPLE BOX (TELUGU & ENGLISH)
-      const hostBoxY = nextY;
-      const hostBoxWidth = 1000;
-      const hostBoxHeight = 150;
-      const hostBoxX = (width - hostBoxWidth) / 2;
+      const hostBoxW = 980;
+      const hostBoxH = 145;
+      const hostBoxX = (width - hostBoxW) / 2;
+      const hostBoxY = currentY;
 
-      // Golden border box for the hosts
-      const hostGrad = ctx.createLinearGradient(hostBoxX, 0, hostBoxX + hostBoxWidth, 0);
-      hostGrad.addColorStop(0, 'rgba(234, 179, 8, 0.08)');
-      hostGrad.addColorStop(0.5, 'rgba(250, 204, 21, 0.22)');
-      hostGrad.addColorStop(1, 'rgba(234, 179, 8, 0.08)');
-
-      ctx.fillStyle = hostGrad;
-      ctx.beginPath();
-      ctx.roundRect(hostBoxX, hostBoxY, hostBoxWidth, hostBoxHeight, 22);
+      // Clean White Card with Royal Blue and Gold Border
+      ctx.fillStyle = '#ffffff';
+      drawRoundRect(ctx, hostBoxX, hostBoxY, hostBoxW, hostBoxH, 18);
       ctx.fill();
-      ctx.strokeStyle = '#facc15';
+
+      // Dual Border
+      ctx.strokeStyle = '#c69214';
       ctx.lineWidth = 2.5;
       ctx.stroke();
 
-      // Host Category Header
-      ctx.textAlign = 'center';
-      ctx.font = 'bold 16px "Segoe UI", Arial, sans-serif';
-      ctx.fillStyle = '#fde047';
+      // Top Header inside Host Box
+      ctx.font = 'bold 15px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#991b1b';
       ctx.letterSpacing = '1px';
-      ctx.fillText('🌸  నేటి విశేష పూజా దంపతులు / TODAY\'S POOJA HOSTS  🌸', width / 2, hostBoxY + 30);
+      const hostCategory =
+        language === 'TE'
+          ? '🌸  నేటి విశేష పూజా దంపతులు  🌸'
+          : language === 'EN'
+          ? '🌸  TODAY\'S SPECIAL POOJA HOSTS  🌸'
+          : '🌸  నేటి విశేష పూజా దంపతులు / TODAY\'S POOJA HOSTS  🌸';
+      ctx.fillText(hostCategory, width / 2, hostBoxY + 28);
       ctx.letterSpacing = '0px';
 
       // Couple Names in Telugu
-      const coupleTelugu =
-        hName && wName
-          ? `శ్రీ మరియు శ్రీమతి ${hName} - ${wName} దంపతులు`
-          : hName
-          ? `శ్రీ ${hName} & కుటుంబ సభ్యులు`
-          : `శ్రీమతి ${wName} & కుటుంబ సభ్యులు`;
+      if (language !== 'EN') {
+        const coupleTelugu =
+          hName && wName
+            ? `శ్రీ మరియు శ్రీమతి ${hName} - ${wName} దంపతులు`
+            : hName
+            ? `శ్రీ ${hName} & కుటుంబ సభ్యులు`
+            : `శ్రీమతి ${wName} & కుటుంబ సభ్యులు`;
 
-      ctx.font = 'bold 30px "Segoe UI", Arial, sans-serif';
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(coupleTelugu, width / 2, hostBoxY + 70);
+        ctx.font = 'bold 28px "Segoe UI", Arial, sans-serif';
+        ctx.fillStyle = '#0c1e54';
+        ctx.fillText(coupleTelugu, width / 2, hostBoxY + 68);
+      }
 
       // Couple Names in English
-      const coupleEnglish =
-        hName && wName
-          ? `Sri ${hName} & Smt. ${wName} (and Family)`
-          : hName
-          ? `Sri ${hName} & Family`
-          : `Smt. ${wName} & Family`;
+      if (language !== 'TE') {
+        const coupleEnglish =
+          hName && wName
+            ? `Sri ${hName} & Smt. ${wName} (and Family)`
+            : hName
+            ? `Sri ${hName} & Family`
+            : `Smt. ${wName} & Family`;
 
-      ctx.font = '600 20px "Segoe UI", Arial, sans-serif';
-      ctx.fillStyle = '#fef08a';
-      ctx.fillText(coupleEnglish, width / 2, hostBoxY + 102);
+        ctx.font = language === 'EN' ? 'bold 28px "Segoe UI", Arial, sans-serif' : '600 20px "Segoe UI", Arial, sans-serif';
+        ctx.fillStyle = language === 'EN' ? '#0c1e54' : '#b8860b';
+        ctx.fillText(coupleEnglish, width / 2, language === 'EN' ? hostBoxY + 74 : hostBoxY + 98);
+      }
 
       // Sponsoring note
       ctx.font = 'italic 15px "Segoe UI", Arial, sans-serif';
-      ctx.fillStyle = '#cbd5e1';
-      ctx.fillText(
-        'వారి సౌజన్యంతో నేటి విశేష పూజ & తీర్థ ప్రసాద వితరణ కార్యక్రమం • Followed by Divine Mahaprasadam',
-        width / 2,
-        hostBoxY + 130
-      );
+      ctx.fillStyle = '#475569';
+      const sponsorNote =
+        language === 'TE'
+          ? 'వారి సౌజన్యంతో నేటి విశేష పూజ & తీర్థ ప్రసాద వితరణ కార్యక్రమం'
+          : language === 'EN'
+          ? 'Graciously hosting today\'s sacred pooja followed by divine Mahaprasadam'
+          : 'వారి సౌజన్యంతో నేటి విశేష పూజ & ప్రసాదం • Followed by Divine Mahaprasadam';
+      ctx.fillText(sponsorNote, width / 2, hostBoxY + 128);
 
-      nextY = hostBoxY + hostBoxHeight + 25;
+      currentY = hostBoxY + hostBoxH + 25;
     }
 
-    // 6B. Invitee Dedication Card
-    const inviteBoxY = nextY;
-    const inviteBoxWidth = 960;
-    const inviteBoxHeight = hasCouple ? 75 : 120;
-    const inviteBoxX = (width - inviteBoxWidth) / 2;
+    // 8. INVITEE DEDICATION CARD
+    const inviteBoxW = 980;
+    const inviteBoxH = 68;
+    const inviteBoxX = (width - inviteBoxW) / 2;
+    const inviteBoxY = currentY;
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-    ctx.beginPath();
-    ctx.roundRect(inviteBoxX, inviteBoxY, inviteBoxWidth, inviteBoxHeight, 18);
+    ctx.fillStyle = '#ffffff';
+    drawRoundRect(ctx, inviteBoxX, inviteBoxY, inviteBoxW, inviteBoxH, 16);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(250, 204, 21, 0.35)';
+    ctx.strokeStyle = '#e2e8f0';
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    if (hasCouple) {
-      ctx.font = '600 18px "Segoe UI", Arial, sans-serif';
-      ctx.fillStyle = '#cbd5e1';
-      ctx.fillText(`ఆహ్వానితులు / Cordially Inviting: `, width / 2, inviteBoxY + 30);
+    ctx.font = 'normal 15px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#64748b';
+    const invitePrefix =
+      language === 'TE'
+        ? 'ఆహ్వానితులు:'
+        : language === 'EN'
+        ? 'Cordially Inviting:'
+        : 'ఆహ్వానితులు / Cordially Inviting:';
+    ctx.fillText(invitePrefix, width / 2, inviteBoxY + 26);
 
-      ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif';
-      ctx.fillStyle = '#fef08a';
-      let dispInv = invitation.invitees;
-      if (dispInv.length > 60) dispInv = dispInv.substring(0, 57) + '...';
-      ctx.fillText(dispInv, width / 2, inviteBoxY + 58);
-      nextY = inviteBoxY + inviteBoxHeight + 20;
-    } else {
-      ctx.font = 'normal 17px "Segoe UI", Arial, sans-serif';
-      ctx.fillStyle = '#cbd5e1';
-      ctx.fillText('గౌరవనీయులైన / Cordially Inviting:', width / 2, inviteBoxY + 36);
-
-      ctx.font = 'bold 34px "Segoe UI", Arial, sans-serif';
-      ctx.fillStyle = '#fef08a';
-      let displayInvitees = invitation.invitees;
-      if (displayInvitees.length > 55) {
-        displayInvitees = displayInvitees.substring(0, 52) + '...';
-      }
-      ctx.fillText(displayInvitees, width / 2, inviteBoxY + 84);
-      nextY = inviteBoxY + inviteBoxHeight + 25;
+    ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#0c1e54';
+    let dispInvitees = invitation.invitees || 'All Devotees & Colony Residents';
+    if (dispInvitees.length > 55) {
+      dispInvitees = dispInvitees.substring(0, 52) + '...';
     }
+    ctx.fillText(dispInvitees, width / 2, inviteBoxY + 54);
 
-    // 7. Event Title Box (Luminous & Golden)
-    const eventBoxY = nextY;
-    const eventBoxWidth = 980;
-    const eventBoxHeight = 85;
-    const eventBoxX = (width - eventBoxWidth) / 2;
+    currentY = inviteBoxY + inviteBoxH + 26;
 
-    const eventGrad = ctx.createLinearGradient(eventBoxX, 0, eventBoxX + eventBoxWidth, 0);
-    eventGrad.addColorStop(0, 'rgba(234, 179, 8, 0.15)');
-    eventGrad.addColorStop(0.5, 'rgba(250, 204, 21, 0.35)');
-    eventGrad.addColorStop(1, 'rgba(234, 179, 8, 0.15)');
+    // 9. EVENT OCCASION TITLE BOX
+    const eventBoxW = 980;
+    const eventBoxH = 82;
+    const eventBoxX = (width - eventBoxW) / 2;
+    const eventBoxY = currentY;
+
+    const eventGrad = ctx.createLinearGradient(eventBoxX, 0, eventBoxX + eventBoxW, 0);
+    eventGrad.addColorStop(0, '#f8fafc');
+    eventGrad.addColorStop(0.5, '#fef9c3');
+    eventGrad.addColorStop(1, '#f8fafc');
 
     ctx.fillStyle = eventGrad;
-    ctx.beginPath();
-    ctx.roundRect(eventBoxX, eventBoxY, eventBoxWidth, eventBoxHeight, 20);
+    drawRoundRect(ctx, eventBoxX, eventBoxY, eventBoxW, eventBoxH, 18);
     ctx.fill();
-    ctx.strokeStyle = '#facc15';
+
+    ctx.strokeStyle = '#c69214';
     ctx.lineWidth = 2.5;
     ctx.stroke();
 
-    ctx.font = '900 36px "Segoe UI", Arial, sans-serif';
+    ctx.font = '900 32px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#0c1e54';
+    ctx.fillText(`🪔  ${invitation.title.toUpperCase()}  🪔`, width / 2, eventBoxY + 52);
+
+    currentY = eventBoxY + eventBoxH + 26;
+
+    // 10. AUSPICIOUS DETAILS BOX (DATE, TIME, VENUE, PRASADAM)
+    const detailsBoxW = 980;
+    const detailsBoxH = 240;
+    const detailsBoxX = (width - detailsBoxW) / 2;
+    const detailsBoxY = currentY;
+
     ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
-    ctx.shadowBlur = 10;
-    ctx.fillText(`🪔  ${invitation.title.toUpperCase()}  🪔`, width / 2, eventBoxY + 55);
-    ctx.shadowBlur = 0;
-
-    nextY = eventBoxY + eventBoxHeight + 25;
-
-    // 8. Auspicious Details Box (Date, Time, Venue, Prasadam)
-    const detailsY = nextY;
-    const detailsWidth = 980;
-    const detailsHeight = 250;
-    const detailsX = (width - detailsWidth) / 2;
-
-    ctx.fillStyle = 'rgba(10, 25, 65, 0.75)';
-    ctx.beginPath();
-    ctx.roundRect(detailsX, detailsY, detailsWidth, detailsHeight, 20);
+    drawRoundRect(ctx, detailsBoxX, detailsBoxY, detailsBoxW, detailsBoxH, 18);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(250, 204, 21, 0.5)';
+
+    ctx.strokeStyle = '#0c1e54';
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // 4 Items inside Details Box
-    // Date
+    // 4 Detailed Rows inside white box
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#facc15';
-    ctx.font = 'bold 21px "Segoe UI", Arial, sans-serif';
-    ctx.fillText('📅  తేదీ / DATE:', detailsX + 45, detailsY + 50);
 
-    ctx.font = '600 21px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(formattedDate, detailsX + 270, detailsY + 50);
+    // Row 1: Date
+    ctx.font = 'bold 20px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#c69214';
+    ctx.fillText(language === 'TE' ? '📅  తేదీ / DATE:' : '📅  DATE:', detailsBoxX + 45, detailsBoxY + 48);
 
-    // Time
-    ctx.fillStyle = '#facc15';
-    ctx.font = 'bold 21px "Segoe UI", Arial, sans-serif';
-    ctx.fillText('⏰  సమయం / TIME:', detailsX + 45, detailsY + 105);
+    ctx.font = '600 20px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#0f172a';
+    ctx.fillText(formattedDate, detailsBoxX + 260, detailsBoxY + 48);
 
-    ctx.font = '600 21px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(invitation.eventTime, detailsX + 270, detailsY + 105);
+    // Row 2: Time
+    ctx.font = 'bold 20px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#c69214';
+    ctx.fillText(language === 'TE' ? '⏰  సమయం / TIME:' : '⏰  TIME:', detailsBoxX + 45, detailsBoxY + 102);
 
-    // Venue
-    ctx.fillStyle = '#facc15';
-    ctx.font = 'bold 21px "Segoe UI", Arial, sans-serif';
-    ctx.fillText('📍  వేదిక / VENUE:', detailsX + 45, detailsY + 160);
+    ctx.font = '600 20px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#0f172a';
+    ctx.fillText(invitation.eventTime, detailsBoxX + 260, detailsBoxY + 102);
+
+    // Row 3: Venue
+    ctx.font = 'bold 20px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#c69214';
+    ctx.fillText(language === 'TE' ? '📍  వేదిక / VENUE:' : '📍  VENUE:', detailsBoxX + 45, detailsBoxY + 156);
 
     ctx.font = '600 19px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = '#ffffff';
-    let displayVenue = invitation.venue;
-    if (displayVenue.length > 48) {
-      displayVenue = displayVenue.substring(0, 45) + '...';
+    ctx.fillStyle = '#0f172a';
+    let dispVenue = invitation.venue;
+    if (dispVenue.length > 46) {
+      dispVenue = dispVenue.substring(0, 43) + '...';
     }
-    ctx.fillText(displayVenue, detailsX + 270, detailsY + 160);
+    ctx.fillText(dispVenue, detailsBoxX + 260, detailsBoxY + 156);
 
-    // Followed by Prasadam
-    ctx.fillStyle = '#fde047';
+    // Row 4: Prasadam Distribution
     ctx.font = 'bold 20px "Segoe UI", Arial, sans-serif';
-    ctx.fillText('🍽️  తీర్థ ప్రసాదం:', detailsX + 45, detailsY + 215);
+    ctx.fillStyle = '#b91c1c';
+    ctx.fillText(language === 'TE' ? '🍽️  తీర్థ ప్రసాదం:' : '🍽️  PRASADAM:', detailsBoxX + 45, detailsBoxY + 210);
 
-    ctx.font = '600 18px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = '#a7f3d0';
-    ctx.fillText(
-      'పూజ అనంతరం భక్తులందరికీ ప్రసాద వితరణ / అన్నప్రసాదం (Followed by Mahaprasadam)',
-      detailsX + 270,
-      detailsY + 215
-    );
+    ctx.font = 'bold 18px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#047857';
+    const prasadamText =
+      language === 'TE'
+        ? 'పూజ అనంతరం భక్తులందరికీ అన్నప్రసాదం / తీర్థ ప్రసాద వితరణ'
+        : language === 'EN'
+        ? 'Followed by Divine Mahaprasadam / Annaprasadam Distribution'
+        : 'పూజ అనంతరం అన్నప్రసాదం (Followed by Divine Mahaprasadam)';
+    ctx.fillText(prasadamText, detailsBoxX + 260, detailsBoxY + 210);
 
-    nextY = detailsY + detailsHeight + 25;
+    currentY = detailsBoxY + detailsBoxH + 28;
 
-    // 10. Program Highlights / Schedule Details (if provided)
+    // 11. PROGRAM DETAILS (WORD WRAPPED DYNAMICALLY - ZERO OVERLAP)
     ctx.textAlign = 'center';
-    let currentY = 950;
-
     if (invitation.description && invitation.description.trim().length > 0) {
-      ctx.font = 'bold 20px "Segoe UI", Arial, sans-serif';
-      ctx.fillStyle = '#fde047';
-      ctx.fillText('✨  కార్యక్రమ వివరాలు / PROGRAM HIGHLIGHTS  ✨', width / 2, currentY);
+      ctx.font = 'bold 18px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#b8860b';
+      ctx.fillText(
+        language === 'TE'
+          ? '✨  కార్యక్రమ విశేషాలు  ✨'
+          : language === 'EN'
+          ? '✨  PROGRAM HIGHLIGHTS  ✨'
+          : '✨  కార్యక్రమ వివరాలు / PROGRAM HIGHLIGHTS  ✨',
+        width / 2,
+        currentY
+      );
+      currentY += 28;
 
-      currentY += 35;
-      ctx.font = 'normal 19px "Segoe UI", Arial, sans-serif';
-      ctx.fillStyle = '#e2e8f0';
+      ctx.font = 'normal 17px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#334155';
 
-      // Word wrapping for description
       const words = invitation.description.trim().split(' ');
       let line = '';
-      const maxWidth = 900;
+      const maxWidth = 920;
 
       for (let n = 0; n < words.length; n++) {
         const testLine = line + words[n] + ' ';
@@ -417,61 +447,57 @@ export default function InvitationCardModal({ invitation, onClose }: InvitationC
         if (metrics.width > maxWidth && n > 0) {
           ctx.fillText(line, width / 2, currentY);
           line = words[n] + ' ';
-          currentY += 28;
-          if (currentY > 1150) break; // prevent overflowing
+          currentY += 24;
+          if (currentY > 1390) break;
         } else {
           line = testLine;
         }
       }
       ctx.fillText(line, width / 2, currentY);
-      currentY += 45;
+      currentY += 32;
     } else {
-      currentY += 40;
+      currentY += 15;
     }
 
-    // 11. Divine Blessings Invocation
-    ctx.font = 'italic bold 21px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = '#fef08a';
-    ctx.fillText(
-      '🙏 "మీ రాకయే మాకు శుభప్రదం • All are cordially invited to receive Lord Ganesha blessings" 🙏',
-      width / 2,
-      Math.max(currentY, 1160)
-    );
+    // 12. DIVINE BLESSINGS INVOCATION
+    ctx.font = 'italic bold 19px Georgia, serif';
+    ctx.fillStyle = '#b8860b';
+    const blessingText =
+      language === 'TE'
+        ? '🙏 "మీ రాకయే మాకు శుభప్రదం • భక్తులందరికీ స్వామివారి కృపాకటాక్షాలు కలగాలని కోరుచున్నాము" 🙏'
+        : language === 'EN'
+        ? '🙏 "All are cordially invited to receive the divine blessings of Lord Ganesha" 🙏'
+        : '🙏 "మీ రాకయే మాకు శుభప్రదం • May Lord Ganesha shower divine blessings upon you & your family" 🙏';
+    ctx.fillText(blessingText, width / 2, Math.max(currentY, 1370));
 
-    // 12. Bottom Divider
-    const divY = 1220;
-    ctx.strokeStyle = 'rgba(250, 204, 21, 0.4)';
+    // 13. BOTTOM SEPARATOR LINE
+    const divY = 1420;
+    ctx.strokeStyle = '#c69214';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(100, divY);
     ctx.lineTo(width - 100, divY);
     ctx.stroke();
 
-    // 13. Association Sign-off & Contact
-    const footY = 1265;
+    // 14. FOOTER & OFFICIAL CONTACT (MINNU 9059375693)
+    const footY = 1465;
     ctx.font = 'bold 24px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = '#facc15';
+    ctx.fillStyle = '#0c1e54';
+    ctx.letterSpacing = '1px';
     ctx.fillText('BALA GANESH ASSOCIATION COMMITTEE', width / 2, footY);
+    ctx.letterSpacing = '0px';
 
-    ctx.font = 'normal 18px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = '#cbd5e1';
-    ctx.fillText(
-      'Bhavani Nagar, Shankarpally, Telangana • Youth Members & Volunteers',
-      width / 2,
-      footY + 32
-    );
+    ctx.font = '600 17px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#475569';
+    ctx.fillText('Bhavani Nagar, Shankarpally, Telangana • Youth Members & Volunteers', width / 2, footY + 30);
 
-    const contactText = invitation.contactInfo?.trim()
-      ? `Contact: ${invitation.contactInfo.trim()} • Official Group: ${FESTIVAL_CONFIG.contactNumber}`
-      : `Official Contact: ${FESTIVAL_CONFIG.contactNumber}`;
-
-    ctx.font = '600 18px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = '#94a3b8';
-    ctx.fillText(contactText, width / 2, footY + 64);
+    ctx.font = 'bold 18px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#b91c1c';
+    ctx.fillText('Official Contact: MINNU 9059375693', width / 2, footY + 62);
 
     ctx.font = 'bold 20px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = '#f59e0b';
-    ctx.fillText('🙏  GANPATI BAPPA MORYA!  🙏', width / 2, footY + 115);
+    ctx.fillStyle = '#c69214';
+    ctx.fillText('🙏  GANPATI BAPPA MORYA!  🙏', width / 2, footY + 105);
 
     // Export to Data URL
     try {
@@ -482,7 +508,7 @@ export default function InvitationCardModal({ invitation, onClose }: InvitationC
     } finally {
       setIsGenerating(false);
     }
-  }, [invitation, formattedDate]);
+  }, [invitation, formattedDate, language]);
 
   useEffect(() => {
     drawInvitation();
@@ -492,13 +518,13 @@ export default function InvitationCardModal({ invitation, onClose }: InvitationC
     if (!imageUrl) return;
     const link = document.createElement('a');
     const safeTitle = invitation.title.replace(/[^a-zA-Z0-9_-]/g, '_');
-    link.download = `Bala_Ganesh_Invitation_${safeTitle}.png`;
+    link.download = `Bala_Ganesh_Invitation_${safeTitle}_${language}.png`;
     link.href = imageUrl;
     link.click();
   };
 
   const handleCopyMessage = async () => {
-    const message = buildWhatsAppInvitationMessage(invitation);
+    const message = buildWhatsAppInvitationMessage(invitation, language);
     try {
       if (typeof navigator !== 'undefined' && navigator.clipboard) {
         await navigator.clipboard.writeText(message);
@@ -510,23 +536,10 @@ export default function InvitationCardModal({ invitation, onClose }: InvitationC
     }
   };
 
-  const handleCopyGroupLink = async () => {
-    try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(FESTIVAL_CONFIG.whatsappGroupLink);
-        setCopiedGroupLink(true);
-        setTimeout(() => setCopiedGroupLink(false), 3000);
-      }
-    } catch (err) {
-      console.error('Clipboard copy failed:', err);
-    }
-  };
-
-  // One-click send to Bala Ganesh WhatsApp group
+  // Send to Bala Ganesh WhatsApp group in chosen language
   const handleSendToWhatsAppGroup = () => {
-    const message = buildWhatsAppInvitationMessage(invitation);
+    const message = buildWhatsAppInvitationMessage(invitation, language);
 
-    // Also auto-copy to clipboard as convenience guarantee
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       try {
         navigator.clipboard.writeText(message);
@@ -535,17 +548,16 @@ export default function InvitationCardModal({ invitation, onClose }: InvitationC
       } catch {}
     }
 
-    // Opens WhatsApp without phone number -> prompts to choose Bala Ganesh group directly!
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
 
-  // Direct send to an individual devotee's mobile number
+  // Direct send to individual devotee's mobile
   const handleSendToIndividual = () => {
     if (!individualMobile.trim()) return;
     const normalized = normalizeIndianMobileForWhatsApp(individualMobile);
     const phoneParam = normalized ? `phone=${normalized.whatsappPhone}&` : '';
-    const message = buildWhatsAppInvitationMessage(invitation);
+    const message = buildWhatsAppInvitationMessage(invitation, language);
     const url = `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
@@ -561,7 +573,7 @@ export default function InvitationCardModal({ invitation, onClose }: InvitationC
             <title>Print Invitation - ${invitation.title}</title>
             <style>
               @page { size: portrait; margin: 0; }
-              body { margin: 0; display: flex; align-items: center; justify-content: center; background: #000; }
+              body { margin: 0; display: flex; align-items: center; justify-content: center; background: #fff; }
               img { max-width: 100%; max-height: 100vh; object-fit: contain; }
             </style>
           </head>
@@ -577,39 +589,78 @@ export default function InvitationCardModal({ invitation, onClose }: InvitationC
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto animate-fadeIn">
       <div className="w-full max-w-3xl bg-[#071338] border-2 border-devotional-gold-500/50 rounded-3xl p-4 sm:p-5 shadow-2xl space-y-4 my-auto text-white">
-        {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-devotional-gold-500/20 pb-3">
+        {/* Modal Header with Language Selector */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-devotional-gold-500/20 pb-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-devotional-gold-400 flex items-center justify-center text-devotional-blue-950 font-black shadow-md">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-devotional-gold-400 flex items-center justify-center text-devotional-blue-950 font-black shadow-md shrink-0">
               <MessageCircle className="w-5 h-5 text-devotional-blue-950" />
             </div>
             <div>
               <h3 className="text-base sm:text-lg font-black text-devotional-gold-300 flex items-center gap-2">
                 <span>Festival Invitation Card</span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-devotional-gold-500/20 border border-devotional-gold-400 text-devotional-gold-300 font-bold">
-                  Bala Ganesh Group
+                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400 text-emerald-300 font-bold">
+                  Bala Ganesh Theme
                 </span>
               </h3>
               <p className="text-xs text-gray-300">
-                {invitation.title} • {formattedDate}
+                Official Contact: <span className="text-amber-300 font-bold font-mono">MINNU 9059375693</span>
               </p>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-gray-300 hover:text-white transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+            {/* Language Selector Segmented Control */}
+            <div className="inline-flex rounded-xl bg-devotional-blue-950 p-1 border border-devotional-gold-500/40 shadow-sm text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setLanguage('TE')}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  language === 'TE'
+                    ? 'bg-amber-500 text-devotional-blue-950 font-black shadow-sm'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                తెలుగు
+              </button>
+              <button
+                type="button"
+                onClick={() => setLanguage('EN')}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  language === 'EN'
+                    ? 'bg-amber-500 text-devotional-blue-950 font-black shadow-sm'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                English
+              </button>
+              <button
+                type="button"
+                onClick={() => setLanguage('BOTH')}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  language === 'BOTH'
+                    ? 'bg-amber-500 text-devotional-blue-950 font-black shadow-sm'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                Both
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/30 text-gray-300 hover:text-white transition-colors shrink-0"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Hidden processing canvas */}
         <canvas ref={canvasRef} className="hidden" />
 
-        {/* Rendered Visual Card Preview Container */}
-        <div className="relative rounded-2xl overflow-hidden shadow-2xl border-2 border-devotional-gold-500/30 bg-[#040b20] max-h-[58vh] overflow-y-auto">
+        {/* Rendered Visual Card Preview Container (Crisp White Paper View) */}
+        <div className="relative rounded-2xl overflow-hidden shadow-2xl border-2 border-devotional-gold-500/30 bg-white max-h-[58vh] overflow-y-auto">
           {imageUrl ? (
             <img
               src={imageUrl}
@@ -619,7 +670,7 @@ export default function InvitationCardModal({ invitation, onClose }: InvitationC
           ) : (
             <div className="aspect-[3/4] w-full flex flex-col items-center justify-center gap-3 bg-[#0a1845] text-devotional-gold-300 py-20">
               <div className="w-10 h-10 border-3 border-devotional-gold-400 border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm font-bold">Rendering Devotional Invitation Card...</p>
+              <p className="text-sm font-bold">Rendering White &amp; Gold Royal Invitation Card...</p>
             </div>
           )}
         </div>
@@ -635,7 +686,9 @@ export default function InvitationCardModal({ invitation, onClose }: InvitationC
               className="py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg hover:brightness-110 active:scale-95 transition-all"
             >
               <Send className="w-4 h-4 text-white" />
-              <span>Send to Bala Ganesh WhatsApp Group</span>
+              <span>
+                Send ({language === 'TE' ? 'తెలుగు' : language === 'EN' ? 'English' : 'Both'}) to WhatsApp Group
+              </span>
             </button>
 
             {/* Jump into WhatsApp Group */}
@@ -646,7 +699,7 @@ export default function InvitationCardModal({ invitation, onClose }: InvitationC
               className="py-3 px-4 rounded-xl bg-devotional-blue-900 hover:bg-devotional-blue-800 border-2 border-emerald-500/50 text-emerald-300 hover:text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
             >
               <Users className="w-4 h-4 text-emerald-400" />
-              <span>Open Bala Ganesh WhatsApp Group</span>
+              <span>Open Bala Ganesh Group</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
           </div>
@@ -672,12 +725,12 @@ export default function InvitationCardModal({ invitation, onClose }: InvitationC
                 {copiedText ? (
                   <>
                     <Check className="w-4 h-4 text-emerald-400" />
-                    <span className="text-emerald-400 font-black">Copied Message!</span>
+                    <span className="text-emerald-400 font-black">Copied!</span>
                   </>
                 ) : (
                   <>
                     <Copy className="w-4 h-4 text-devotional-gold-400" />
-                    <span>Copy WhatsApp Text</span>
+                    <span>Copy Text</span>
                   </>
                 )}
               </button>
@@ -696,7 +749,7 @@ export default function InvitationCardModal({ invitation, onClose }: InvitationC
             <div className="flex items-center gap-1.5 w-full sm:w-auto mt-1 sm:mt-0">
               <input
                 type="tel"
-                placeholder="Mobile (optional direct invite)"
+                placeholder="Mobile (direct invite)"
                 value={individualMobile}
                 onChange={(e) => setIndividualMobile(e.target.value)}
                 className="w-full sm:w-48 px-3 py-2 text-xs bg-devotional-blue-950 border border-devotional-gold-500/40 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-amber-400"

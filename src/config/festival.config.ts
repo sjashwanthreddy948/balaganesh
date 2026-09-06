@@ -4,8 +4,8 @@ export const FESTIVAL_CONFIG = {
   associationName: process.env.NEXT_PUBLIC_ASSOCIATION_NAME || 'BALA GANESH ASSOCIATION',
   upiId: process.env.NEXT_PUBLIC_UPI_ID || 'rajashekarchilumula1656@okaxis',
   upiPayeeName: process.env.NEXT_PUBLIC_UPI_PAYEE_NAME || 'BALA GANESH ASSOCIATION',
-  whatsappNumber: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '919876543210',
-  contactNumber: process.env.NEXT_PUBLIC_CONTACT_NUMBER || '+91 98765 43210',
+  whatsappNumber: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '919059375693',
+  contactNumber: process.env.NEXT_PUBLIC_CONTACT_NUMBER || 'MINNU 9059375693',
   associationAddress:
     process.env.NEXT_PUBLIC_ASSOCIATION_ADDRESS || 'Bhavani Nagar, Shankarpally, Telangana',
   festivalYear: process.env.NEXT_PUBLIC_FESTIVAL_YEAR || '2026',
@@ -275,20 +275,24 @@ export function buildWhatsAppExpenseVoucherShareUrl(expense: {
 }
 
 /**
- * Builds standard WhatsApp Festival Invitation Message in bilingual Telugu & English
+ * Builds standard WhatsApp Festival Invitation Message
+ * Supports language option: 'TE' (Telugu), 'EN' (English), or 'BOTH' (Bilingual)
  * Supports family/couple hosting (husband and wife names) like Ravindar Reddy & Maneela
  */
-export function buildWhatsAppInvitationMessage(invitation: {
-  title: string;
-  invitees: string;
-  husbandName?: string | null;
-  wifeName?: string | null;
-  eventDate: string | Date;
-  eventTime: string;
-  venue: string;
-  description?: string | null;
-  contactInfo?: string | null;
-}): string {
+export function buildWhatsAppInvitationMessage(
+  invitation: {
+    title: string;
+    invitees: string;
+    husbandName?: string | null;
+    wifeName?: string | null;
+    eventDate: string | Date;
+    eventTime: string;
+    venue: string;
+    description?: string | null;
+    contactInfo?: string | null;
+  },
+  language: 'TE' | 'EN' | 'BOTH' = 'BOTH'
+): string {
   const dateObj = new Date(invitation.eventDate);
   const formattedDate = isNaN(dateObj.getTime())
     ? String(invitation.eventDate)
@@ -303,10 +307,10 @@ export function buildWhatsAppInvitationMessage(invitation: {
   const wName = invitation.wifeName?.trim();
   const hasCouple = Boolean(hName || wName);
 
-  let coupleBlockTelugu = '';
-  let coupleBlockEnglish = '';
+  const contactText = invitation.contactInfo?.trim() || FESTIVAL_CONFIG.contactNumber;
 
-  if (hasCouple) {
+  // 1. PURE TELUGU VERSION
+  if (language === 'TE') {
     const coupleTextTelugu =
       hName && wName
         ? `శ్రీ మరియు శ్రీమతి ${hName} - ${wName} దంపతులు & కుటుంబ సభ్యులు`
@@ -314,6 +318,44 @@ export function buildWhatsAppInvitationMessage(invitation: {
         ? `శ్రీ ${hName} & కుటుంబ సభ్యులు`
         : `శ్రీమతి ${wName} & కుటుంబ సభ్యులు`;
 
+    const coupleSection = hasCouple
+      ? `\n🌸 *నేటి విశేష పూజా దంపతులు:* 🌸\n🙏 *${coupleTextTelugu}*\nవారి సౌజన్యంతో నేటి శ్రీ గణపతి విశేష పూజ మరియు అన్నప్రసాద వితరణ కార్యక్రమం భక్తిశ్రద్ధలతో నిర్వహించబడుచున్నది.\n`
+      : '';
+
+    const detailsBlock = invitation.description?.trim()
+      ? `\n✨ *కార్యక్రమ వివరాలు:*\n${invitation.description.trim()}\n`
+      : '';
+
+    return `🕉️ *శ్రీ వినాయక చవితి విశేష పూజా ఆహ్వానం* 🕉️
+*${FESTIVAL_CONFIG.associationName}*
+*${FESTIVAL_CONFIG.associationAddress}*
+━━━━━━━━━━━━━━━━━━━━━━━
+🌸 *సాదర ఆహ్వానం* 🌸
+
+గౌరవనీయులైన / Dear *${invitation.invitees}*,
+${coupleSection}
+మేము మిమ్మల్ని మరియు మీ కుటుంబ సభ్యులను నేటి విశేష పూజా కార్యక్రమంలో పాల్గొనవలసిందిగా సాదరంగా ఆహ్వానిస్తున్నాము.
+
+🪔 *${invitation.title.toUpperCase()}* 🪔
+━━━━━━━━━━━━━━━━━━━━━━━
+📅 *తేదీ:* ${formattedDate}
+⏰ *సమయం:* ${invitation.eventTime}
+📍 *వేదిక:* ${invitation.venue}
+🍽️ *తీర్థ ప్రసాదం:* పూజ అనంతరం భక్తులందరికీ అన్నప్రసాదం / తీర్థ ప్రసాద వితరణ
+${detailsBlock}
+🙏 *మీ రాకయే మాకు శుభప్రదం! భక్తులందరూ పాల్గొని గణనాథుని కృపకు పాత్రులు కాగలరు.*
+
+👥 *బాల గణేష్ అధికారిక వాట్సాప్ గ్రూప్:*
+${FESTIVAL_CONFIG.whatsappGroupLink}
+
+━━━━━━━━━━━━━━━━━━━━━━━
+${hasCouple ? `— *సౌజన్యం: ${hName || ''}${hName && wName ? ' & ' : ''}${wName || ''} & కుటుంబ సభ్యులు*\n` : ''}— *నిర్వాహకులు: బాల గణేష్ అసోసియేషన్*
+📞 *సంప్రదించండి:* ${contactText}
+🙏 *గణపతి బప్పా మోరియా!* 🙏`;
+  }
+
+  // 2. PURE ENGLISH VERSION
+  if (language === 'EN') {
     const coupleTextEnglish =
       hName && wName
         ? `Sri ${hName} & Smt. ${wName} (and Family)`
@@ -321,18 +363,68 @@ export function buildWhatsAppInvitationMessage(invitation: {
         ? `Sri ${hName} & Family`
         : `Smt. ${wName} & Family`;
 
-    coupleBlockTelugu = `\n🌸 *నేటి విశేష పూజా దంపతులు (POOJA HOSTS):*\n🙏 *${coupleTextTelugu}*\n(Host: ${coupleTextEnglish})\n\nవారి సౌజన్యంతో నేటి శ్రీ గణపతి విశేష పూజ మరియు ప్రసాద వితరణ కార్యక్రమం భక్తిశ్రద్ధలతో నిర్వహించబడుచున్నది.\n`;
+    const coupleSection = hasCouple
+      ? `\n🌸 *TODAY'S SPECIAL POOJA HOSTS:* 🌸\n⭐ *${coupleTextEnglish}* ⭐\nToday's sacred Ganesh Pooja and Mahaprasadam is graciously hosted by them.\n`
+      : '';
 
-    coupleBlockEnglish = `Today's auspicious Ganesh Pooja is graciously hosted by:\n⭐ *${coupleTextEnglish}* ⭐\n`;
+    const detailsBlock = invitation.description?.trim()
+      ? `\n✨ *Program Details:*\n${invitation.description.trim()}\n`
+      : '';
+
+    return `🕉️ *SRI GANESH CHATURTHI POOJA INVITATION* 🕉️
+*${FESTIVAL_CONFIG.associationName}*
+*${FESTIVAL_CONFIG.associationAddress}*
+━━━━━━━━━━━━━━━━━━━━━━━
+🌸 *CORDIAL INVITATION* 🌸
+
+Dear *${invitation.invitees}*,
+${coupleSection}
+We cordially invite you and your family to join us for:
+
+🪔 *${invitation.title.toUpperCase()}* 🪔
+━━━━━━━━━━━━━━━━━━━━━━━
+📅 *Date:* ${formattedDate}
+⏰ *Time:* ${invitation.eventTime}
+📍 *Venue:* ${invitation.venue}
+🍽️ *Prasadam:* Followed by Divine Mahaprasadam Distribution
+${detailsBlock}
+🙏 *All devotees are invited to seek the divine blessings of Lord Ganesha.*
+
+👥 *Join Official Bala Ganesh WhatsApp Group:*
+${FESTIVAL_CONFIG.whatsappGroupLink}
+
+━━━━━━━━━━━━━━━━━━━━━━━
+${hasCouple ? `— *Hosted By: ${coupleTextEnglish}*\n` : ''}— *Organized By: Bala Ganesh Association Committee & Youth*
+📞 *Contact:* ${contactText}
+🙏 *Ganpati Bappa Morya!* 🙏`;
   }
+
+  // 3. BILINGUAL VERSION (BOTH TELUGU & ENGLISH)
+  const coupleTextTelugu =
+    hName && wName
+      ? `శ్రీ మరియు శ్రీమతి ${hName} - ${wName} దంపతులు & కుటుంబ సభ్యులు`
+      : hName
+      ? `శ్రీ ${hName} & కుటుంబ సభ్యులు`
+      : `శ్రీమతి ${wName} & కుటుంబ సభ్యులు`;
+
+  const coupleTextEnglish =
+    hName && wName
+      ? `Sri ${hName} & Smt. ${wName} (and Family)`
+      : hName
+      ? `Sri ${hName} & Family`
+      : `Smt. ${wName} & Family`;
+
+  const coupleBlockTelugu = hasCouple
+    ? `\n🌸 *నేటి విశేష పూజా దంపతులు (POOJA HOSTS):*\n🙏 *${coupleTextTelugu}*\n(Host: ${coupleTextEnglish})\n\nవారి సౌజన్యంతో నేటి శ్రీ గణపతి విశేష పూజ మరియు ప్రసాద వితరణ కార్యక్రమం భక్తిశ్రద్ధలతో నిర్వహించబడుచున్నది.\n`
+    : '';
+
+  const coupleBlockEnglish = hasCouple
+    ? `Today's auspicious Ganesh Pooja is graciously hosted by:\n⭐ *${coupleTextEnglish}* ⭐\n`
+    : '';
 
   const detailsBlock = invitation.description?.trim()
     ? `\n✨ *కార్యక్రమ వివరాలు / Program Details:*\n${invitation.description.trim()}\n`
     : '';
-
-  const contactBlock = invitation.contactInfo?.trim()
-    ? `📞 *సంప్రదించండి / Contact:* ${invitation.contactInfo.trim()}\n`
-    : `📞 *Contact:* ${FESTIVAL_CONFIG.contactNumber}\n`;
 
   return `🕉️ *శ్రీ వినాయక చవితి విశేష పూజా ఆహ్వానం* 🕉️
 *${FESTIVAL_CONFIG.associationName}*
@@ -360,26 +452,29 @@ ${FESTIVAL_CONFIG.whatsappGroupLink}
 
 ━━━━━━━━━━━━━━━━━━━━━━━
 ${hasCouple ? `— *సౌజన్యం: ${hName || ''}${hName && wName ? ' & ' : ''}${wName || ''} & కుటుంబ సభ్యులు*\n` : ''}— *నిర్వాహకులు: Bala Ganesh Association Committee & Youth Members*
-${contactBlock}
+📞 *Contact:* ${contactText}
 🙏 *Ganpati Bappa Morya!* 🙏`;
 }
 
 /**
  * Builds WhatsApp Share URL for Invitation (Defaults to open picker for Bala Ganesh Group)
  */
-export function buildWhatsAppInvitationShareUrl(invitation: {
-  title: string;
-  invitees: string;
-  husbandName?: string | null;
-  wifeName?: string | null;
-  eventDate: string | Date;
-  eventTime: string;
-  venue: string;
-  description?: string | null;
-  contactInfo?: string | null;
-  mobileNumber?: string | null;
-}): string {
-  const message = buildWhatsAppInvitationMessage(invitation);
+export function buildWhatsAppInvitationShareUrl(
+  invitation: {
+    title: string;
+    invitees: string;
+    husbandName?: string | null;
+    wifeName?: string | null;
+    eventDate: string | Date;
+    eventTime: string;
+    venue: string;
+    description?: string | null;
+    contactInfo?: string | null;
+    mobileNumber?: string | null;
+  },
+  language: 'TE' | 'EN' | 'BOTH' = 'BOTH'
+): string {
+  const message = buildWhatsAppInvitationMessage(invitation, language);
   const normalized = normalizeIndianMobileForWhatsApp(invitation.mobileNumber);
   const phoneParam = normalized ? `phone=${normalized.whatsappPhone}&` : '';
   return `https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(message)}`;

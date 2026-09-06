@@ -28,6 +28,7 @@ import {
   ExternalLink,
   ChevronRight,
   ShieldCheck,
+  Languages,
 } from 'lucide-react';
 
 const PRESET_EVENTS = [
@@ -38,8 +39,8 @@ const PRESET_EVENTS = [
     defaultTime: '07:30 PM onwards',
     defaultDescription:
       'Special Ganesh Abhishekam, Archana, and Maha Aarti, followed by sacred Mahaprasadam.',
-    defaultHusband: 'Ravindar Reddy',
-    defaultWife: 'Maneela',
+    defaultHusband: '',
+    defaultWife: '',
   },
   {
     id: 'sthapana',
@@ -100,9 +101,10 @@ export default function InvitationsPage() {
   const [user, setUser] = useState<{ id: string; name: string; role: string } | null>(null);
 
   // Form Fields
-  const [invitees, setInvitees] = useState('All Devotees, Colony Residents & Friends');
-  const [husbandName, setHusbandName] = useState('Ravindar Reddy');
-  const [wifeName, setWifeName] = useState('Maneela');
+  const [invitees, setInvitees] = useState('All Devotees & Colony Residents');
+  const [husbandName, setHusbandName] = useState('');
+  const [wifeName, setWifeName] = useState('');
+  const [language, setLanguage] = useState<'TE' | 'EN' | 'BOTH'>('TE');
   const [title, setTitle] = useState(PRESET_EVENTS[0].title);
   const [eventDate, setEventDate] = useState(() => {
     // Default to today's date in YYYY-MM-DD
@@ -111,7 +113,7 @@ export default function InvitationsPage() {
   const [eventTime, setEventTime] = useState(PRESET_EVENTS[0].defaultTime);
   const [venue, setVenue] = useState(FESTIVAL_CONFIG.associationAddress);
   const [description, setDescription] = useState(PRESET_EVENTS[0].defaultDescription);
-  const [contactInfo, setContactInfo] = useState(FESTIVAL_CONFIG.contactNumber);
+  const [contactInfo, setContactInfo] = useState('MINNU 9059375693');
 
   // States
   const [isSaving, setIsSaving] = useState(false);
@@ -232,7 +234,7 @@ export default function InvitationsPage() {
 
   // Direct Send to Bala Ganesh WhatsApp Group
   const handleSendToWhatsAppGroup = () => {
-    const message = buildWhatsAppInvitationMessage(currentInvitationData);
+    const message = buildWhatsAppInvitationMessage(currentInvitationData, language);
 
     // Auto copy to clipboard
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -249,7 +251,7 @@ export default function InvitationsPage() {
 
   // Copy WhatsApp Message
   const handleCopyMessage = async () => {
-    const message = buildWhatsAppInvitationMessage(currentInvitationData);
+    const message = buildWhatsAppInvitationMessage(currentInvitationData, language);
     try {
       if (typeof navigator !== 'undefined' && navigator.clipboard) {
         await navigator.clipboard.writeText(message);
@@ -407,18 +409,6 @@ export default function InvitationsPage() {
                       </p>
                     </div>
                   </div>
-
-                  {/* Quick toggle sample button */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setHusbandName('Ravindar Reddy');
-                      setWifeName('Maneela');
-                    }}
-                    className="text-[10px] px-2 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-200 font-bold transition-colors"
-                  >
-                    Sample: Ravindar &amp; Maneela
-                  </button>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -430,7 +420,7 @@ export default function InvitationsPage() {
                       type="text"
                       value={husbandName}
                       onChange={(e) => setHusbandName(e.target.value)}
-                      placeholder="e.g. Ravindar Reddy (or Sri Ravindar Reddy)"
+                      placeholder="Enter husband name (యజమాని పేరు)"
                       className="w-full px-3.5 py-2.5 rounded-xl bg-devotional-blue-950 border border-amber-500/40 text-white placeholder-gray-500 focus:outline-none focus:border-amber-400 font-medium"
                     />
                   </div>
@@ -443,7 +433,7 @@ export default function InvitationsPage() {
                       type="text"
                       value={wifeName}
                       onChange={(e) => setWifeName(e.target.value)}
-                      placeholder="e.g. Maneela (or Smt. Maneela)"
+                      placeholder="Enter wife name (ధర్మపత్ని పేరు)"
                       className="w-full px-3.5 py-2.5 rounded-xl bg-devotional-blue-950 border border-amber-500/40 text-white placeholder-gray-500 focus:outline-none focus:border-amber-400 font-medium"
                     />
                   </div>
@@ -630,6 +620,55 @@ export default function InvitationsPage() {
                 </span>
               </div>
 
+              {/* Language Selection Toggle */}
+              <div className="space-y-1.5 pt-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-emerald-300 flex items-center gap-1.5">
+                    <Languages className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Select Language / భాష ఎంచుకోండి:</span>
+                  </span>
+                  <span className="text-[10px] text-emerald-200/80 font-mono font-bold">
+                    {language === 'TE' ? 'తెలుగు మాత్రమే' : language === 'EN' ? 'English Only' : 'ఉభయ భాషలు (Both)'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-1.5 bg-devotional-blue-950 p-1.5 rounded-2xl border border-emerald-500/40 shadow-inner">
+                  <button
+                    type="button"
+                    onClick={() => setLanguage('TE')}
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition-all ${
+                      language === 'TE'
+                        ? 'bg-emerald-500 text-devotional-blue-950 font-black shadow-sm'
+                        : 'text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    🇮🇳 తెలుగు
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLanguage('EN')}
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition-all ${
+                      language === 'EN'
+                        ? 'bg-emerald-500 text-devotional-blue-950 font-black shadow-sm'
+                        : 'text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    🇬🇧 English
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLanguage('BOTH')}
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition-all ${
+                      language === 'BOTH'
+                        ? 'bg-emerald-500 text-devotional-blue-950 font-black shadow-sm'
+                        : 'text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    🌟 Both
+                  </button>
+                </div>
+              </div>
+
               {/* Primary 1-Click Send to WhatsApp Group */}
               <button
                 type="button"
@@ -637,7 +676,9 @@ export default function InvitationsPage() {
                 className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm flex items-center justify-center gap-2.5 shadow-lg hover:brightness-110 active:scale-95 transition-all"
               >
                 <Send className="w-5 h-5 text-white" />
-                <span>Send to Bala Ganesh WhatsApp Group</span>
+                <span>
+                  Send ({language === 'TE' ? 'తెలుగు' : language === 'EN' ? 'English' : 'Both'}) to WhatsApp Group
+                </span>
               </button>
 
               <div className="grid grid-cols-2 gap-2">
@@ -676,10 +717,10 @@ export default function InvitationsPage() {
               {/* Live Formatted WhatsApp Message Preview */}
               <div className="space-y-1.5 pt-1">
                 <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400">
-                  Live Message Preview (What group members will receive):
+                  Live Message Preview ({language === 'TE' ? 'Telugu' : language === 'EN' ? 'English' : 'Bilingual'}):
                 </span>
                 <div className="p-3.5 rounded-2xl bg-[#031310] border border-emerald-500/30 text-xs text-gray-200 font-mono whitespace-pre-wrap max-h-64 overflow-y-auto leading-relaxed shadow-inner">
-                  {buildWhatsAppInvitationMessage(currentInvitationData)}
+                  {buildWhatsAppInvitationMessage(currentInvitationData, language)}
                 </div>
               </div>
             </div>
@@ -813,7 +854,7 @@ export default function InvitationsPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          const msg = buildWhatsAppInvitationMessage(inv);
+                          const msg = buildWhatsAppInvitationMessage(inv, language);
                           if (typeof navigator !== 'undefined' && navigator.clipboard) {
                             try {
                               navigator.clipboard.writeText(msg);
@@ -858,6 +899,7 @@ export default function InvitationsPage() {
       {activeInvitationModal && (
         <InvitationCardModal
           invitation={activeInvitationModal}
+          initialLanguage={language}
           onClose={() => setActiveInvitationModal(null)}
         />
       )}
