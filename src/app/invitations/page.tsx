@@ -106,7 +106,7 @@ export default function InvitationsPage() {
   const [husbandName, setHusbandName] = useState('');
   const [wifeName, setWifeName] = useState('');
   const [language, setLanguage] = useState<'TE' | 'EN' | 'BOTH'>('TE');
-  const [title, setTitle] = useState(PRESET_EVENTS[0].title);
+  const [title, setTitle] = useState(PRESET_EVENTS[0].telugu);
   const [eventDate, setEventDate] = useState(() => {
     // Default to today's date in YYYY-MM-DD
     return new Date().toISOString().split('T')[0];
@@ -164,9 +164,24 @@ export default function InvitationsPage() {
     loadSavedInvitations();
   }, [loadSavedInvitations]);
 
+  // Language Change Handler with intelligent preset title sync
+  const handleLanguageChange = (newLang: 'TE' | 'EN' | 'BOTH') => {
+    setLanguage(newLang);
+    const matched = PRESET_EVENTS.find(
+      (p) => p.title === title || p.telugu === title
+    );
+    if (matched) {
+      if (newLang === 'TE') {
+        setTitle(matched.telugu);
+      } else {
+        setTitle(matched.title);
+      }
+    }
+  };
+
   // Select Preset Event
   const handleSelectPreset = (preset: typeof PRESET_EVENTS[0]) => {
-    setTitle(preset.title);
+    setTitle(language === 'TE' ? preset.telugu : preset.title);
     setEventTime(preset.defaultTime);
     setDescription(preset.defaultDescription);
     if (preset.defaultHusband !== undefined) {
@@ -224,8 +239,6 @@ export default function InvitationsPage() {
 
       setSuccessMsg('✓ Invitation saved successfully!');
       loadSavedInvitations();
-      // Automatically open visual card preview modal
-      setActiveInvitationModal(data.data);
     } catch {
       setError('Unable to save invitation. Please try again.');
     } finally {
@@ -573,26 +586,15 @@ export default function InvitationsPage() {
                 />
               </div>
 
-              {/* Action Submit Buttons */}
-              <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-                {/* Save & Generate Button */}
+              {/* Action Submit Button */}
+              <div className="pt-2">
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="flex-1 py-3 px-4 rounded-xl btn-gold text-devotional-blue-950 font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-gold-sm hover:brightness-110 active:scale-95 transition-all disabled:opacity-60"
+                  className="w-full py-3.5 px-4 rounded-xl btn-gold text-devotional-blue-950 font-black text-sm flex items-center justify-center gap-2 shadow-gold-sm hover:brightness-110 active:scale-95 transition-all disabled:opacity-60"
                 >
                   <PlusCircle className="w-4 h-4 text-devotional-blue-950" />
                   <span>{isSaving ? 'Saving Invitation...' : 'Save & Prepare Invitation'}</span>
-                </button>
-
-                {/* Instant Preview Card */}
-                <button
-                  type="button"
-                  onClick={() => setActiveInvitationModal(currentInvitationData)}
-                  className="py-3 px-4 rounded-xl bg-devotional-blue-900 hover:bg-devotional-blue-800 border border-devotional-gold-500/40 text-devotional-gold-300 hover:text-white font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all"
-                >
-                  <Eye className="w-4 h-4 text-devotional-gold-400" />
-                  <span>View Card Preview</span>
                 </button>
               </div>
             </form>
@@ -637,7 +639,7 @@ export default function InvitationsPage() {
                 <div className="grid grid-cols-3 gap-1.5 bg-devotional-blue-950 p-1.5 rounded-2xl border border-devotional-gold-500/40 shadow-inner">
                   <button
                     type="button"
-                    onClick={() => setLanguage('TE')}
+                    onClick={() => handleLanguageChange('TE')}
                     className={`py-2 px-2 rounded-xl text-xs font-bold transition-all ${
                       language === 'TE'
                         ? 'bg-gradient-to-r from-amber-500 to-devotional-gold-500 text-devotional-blue-950 font-black shadow-sm'
@@ -648,7 +650,7 @@ export default function InvitationsPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setLanguage('EN')}
+                    onClick={() => handleLanguageChange('EN')}
                     className={`py-2 px-2 rounded-xl text-xs font-bold transition-all ${
                       language === 'EN'
                         ? 'bg-gradient-to-r from-amber-500 to-devotional-gold-500 text-devotional-blue-950 font-black shadow-sm'
@@ -659,7 +661,7 @@ export default function InvitationsPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setLanguage('BOTH')}
+                    onClick={() => handleLanguageChange('BOTH')}
                     className={`py-2 px-2 rounded-xl text-xs font-bold transition-all ${
                       language === 'BOTH'
                         ? 'bg-gradient-to-r from-amber-500 to-devotional-gold-500 text-devotional-blue-950 font-black shadow-sm'
