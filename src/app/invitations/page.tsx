@@ -366,10 +366,10 @@ export default function InvitationsPage() {
                 >
                   <div>
                     <span className="text-base block mb-1">🪔</span>
-                    <h3 className="text-xs font-bold leading-tight text-white mb-0.5">
+                    <h3 className="text-xs font-bold leading-normal text-white mb-0.5">
                       {preset.title}
                     </h3>
-                    <p className="text-[10px] text-devotional-gold-300 font-medium">
+                    <p className="text-[10px] text-devotional-gold-300 font-medium leading-normal">
                       {preset.telugu}
                     </p>
                   </div>
@@ -631,7 +631,7 @@ export default function InvitationsPage() {
                     <Languages className="w-3.5 h-3.5 text-devotional-gold-400" />
                     <span>Select Language / భాష ఎంచుకోండి:</span>
                   </span>
-                  <span className="text-[10px] text-devotional-gold-200/80 font-mono font-bold">
+                  <span className="text-[10px] text-devotional-gold-200/80 font-sans font-bold">
                     {language === 'TE' ? 'తెలుగు మాత్రమే' : language === 'EN' ? 'English Only' : 'ఉభయ భాషలు (Both)'}
                   </span>
                 </div>
@@ -755,7 +755,7 @@ export default function InvitationsPage() {
                 <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400">
                   Live Message Preview ({language === 'TE' ? 'Telugu' : language === 'EN' ? 'English' : 'Bilingual'}):
                 </span>
-                <div className="p-3.5 rounded-2xl bg-[#031310] border border-emerald-500/30 text-xs text-gray-200 font-mono whitespace-pre-wrap max-h-48 overflow-y-auto leading-relaxed shadow-inner">
+                <div className="p-3.5 rounded-2xl bg-[#031310] border border-emerald-500/30 text-xs text-gray-200 font-sans font-medium whitespace-pre-wrap max-h-48 overflow-y-auto leading-relaxed shadow-inner">
                   {buildWhatsAppInvitationMessage(currentInvitationData, language)}
                 </div>
               </div>
@@ -835,7 +835,7 @@ export default function InvitationsPage() {
                         </button>
                       </div>
 
-                      <h3 className="text-sm font-black text-[#0c1e54] line-clamp-2">
+                      <h3 className="text-sm font-black text-[#0c1e54] line-clamp-2 leading-snug">
                         {inv.title}
                       </h3>
 
@@ -844,10 +844,10 @@ export default function InvitationsPage() {
                           <div className="p-2.5 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-400 text-xs sm:text-sm text-[#7c2d12] font-black flex items-center gap-2 shadow-sm">
                             <span className="text-base shrink-0">🌸</span>
                             <div className="min-w-0">
-                              <span className="text-[10px] uppercase font-bold text-amber-800/80 block leading-tight">
+                              <span className="text-[10px] uppercase font-bold text-amber-800/80 block leading-normal">
                                 పూజా దంపతులు / Pooja Hosts:
                               </span>
-                              <span className="truncate text-xs sm:text-sm font-black text-[#7c2d12] block">
+                              <span className="truncate text-xs sm:text-sm font-black text-[#7c2d12] block leading-normal">
                                 {inv.husbandName && inv.wifeName
                                   ? `${inv.husbandName} & ${inv.wifeName}`
                                   : inv.husbandName || inv.wifeName}

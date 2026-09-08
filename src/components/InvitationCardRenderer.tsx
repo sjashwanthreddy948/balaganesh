@@ -69,7 +69,7 @@ export default function InvitationCardRenderer({
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(true);
 
-  // Format date display
+  // Format date display (pure Telugu or formal English)
   const formattedDate = (() => {
     const d = new Date(invitation.eventDate);
     if (isNaN(d.getTime())) return String(invitation.eventDate);
@@ -117,9 +117,9 @@ export default function InvitationCardRenderer({
 
     setIsGenerating(true);
 
-    // High-resolution portrait canvas (1200 x 1650)
+    // High-resolution portrait canvas (1200 x 1720) with generous breathing room
     const width = 1200;
-    const height = 1650;
+    const height = 1720;
     canvas.width = width;
     canvas.height = height;
 
@@ -134,7 +134,7 @@ export default function InvitationCardRenderer({
     stampImage.crossOrigin = 'anonymous';
 
     const renderLayers = (imgLoaded: boolean, stampLoaded: boolean) => {
-      // 1. BASE BACKGROUND: Pure Luxury Ivory / White Paper Stock (Certificate Style)
+      // 1. BASE BACKGROUND: Pure Luxury Ivory / White Paper Stock
       const paperGradient = ctx.createLinearGradient(0, 0, width, height);
       paperGradient.addColorStop(0, '#ffffff');
       paperGradient.addColorStop(0.35, '#fafaf7');
@@ -143,7 +143,7 @@ export default function InvitationCardRenderer({
       ctx.fillStyle = paperGradient;
       ctx.fillRect(0, 0, width, height);
 
-      // 2. SUBTLE WATERMARK: Pandal & Deity Watermark (8% Opacity on White Paper)
+      // 2. SUBTLE WATERMARK: Pandal & Deity Watermark (8% Opacity)
       if (imgLoaded && bgImage.width > 0) {
         ctx.save();
         ctx.globalAlpha = 0.08;
@@ -151,7 +151,7 @@ export default function InvitationCardRenderer({
         ctx.restore();
       }
 
-      // 3. ELEGANT GOLD & ROYAL BLUE DUAL BORDERS (Exact Certificate Theme)
+      // 3. ELEGANT GOLD & ROYAL BLUE DUAL BORDERS
       // Outer Deep Royal Blue Thick Border
       ctx.strokeStyle = '#0c1e54';
       ctx.lineWidth = 14;
@@ -167,7 +167,7 @@ export default function InvitationCardRenderer({
       ctx.lineWidth = 1.5;
       ctx.strokeRect(62, 62, width - 124, height - 124);
 
-      // 4. CORNER ROSETTES (Metallic Gold with Royal Blue Center Jewel)
+      // 4. CORNER ROSETTES
       const cornerInsets = [
         [50, 50],
         [width - 50, 50],
@@ -196,7 +196,7 @@ export default function InvitationCardRenderer({
         ctx.fill();
       });
 
-      // Cursor for guaranteed sequential vertical flow (ZERO OVERLAPPING)
+      // Cursor for strict sequential vertical flow (ZERO COLLISION)
       let currentY = 108;
 
       // 5. SACRED INVOCATION
@@ -208,22 +208,22 @@ export default function InvitationCardRenderer({
       ctx.fillText('ॐ', width / 2, currentY);
       currentY += 34;
 
-      // Sanskrit Shloka (zero letter-spacing for Brahmic/Indic script)
+      // Sanskrit Shloka
       ctx.font = `bold 18px ${SERIF_FONT}`;
       ctx.fillStyle = '#b8860b';
       ctx.letterSpacing = '0px';
-      ctx.fillText('॥ श्री गणेशाय नमः ॥ • ॐ गं गणपतये नमः', width / 2, currentY);
+      ctx.fillText('॥ श्री गणेशाय नमः ॥ • ॐ गं गणपतये नमః', width / 2, currentY);
       currentY += 44;
 
-      // 6. ASSOCIATION NAME (Deep Royal Blue Display with Gold Accent)
-      ctx.font = '900 42px "Segoe UI", Arial, sans-serif';
+      // 6. ASSOCIATION NAME
+      ctx.font = `900 40px ${TELUGU_FONT}`;
       ctx.fillStyle = '#0c1e54';
-      ctx.letterSpacing = '2px';
-      ctx.fillText(FESTIVAL_CONFIG.associationName, width / 2, currentY);
       ctx.letterSpacing = '0px';
-      currentY += 33;
+      ctx.fillText(FESTIVAL_CONFIG.associationName, width / 2, currentY);
+      currentY += 42; // Generous space for Telugu bottom descenders
 
-      ctx.font = 'bold 18px "Segoe UI", Arial, sans-serif';
+      // Subtitle
+      ctx.font = 'bold 17px "Segoe UI", Arial, sans-serif';
       ctx.fillStyle = '#b8860b';
       ctx.letterSpacing = '1.5px';
       ctx.fillText(
@@ -232,11 +232,11 @@ export default function InvitationCardRenderer({
         currentY
       );
       ctx.letterSpacing = '0px';
-      currentY += 35;
+      currentY += 38;
 
-      // 7. TITLE RIBBON: ROYAL BLUE WITH METALLIC GOLD BORDER
+      // 7. TITLE RIBBON
       const ribbonW = 760;
-      const ribbonH = 48;
+      const ribbonH = 52;
       const ribbonX = (width - ribbonW) / 2;
       const ribbonY = currentY;
 
@@ -248,11 +248,11 @@ export default function InvitationCardRenderer({
       ctx.fillStyle = ribbonGrad;
       ctx.strokeStyle = '#c69214';
       ctx.lineWidth = 3;
-      drawRoundRect(ctx, ribbonX, ribbonY, ribbonW, ribbonH, 24);
+      drawRoundRect(ctx, ribbonX, ribbonY, ribbonW, ribbonH, 26);
       ctx.fill();
       ctx.stroke();
 
-      ctx.font = `bold 21px ${TELUGU_FONT}`;
+      ctx.font = `bold 22px ${TELUGU_FONT}`;
       ctx.fillStyle = '#ffffff';
       ctx.letterSpacing = '0px';
       const ribbonText =
@@ -260,9 +260,9 @@ export default function InvitationCardRenderer({
           ? '★ విశేష పూజా ఆహ్వాన పత్రిక ★'
           : language === 'EN'
           ? '★ CORDIAL POOJA INVITATION ★'
-          : '★ CORDIAL INVITATION / సాదర ఆహ్వానం ★';
-      ctx.fillText(ribbonText, width / 2, ribbonY + 32);
-      currentY = ribbonY + ribbonH + 24;
+          : '★ ఆహ్వాన పత్రిక / INVITATION ★';
+      ctx.fillText(ribbonText, width / 2, ribbonY + 35);
+      currentY = ribbonY + ribbonH + 26;
 
       // 8. POOJA HOST COUPLE SECTION (HERO HOST SECTION)
       const hName = invitation.husbandName?.trim();
@@ -272,40 +272,40 @@ export default function InvitationCardRenderer({
       if (hasCouple) {
         const isBilingual = language === 'BOTH';
         const hostBoxW = 1020;
-        const hostBoxH = isBilingual ? 205 : 175;
+        const hostBoxH = isBilingual ? 225 : 185;
         const hostBoxX = (width - hostBoxW) / 2;
         const hostBoxY = currentY;
 
         // Luxury White Card with Gold Drop Shadow & Double Gold-Royal Blue Borders
         ctx.save();
-        ctx.shadowColor = 'rgba(12, 30, 84, 0.1)';
-        ctx.shadowBlur = 14;
-        ctx.shadowOffsetY = 5;
+        ctx.shadowColor = 'rgba(12, 30, 84, 0.12)';
+        ctx.shadowBlur = 16;
+        ctx.shadowOffsetY = 6;
         ctx.fillStyle = '#ffffff';
-        drawRoundRect(ctx, hostBoxX, hostBoxY, hostBoxW, hostBoxH, 18);
+        drawRoundRect(ctx, hostBoxX, hostBoxY, hostBoxW, hostBoxH, 20);
         ctx.fill();
         ctx.restore();
 
         // Outer Burnished Gold Frame
         ctx.strokeStyle = '#c69214';
-        ctx.lineWidth = 3;
-        drawRoundRect(ctx, hostBoxX, hostBoxY, hostBoxW, hostBoxH, 18);
+        ctx.lineWidth = 3.5;
+        drawRoundRect(ctx, hostBoxX, hostBoxY, hostBoxW, hostBoxH, 20);
         ctx.stroke();
 
         // Inner Royal Blue Hairline
-        ctx.strokeStyle = 'rgba(12, 30, 84, 0.3)';
+        ctx.strokeStyle = 'rgba(12, 30, 84, 0.35)';
         ctx.lineWidth = 1.2;
-        drawRoundRect(ctx, hostBoxX + 6, hostBoxY + 6, hostBoxW - 12, hostBoxH - 12, 14);
+        drawRoundRect(ctx, hostBoxX + 6, hostBoxY + 6, hostBoxW - 12, hostBoxH - 12, 16);
         ctx.stroke();
 
         // Top Category Pill/Header
-        const categoryY = hostBoxY + 28;
+        const categoryY = hostBoxY + 32;
         ctx.font = `bold 16px ${TELUGU_FONT}`;
         ctx.fillStyle = '#991b1b';
         ctx.letterSpacing = '0px';
         const hostCategory =
           language === 'TE'
-            ? '🌸  నేటి విశేష పూజా దంపతులు (POOJA HOSTS)  🌸'
+            ? '🌸  నేటి విశేష పూజా దంపతులు  🌸'
             : language === 'EN'
             ? "🌸  TODAY'S AUSPICIOUS POOJA HOSTS  🌸"
             : "🌸  నేటి విశేష పూజా దంపతులు / TODAY'S POOJA HOSTS  🌸";
@@ -327,22 +327,22 @@ export default function InvitationCardRenderer({
             : `Smt. ${wName} & Family`;
 
         if (language === 'TE') {
-          // PURE TELUGU HERO DISPLAY (AUTO-SCALED WITH GENEROUS DESCENT CLEARANCE)
+          // PURE TELUGU HERO DISPLAY
           let teSize = 38;
           ctx.font = `bold ${teSize}px ${TELUGU_FONT}`;
           while (ctx.measureText(coupleTelugu).width > 920 && teSize > 20) {
-            teSize -= 1.5;
+            teSize -= 1;
             ctx.font = `bold ${teSize}px ${TELUGU_FONT}`;
           }
           ctx.fillStyle = '#0c1e54';
-          const nameY = hostBoxY + 76;
+          const nameY = hostBoxY + 84;
           ctx.fillText(coupleTelugu, width / 2, nameY);
 
-          // Ornate Gold Underline placed safely below Telugu descenders
-          const teWidth = Math.min(ctx.measureText(coupleTelugu).width + 50, 920);
-          const lineY = nameY + 26;
+          // Ornate Gold Underline with Diamond (Safely below Telugu descenders)
+          const teWidth = Math.min(ctx.measureText(coupleTelugu).width + 60, 920);
+          const lineY = nameY + 28;
           ctx.strokeStyle = '#c69214';
-          ctx.lineWidth = 2.2;
+          ctx.lineWidth = 2.5;
           ctx.beginPath();
           ctx.moveTo(width / 2 - teWidth / 2, lineY);
           ctx.lineTo(width / 2 + teWidth / 2, lineY);
@@ -351,12 +351,12 @@ export default function InvitationCardRenderer({
           // Center Diamond on Underline
           ctx.fillStyle = '#0c1e54';
           ctx.strokeStyle = '#c69214';
-          ctx.lineWidth = 1.8;
+          ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.moveTo(width / 2, lineY - 6);
-          ctx.lineTo(width / 2 + 6, lineY);
+          ctx.lineTo(width / 2 + 7, lineY);
           ctx.lineTo(width / 2, lineY + 6);
-          ctx.lineTo(width / 2 - 6, lineY);
+          ctx.lineTo(width / 2 - 7, lineY);
           ctx.closePath();
           ctx.fill();
           ctx.stroke();
@@ -367,25 +367,25 @@ export default function InvitationCardRenderer({
           ctx.fillText(
             'వారి సౌజన్యంతో నేటి విశేష పూజ & తీర్థ ప్రసాద వితరణ కార్యక్రమం',
             width / 2,
-            hostBoxY + 144
+            hostBoxY + 152
           );
         } else if (language === 'EN') {
           // PURE ENGLISH HERO DISPLAY
           let enSize = 40;
           ctx.font = `bold ${enSize}px ${SERIF_FONT}`;
-          while (ctx.measureText(coupleEnglish).width > 920 && enSize > 22) {
-            enSize -= 1.5;
+          while (ctx.measureText(coupleEnglish).width > 920 && enSize > 20) {
+            enSize -= 1;
             ctx.font = `bold ${enSize}px ${SERIF_FONT}`;
           }
           ctx.fillStyle = '#0c1e54';
-          const nameY = hostBoxY + 76;
+          const nameY = hostBoxY + 84;
           ctx.fillText(coupleEnglish, width / 2, nameY);
 
           // Ornate Gold Underline with Diamond
-          const enWidth = Math.min(ctx.measureText(coupleEnglish).width + 50, 920);
-          const lineY = nameY + 22;
+          const enWidth = Math.min(ctx.measureText(coupleEnglish).width + 60, 920);
+          const lineY = nameY + 24;
           ctx.strokeStyle = '#c69214';
-          ctx.lineWidth = 2.2;
+          ctx.lineWidth = 2.5;
           ctx.beginPath();
           ctx.moveTo(width / 2 - enWidth / 2, lineY);
           ctx.lineTo(width / 2 + enWidth / 2, lineY);
@@ -394,12 +394,12 @@ export default function InvitationCardRenderer({
           // Center Diamond on Underline
           ctx.fillStyle = '#0c1e54';
           ctx.strokeStyle = '#c69214';
-          ctx.lineWidth = 1.8;
+          ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.moveTo(width / 2, lineY - 6);
-          ctx.lineTo(width / 2 + 6, lineY);
+          ctx.lineTo(width / 2 + 7, lineY);
           ctx.lineTo(width / 2, lineY + 6);
-          ctx.lineTo(width / 2 - 6, lineY);
+          ctx.lineTo(width / 2 - 7, lineY);
           ctx.closePath();
           ctx.fill();
           ctx.stroke();
@@ -410,28 +410,28 @@ export default function InvitationCardRenderer({
           ctx.fillText(
             "Graciously hosting today's sacred pooja followed by divine Mahaprasadam",
             width / 2,
-            hostBoxY + 144
+            hostBoxY + 150
           );
         } else {
-          // BILINGUAL DISPLAY (TELUGU 32px + ENGLISH 24px DUAL DISPLAY WITH ZERO OVERLAP)
+          // BILINGUAL DISPLAY (TELUGU 32px + ENGLISH 24px DUAL DISPLAY WITH GENEROUS 48px CLEARANCE)
           let teSize = 32;
           ctx.font = `bold ${teSize}px ${TELUGU_FONT}`;
           while (ctx.measureText(coupleTelugu).width > 920 && teSize > 20) {
-            teSize -= 1.5;
+            teSize -= 1;
             ctx.font = `bold ${teSize}px ${TELUGU_FONT}`;
           }
           ctx.fillStyle = '#0c1e54';
-          const teY = hostBoxY + 70;
+          const teY = hostBoxY + 76;
           ctx.fillText(coupleTelugu, width / 2, teY);
 
           let enSize = 24;
           ctx.font = `bold ${enSize}px ${SERIF_FONT}`;
           while (ctx.measureText(coupleEnglish).width > 920 && enSize > 18) {
-            enSize -= 1.5;
+            enSize -= 1;
             ctx.font = `bold ${enSize}px ${SERIF_FONT}`;
           }
           ctx.fillStyle = '#b8860b';
-          const enY = hostBoxY + 114;
+          const enY = hostBoxY + 124;
           ctx.fillText(coupleEnglish, width / 2, enY);
 
           // Ornate Gold Underline with Diamond under English
@@ -439,7 +439,7 @@ export default function InvitationCardRenderer({
             Math.max(ctx.measureText(coupleTelugu).width, ctx.measureText(coupleEnglish).width) + 50,
             920
           );
-          const lineY = enY + 18;
+          const lineY = enY + 20;
           ctx.strokeStyle = '#c69214';
           ctx.lineWidth = 2;
           ctx.beginPath();
@@ -466,21 +466,21 @@ export default function InvitationCardRenderer({
           ctx.fillText(
             'వారి సౌజన్యంతో నేటి విశేష పూజ & ప్రసాదం • Followed by Divine Mahaprasadam',
             width / 2,
-            hostBoxY + 176
+            hostBoxY + 192
           );
         }
 
-        currentY = hostBoxY + hostBoxH + 20;
+        currentY = hostBoxY + hostBoxH + 24;
       }
 
-      // 9. INVITEE DEDICATION CARD (COMFORTABLE 78px HEIGHT FOR BILINGUAL / TELUGU MATRAS)
+      // 9. INVITEE DEDICATION CARD
       const inviteBoxW = 980;
-      const inviteBoxH = 78;
+      const inviteBoxH = 82;
       const inviteBoxX = (width - inviteBoxW) / 2;
       const inviteBoxY = currentY;
 
       ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-      drawRoundRect(ctx, inviteBoxX, inviteBoxY, inviteBoxW, inviteBoxH, 14);
+      drawRoundRect(ctx, inviteBoxX, inviteBoxY, inviteBoxW, inviteBoxH, 16);
       ctx.fill();
 
       ctx.strokeStyle = '#0c1e54';
@@ -489,13 +489,13 @@ export default function InvitationCardRenderer({
 
       ctx.font = `bold 14px ${TELUGU_FONT}`;
       ctx.fillStyle = '#475569';
-      ctx.fillText(
+      const inviteLabel =
         language === 'TE'
-          ? 'గౌరవనీయులైన / CORDIAL INVITATION TO:'
-          : 'CORDIAL INVITATION TO:',
-        width / 2,
-        inviteBoxY + 26
-      );
+          ? 'గౌరవనీయులైన ఆహ్వానితులు:'
+          : language === 'EN'
+          ? 'CORDIAL INVITATION TO:'
+          : 'గౌరవనీయులైన ఆహ్వానితులు / CORDIAL INVITATION TO:';
+      ctx.fillText(inviteLabel, width / 2, inviteBoxY + 28);
 
       let invSize = 22;
       ctx.font = `bold ${invSize}px ${TELUGU_FONT}`;
@@ -505,13 +505,13 @@ export default function InvitationCardRenderer({
         ctx.font = `bold ${invSize}px ${TELUGU_FONT}`;
       }
       ctx.fillStyle = '#0c1e54';
-      ctx.fillText(dispInvitees, width / 2, inviteBoxY + 58);
+      ctx.fillText(dispInvitees, width / 2, inviteBoxY + 62);
 
-      currentY = inviteBoxY + inviteBoxH + 20;
+      currentY = inviteBoxY + inviteBoxH + 24;
 
-      // 10. SACRED EVENT TITLE BANNER (AUTO-SCALED ZERO OVERFLOW)
+      // 10. SACRED EVENT TITLE BANNER
       const eventBoxW = 980;
-      const eventBoxH = 72;
+      const eventBoxH = 76;
       const eventBoxX = (width - eventBoxW) / 2;
       const eventBoxY = currentY;
 
@@ -526,7 +526,7 @@ export default function InvitationCardRenderer({
       eventGrad.addColorStop(1, '#f8fafc');
 
       ctx.fillStyle = eventGrad;
-      drawRoundRect(ctx, eventBoxX, eventBoxY, eventBoxW, eventBoxH, 16);
+      drawRoundRect(ctx, eventBoxX, eventBoxY, eventBoxW, eventBoxH, 18);
       ctx.fill();
 
       ctx.strokeStyle = '#c69214';
@@ -536,18 +536,18 @@ export default function InvitationCardRenderer({
       let titleSize = 28;
       ctx.font = `900 ${titleSize}px ${TELUGU_FONT}`;
       const titleText = `🪔  ${invitation.title.trim()}  🪔`;
-      while (ctx.measureText(titleText).width > eventBoxW - 60 && titleSize > 18) {
-        titleSize -= 1.5;
+      while (ctx.measureText(titleText).width > eventBoxW - 60 && titleSize > 16) {
+        titleSize -= 1;
         ctx.font = `900 ${titleSize}px ${TELUGU_FONT}`;
       }
       ctx.fillStyle = '#0c1e54';
-      ctx.fillText(titleText, width / 2, eventBoxY + 46);
+      ctx.fillText(titleText, width / 2, eventBoxY + 48);
 
-      currentY = eventBoxY + eventBoxH + 22;
+      currentY = eventBoxY + eventBoxH + 24;
 
-      // 11. AUSPICIOUS DETAILS BOX (AUTO-SCALED VALUES & SAFE MARGINS)
+      // 11. AUSPICIOUS DETAILS BOX (SEPARATED LABELS AND VALUES TO PREVENT TELUGU OVERLAPPING)
       const detailsBoxW = 980;
-      const detailsBoxH = 244;
+      const detailsBoxH = 248;
       const detailsBoxX = (width - detailsBoxW) / 2;
       const detailsBoxY = currentY;
 
@@ -562,17 +562,15 @@ export default function InvitationCardRenderer({
       // 4 Detailed Rows inside white box
       ctx.textAlign = 'left';
       const labelX = detailsBoxX + 40;
-      const valueX = detailsBoxX + 240;
-      const maxValW = 690;
+      const valueX = detailsBoxX + 270; // 230px space for labels prevents ANY overlap
+      const maxValW = detailsBoxW - (valueX - detailsBoxX) - 30;
 
       // Row 1: Date
       ctx.font = `bold 18px ${TELUGU_FONT}`;
       ctx.fillStyle = '#c69214';
-      ctx.fillText(
-        language === 'TE' ? '📅  తేదీ / DATE:' : '📅  DATE:',
-        labelX,
-        detailsBoxY + 46
-      );
+      const dateLabel =
+        language === 'TE' ? '📅  తేదీ:' : language === 'EN' ? '📅  DATE:' : '📅  తేదీ / Date:';
+      ctx.fillText(dateLabel, labelX, detailsBoxY + 46);
 
       let dSize = 19;
       ctx.font = `600 ${dSize}px ${TELUGU_FONT}`;
@@ -586,11 +584,9 @@ export default function InvitationCardRenderer({
       // Row 2: Time
       ctx.font = `bold 18px ${TELUGU_FONT}`;
       ctx.fillStyle = '#c69214';
-      ctx.fillText(
-        language === 'TE' ? '⏰  సమయం / TIME:' : '⏰  TIME:',
-        labelX,
-        detailsBoxY + 100
-      );
+      const timeLabel =
+        language === 'TE' ? '⏰  సమయం:' : language === 'EN' ? '⏰  TIME:' : '⏰  సమయం / Time:';
+      ctx.fillText(timeLabel, labelX, detailsBoxY + 102);
 
       let tSize = 19;
       ctx.font = `600 ${tSize}px ${TELUGU_FONT}`;
@@ -599,16 +595,14 @@ export default function InvitationCardRenderer({
         ctx.font = `600 ${tSize}px ${TELUGU_FONT}`;
       }
       ctx.fillStyle = '#0f172a';
-      ctx.fillText(invitation.eventTime, valueX, detailsBoxY + 100);
+      ctx.fillText(invitation.eventTime, valueX, detailsBoxY + 102);
 
       // Row 3: Venue
       ctx.font = `bold 18px ${TELUGU_FONT}`;
       ctx.fillStyle = '#c69214';
-      ctx.fillText(
-        language === 'TE' ? '📍  వేదిక / VENUE:' : '📍  VENUE:',
-        labelX,
-        detailsBoxY + 154
-      );
+      const venueLabel =
+        language === 'TE' ? '📍  వేదిక:' : language === 'EN' ? '📍  VENUE:' : '📍  వేదిక / Venue:';
+      ctx.fillText(venueLabel, labelX, detailsBoxY + 158);
 
       let vSize = 18;
       ctx.font = `600 ${vSize}px ${TELUGU_FONT}`;
@@ -618,20 +612,18 @@ export default function InvitationCardRenderer({
         ctx.font = `600 ${vSize}px ${TELUGU_FONT}`;
       }
       ctx.fillStyle = '#0f172a';
-      ctx.fillText(dispVenue, valueX, detailsBoxY + 154);
+      ctx.fillText(dispVenue, valueX, detailsBoxY + 158);
 
       // Row 4: Prasadam Distribution
       ctx.font = `bold 18px ${TELUGU_FONT}`;
       ctx.fillStyle = '#b91c1c';
-      ctx.fillText(
+      const prasadamLabel =
         language === 'TE'
-          ? '🍽️  తీర్థ ప్రసాదం:'
+          ? '🍽️  ప్రసాదం:'
           : language === 'EN'
           ? '🍽️  PRASADAM:'
-          : '🍽️  తీర్థ ప్రసాదం:',
-        labelX,
-        detailsBoxY + 208
-      );
+          : '🍽️  ప్రసాదం / Prasadam:';
+      ctx.fillText(prasadamLabel, labelX, detailsBoxY + 214);
 
       const prasadamText =
         language === 'TE'
@@ -647,11 +639,11 @@ export default function InvitationCardRenderer({
         ctx.font = `bold ${pSize}px ${TELUGU_FONT}`;
       }
       ctx.fillStyle = '#047857';
-      ctx.fillText(prasadamText, valueX, detailsBoxY + 208);
+      ctx.fillText(prasadamText, valueX, detailsBoxY + 214);
 
-      currentY = detailsBoxY + detailsBoxH + 24;
+      currentY = detailsBoxY + detailsBoxH + 26;
 
-      // 12. PROGRAM DETAILS (WORD WRAPPED & STRICTLY BOUNDED)
+      // 12. PROGRAM DETAILS (WORD WRAPPED & PROPORTIONED)
       ctx.textAlign = 'center';
       if (invitation.description && invitation.description.trim().length > 0) {
         ctx.font = `bold 18px ${TELUGU_FONT}`;
@@ -665,7 +657,7 @@ export default function InvitationCardRenderer({
           width / 2,
           currentY
         );
-        currentY += 26;
+        currentY += 30;
 
         ctx.font = `normal 16px ${TELUGU_FONT}`;
         ctx.fillStyle = '#334155';
@@ -685,7 +677,7 @@ export default function InvitationCardRenderer({
             const metrics = ctx.measureText(testLine);
             if (metrics.width > maxTextWidth && currentLine) {
               ctx.fillText(currentLine, width / 2, currentY);
-              currentY += 24;
+              currentY += 28; // 28px comfortable line height for Telugu matras
               linesCount++;
               currentLine = words[n];
               if (linesCount >= maxLines) break;
@@ -695,14 +687,16 @@ export default function InvitationCardRenderer({
           }
           if (currentLine && linesCount < maxLines) {
             ctx.fillText(currentLine, width / 2, currentY);
-            currentY += 24;
+            currentY += 28;
             linesCount++;
           }
         }
       }
 
-      // 13. DIVINE BLESSINGS INVOCATION (BOUNDED & PROPORTIONED)
+      // 13. DIVINE BLESSINGS INVOCATION (DYNAMIC SEQUENTIAL POSITIONING)
+      const blessingY = Math.max(currentY + 22, 1375);
       ctx.fillStyle = '#b8860b';
+
       if (language === 'TE') {
         let bSize = 18;
         ctx.font = `italic bold ${bSize}px ${SERIF_FONT}`;
@@ -712,30 +706,31 @@ export default function InvitationCardRenderer({
           bSize -= 0.5;
           ctx.font = `italic bold ${bSize}px ${SERIF_FONT}`;
         }
-        ctx.fillText(blessingText, width / 2, 1382);
+        ctx.fillText(blessingText, width / 2, blessingY);
       } else if (language === 'EN') {
         ctx.font = `italic bold 18px ${SERIF_FONT}`;
         const blessingText =
           '🙏 "All are cordially invited to receive the divine blessings of Lord Ganesha" 🙏';
-        ctx.fillText(blessingText, width / 2, 1382);
+        ctx.fillText(blessingText, width / 2, blessingY);
       } else {
         // Bilingual: Two distinct balanced lines
         ctx.font = `bold 16px ${TELUGU_FONT}`;
         ctx.fillText(
           '🙏 "మీ రాకయే మాకు శుభప్రదం • భక్తులందరికీ స్వామివారి కృపాకటాక్షాలు కలగాలని కోరుచున్నాము" 🙏',
           width / 2,
-          1370
+          blessingY
         );
         ctx.font = `italic 15px ${SERIF_FONT}`;
         ctx.fillText(
           '"All devotees are cordially invited to seek the divine blessings of Lord Ganesha"',
           width / 2,
-          1394
+          blessingY + 26
         );
       }
 
-      // 14. BOTTOM SEPARATOR LINE
-      const divY = 1415;
+      // 14. BOTTOM SEPARATOR LINE (GUARANTEED SPACE BELOW BLESSINGS)
+      const isBilingual = language === 'BOTH';
+      const divY = Math.max(blessingY + (isBilingual ? 46 : 34), 1425);
       ctx.strokeStyle = '#c69214';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
@@ -743,13 +738,13 @@ export default function InvitationCardRenderer({
       ctx.lineTo(width - 100, divY);
       ctx.stroke();
 
-      // 15. OFFICIAL RED SEAL STAMP (EXACT CERTIFICATE STYLE)
+      // 15. OFFICIAL RED SEAL STAMP
       if (stampLoaded && stampImage.width > 0) {
         ctx.save();
         const redSealW = 190;
         const redSealH = 130;
         const redSealX = width - 260;
-        const redSealY = 1435;
+        const redSealY = divY + 15;
         ctx.drawImage(stampImage, redSealX, redSealY, redSealW, redSealH);
         ctx.restore();
       }
@@ -759,12 +754,12 @@ export default function InvitationCardRenderer({
       ctx.font = 'bold 12px monospace';
       ctx.fillStyle = '#64748b';
       ctx.textAlign = 'left';
-      ctx.fillText('OFFICIAL DIGITAL INVITATION', 90, 1495);
-      ctx.fillText(`SAMITHI REF: BG-${invitation.year || 2026}`, 90, 1515);
+      ctx.fillText('OFFICIAL DIGITAL INVITATION', 90, divY + 55);
+      ctx.fillText(`SAMITHI REF: BG-${invitation.year || 2026}`, 90, divY + 75);
       ctx.restore();
 
-      // 17. FOOTER & OFFICIAL CONTACT (MINNU 9059375693)
-      const footY = 1460;
+      // 17. FOOTER & OFFICIAL CONTACT
+      const footY = divY + 42;
       ctx.textAlign = 'center';
       ctx.font = `bold 22px ${TELUGU_FONT}`;
       ctx.fillStyle = '#0c1e54';
@@ -784,7 +779,7 @@ export default function InvitationCardRenderer({
 
       ctx.font = `bold 20px ${TELUGU_FONT}`;
       ctx.fillStyle = '#c69214';
-      ctx.fillText('🙏  GANPATI BAPPA MORYA!  🙏', width / 2, footY + 98);
+      ctx.fillText('🙏  GANPATI BAPPA MORYA!  🙏', width / 2, footY + 96);
 
       // Export to Data URL
       try {
@@ -822,7 +817,6 @@ export default function InvitationCardRenderer({
       tryRender();
     };
 
-    // Render immediate crisp vector paper & text, then re-render with watermark & stamp
     tryRender();
   }, [invitation, formattedDate, language]);
 

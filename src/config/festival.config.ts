@@ -332,7 +332,7 @@ export function buildWhatsAppInvitationMessage(
 ━━━━━━━━━━━━━━━━━━━━━━━
 🌸 *సాదర ఆహ్వానం* 🌸
 
-గౌరవనీయులైన / Dear *${invitation.invitees}*,
+గౌరవనీయులైన *${invitation.invitees}* గారికి,
 ${coupleSection}
 మేము మిమ్మల్ని మరియు మీ కుటుంబ సభ్యులను నేటి విశేష పూజా కార్యక్రమంలో పాల్గొనవలసిందిగా సాదరంగా ఆహ్వానిస్తున్నాము.
 
