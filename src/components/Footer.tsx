@@ -47,10 +47,10 @@ export default function Footer() {
           </Link>
           <span className="text-devotional-gold-500/40 hidden sm:inline">•</span>
           <Link
-            href="/expenses"
-            className="text-gray-300 hover:text-devotional-gold-300 transition-colors"
+            href="/invitations"
+            className="text-emerald-300 hover:text-emerald-200 transition-colors"
           >
-            Expenses
+            Invitations
           </Link>
           <span className="text-devotional-gold-500/40 hidden sm:inline">•</span>
           <a

@@ -60,13 +60,15 @@ export default function Header() {
                   <span className="hidden sm:inline">Laddu</span>
                 </Link>
 
-                <Link
-                  href="/expenses"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/40 text-devotional-gold-300 hover:text-white text-xs font-bold transition-all shadow-sm"
-                >
-                  <Receipt className="w-3.5 h-3.5 text-rose-400" />
-                  <span className="hidden sm:inline">Expenses</span>
-                </Link>
+                {user.role === 'ADMIN' && (
+                  <Link
+                    href="/expenses"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-devotional-blue-900 border border-devotional-gold-500/40 text-devotional-gold-300 hover:text-white text-xs font-bold transition-all shadow-sm"
+                  >
+                    <Receipt className="w-3.5 h-3.5 text-rose-400" />
+                    <span className="hidden sm:inline">Expenses</span>
+                  </Link>
+                )}
 
                 <Link
                   href="/invitations"

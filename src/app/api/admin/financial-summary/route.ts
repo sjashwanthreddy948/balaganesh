@@ -4,8 +4,8 @@ import { getUserSession } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   const session = await getUserSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!session || session.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Access denied. Admin permission required.' }, { status: 403 });
   }
 
   try {

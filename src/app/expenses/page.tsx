@@ -147,6 +147,11 @@ export default function ExpensesPage() {
         const meJson = await meRes.json();
         setUserRole(meJson.user.role);
         setCurrentUserName(meJson.user.name || '');
+
+        if (meJson.user.role !== 'ADMIN') {
+          router.replace('/dashboard');
+          return;
+        }
       } else {
         router.replace('/login?redirect=/expenses');
         return;
@@ -331,6 +336,38 @@ export default function ExpensesPage() {
       console.error('Error deleting expense:', err);
     }
   };
+
+  if (userRole && userRole !== 'ADMIN') {
+    return (
+      <div className="min-h-screen flex flex-col justify-between pb-24 md:pb-8">
+        <Header />
+        <main className="flex-1 max-w-xl w-full mx-auto px-4 py-16 text-center space-y-4">
+          <div className="p-8 rounded-3xl border border-red-500/30 bg-red-950/40 space-y-4 shadow-xl">
+            <span className="text-4xl">🔒</span>
+            <h2 className="text-xl font-black text-red-200">Admin Permission Required</h2>
+            <p className="text-sm text-gray-300">
+              Access to the Expenses Tracker and Financial Treasury is restricted to Administrators only. Volunteers can add Chanda and send invitations.
+            </p>
+            <div className="pt-2 flex justify-center gap-3">
+              <button
+                onClick={() => router.replace('/dashboard')}
+                className="px-5 py-2.5 rounded-xl bg-devotional-gold-500 text-devotional-blue-950 font-bold text-sm shadow-md"
+              >
+                Go to Chanda Hub
+              </button>
+              <button
+                onClick={() => router.replace('/invitations')}
+                className="px-5 py-2.5 rounded-xl bg-devotional-blue-900 border border-emerald-500/40 text-emerald-300 font-bold text-sm"
+              >
+                Send Invitations
+              </button>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col justify-between pb-24 md:pb-8">

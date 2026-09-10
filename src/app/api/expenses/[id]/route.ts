@@ -8,8 +8,8 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   const session = await getUserSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!session || session.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Admin permission required' }, { status: 403 });
   }
 
   try {

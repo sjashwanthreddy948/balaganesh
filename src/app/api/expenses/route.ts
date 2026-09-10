@@ -7,10 +7,10 @@ import { getUserSession } from '@/lib/auth';
 export async function POST(req: NextRequest) {
   try {
     const session = await getUserSession();
-    if (!session) {
+    if (!session || session.role !== 'ADMIN') {
       return NextResponse.json(
-        { success: false, error: 'Login required to record expenses.' },
-        { status: 401 }
+        { success: false, error: 'Access denied. Only administrators can record expenses.' },
+        { status: 403 }
       );
     }
 
@@ -89,6 +89,14 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await getUserSession();
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json(
+        { success: false, error: 'Access denied. Only administrators can view expenses.' },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search')?.trim();
     const category = searchParams.get('category')?.trim();

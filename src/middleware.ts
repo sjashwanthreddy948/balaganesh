@@ -22,7 +22,20 @@ export async function middleware(request: NextRequest) {
     }
 
     try {
-      await jwtVerify(token, JWT_SECRET);
+      const { payload } = await jwtVerify(token, JWT_SECRET);
+
+      // Restrict /expenses and /admin to ADMIN role only
+      const isAdminOnly =
+        pathname === '/expenses' ||
+        pathname.startsWith('/expenses/') ||
+        pathname === '/admin' ||
+        pathname.startsWith('/admin/');
+
+      if (isAdminOnly && payload.role !== 'ADMIN') {
+        const dashboardUrl = new URL('/dashboard', request.url);
+        return NextResponse.redirect(dashboardUrl);
+      }
+
       return NextResponse.next();
     } catch {
       const loginUrl = new URL('/', request.url);

@@ -135,23 +135,42 @@ export default function MobileBottomNav({
             </span>
           </Link>
 
-          {/* Item 4: Expenses */}
-          <Link
-            href="/expenses"
-            className={`flex flex-col items-center justify-center min-w-[50px] py-1.5 px-1.5 rounded-xl transition-all active:scale-95 ${
-              pathname === '/expenses'
-                ? 'text-devotional-gold-300 font-extrabold'
-                : 'text-gray-400 hover:text-gray-200'
-            }`}
-          >
-            <div className="relative">
-              <Receipt className="w-5 h-5" />
-              {pathname === '/expenses' && (
-                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-devotional-gold-400" />
-              )}
-            </div>
-            <span className="text-[10px] mt-1 font-semibold">Expenses</span>
-          </Link>
+          {/* Item 4: Expenses (Admin) or Invitations (Volunteer) */}
+          {userRole === 'ADMIN' ? (
+            <Link
+              href="/expenses"
+              className={`flex flex-col items-center justify-center min-w-[50px] py-1.5 px-1.5 rounded-xl transition-all active:scale-95 ${
+                pathname === '/expenses'
+                  ? 'text-devotional-gold-300 font-extrabold'
+                  : 'text-gray-400 hover:text-gray-200'
+              }`}
+            >
+              <div className="relative">
+                <Receipt className="w-5 h-5" />
+                {pathname === '/expenses' && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-devotional-gold-400" />
+                )}
+              </div>
+              <span className="text-[10px] mt-1 font-semibold">Expenses</span>
+            </Link>
+          ) : (
+            <Link
+              href="/invitations"
+              className={`flex flex-col items-center justify-center min-w-[50px] py-1.5 px-1.5 rounded-xl transition-all active:scale-95 ${
+                pathname === '/invitations'
+                  ? 'text-emerald-300 font-extrabold'
+                  : 'text-gray-400 hover:text-gray-200'
+              }`}
+            >
+              <div className="relative">
+                <Mail className="w-5 h-5" />
+                {pathname === '/invitations' && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                )}
+              </div>
+              <span className="text-[10px] mt-1 font-semibold">Invite</span>
+            </Link>
+          )}
 
           {/* Item 5: Menu / More */}
           <button
@@ -221,14 +240,16 @@ export default function MobileBottomNav({
                 <span>Laddu Payments</span>
               </Link>
 
-              <Link
-                href="/expenses"
-                onClick={() => setShowMoreMenu(false)}
-                className="p-3.5 rounded-2xl bg-devotional-blue-900/60 border border-devotional-gold-500/30 flex items-center gap-3 text-xs font-bold text-white hover:bg-devotional-blue-800 transition-colors"
-              >
-                <Receipt className="w-4 h-4 text-rose-400 shrink-0" />
-                <span>Expenses Tracker</span>
-              </Link>
+              {userRole === 'ADMIN' && (
+                <Link
+                  href="/expenses"
+                  onClick={() => setShowMoreMenu(false)}
+                  className="p-3.5 rounded-2xl bg-devotional-blue-900/60 border border-devotional-gold-500/30 flex items-center gap-3 text-xs font-bold text-white hover:bg-devotional-blue-800 transition-colors"
+                >
+                  <Receipt className="w-4 h-4 text-rose-400 shrink-0" />
+                  <span>Expenses Tracker</span>
+                </Link>
+              )}
 
               <Link
                 href="/contribute"

@@ -170,15 +170,19 @@ export default function DashboardPage() {
         setStats(statsJson.stats);
       }
 
-      // 3. Fetch Full Financial Summary (Total Chanda, Total Expenses, Remaining Balance)
-      try {
-        const finRes = await fetch('/api/admin/financial-summary');
-        if (finRes.ok) {
-          const finJson = await finRes.json();
-          setFinancialSummary(finJson.summary);
+      // 3. Fetch Full Financial Summary (Admin Only)
+      if (meJson.user?.role === 'ADMIN') {
+        try {
+          const finRes = await fetch('/api/admin/financial-summary');
+          if (finRes.ok) {
+            const finJson = await finRes.json();
+            setFinancialSummary(finJson.summary);
+          }
+        } catch (finErr) {
+          console.error('Financial summary load error:', finErr);
         }
-      } catch (finErr) {
-        console.error('Financial summary load error:', finErr);
+      } else {
+        setFinancialSummary(null);
       }
 
       // 4. Fetch contributions with filters & pagination
@@ -258,9 +262,11 @@ export default function DashboardPage() {
         if (statsRes.ok) {
           setStats((await statsRes.json()).stats);
         }
-        const finRes = await fetch('/api/admin/financial-summary');
-        if (finRes.ok) {
-          setFinancialSummary((await finRes.json()).summary);
+        if (user?.role === 'ADMIN') {
+          const finRes = await fetch('/api/admin/financial-summary');
+          if (finRes.ok) {
+            setFinancialSummary((await finRes.json()).summary);
+          }
         }
       }
     } catch (err) {
@@ -379,14 +385,16 @@ export default function DashboardPage() {
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
 
-            {/* Link to Expenses page */}
-            <button
-              onClick={() => router.push('/expenses')}
-              className="px-3 py-2 rounded-xl bg-devotional-blue-900 hover:bg-devotional-blue-800 border border-devotional-gold-500/30 text-devotional-gold-200 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
-            >
-              <Receipt className="w-4 h-4 text-rose-400" />
-              <span>Expenses & Balance →</span>
-            </button>
+            {/* Link to Expenses page (Admin Only) */}
+            {isAdmin && (
+              <button
+                onClick={() => router.push('/expenses')}
+                className="px-3 py-2 rounded-xl bg-devotional-blue-900 hover:bg-devotional-blue-800 border border-devotional-gold-500/30 text-devotional-gold-200 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+              >
+                <Receipt className="w-4 h-4 text-rose-400" />
+                <span>Expenses & Balance →</span>
+              </button>
+            )}
 
             {/* Link to Invitations Studio */}
             <button
@@ -477,16 +485,18 @@ export default function DashboardPage() {
                 </p>
               </div>
 
-              {/* Dedicated link to separate Expenses tracker */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => router.push('/expenses')}
-                  className="w-full sm:w-auto px-4 py-3 rounded-2xl bg-devotional-blue-950/90 hover:bg-devotional-blue-900 border border-devotional-gold-500/40 text-devotional-gold-200 hover:text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-sm transition-all"
-                >
-                  <Receipt className="w-4 h-4 text-rose-400" />
-                  <span>View Expense Tracker & Balance →</span>
-                </button>
-              </div>
+              {/* Dedicated link to separate Expenses tracker (Admin Only) */}
+              {isAdmin && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => router.push('/expenses')}
+                    className="w-full sm:w-auto px-4 py-3 rounded-2xl bg-devotional-blue-950/90 hover:bg-devotional-blue-900 border border-devotional-gold-500/40 text-devotional-gold-200 hover:text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-sm transition-all"
+                  >
+                    <Receipt className="w-4 h-4 text-rose-400" />
+                    <span>View Expense Tracker & Balance →</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
